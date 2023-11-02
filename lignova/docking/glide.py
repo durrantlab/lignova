@@ -7,8 +7,8 @@ from loguru import logger
 
 from ..structure.ligand import Ligand, PreparedLigand
 from ..structure.protein import PreparedProtein
-from .docking import Docking
 from .contexts import GlideContext
+from .docking import Docking
 
 
 class Glide(Docking):
@@ -19,9 +19,10 @@ class Glide(Docking):
     sites/default/files/s3/release/2023-3/
     Documentation/html/utilities/program_utility_usage/glide_sif.html).
     """
+
     def __init__(self) -> None:
         # TODO:DONE? move this check with context in run
-        #self.context= GlideContext.get_current()
+        # self.context= GlideContext.get_current()
         pass
 
     def run(self, target, ligand, context):
@@ -95,7 +96,7 @@ class Glide(Docking):
             raise e
 
     @staticmethod
-    def convert_to_mae(input_object,context):
+    def convert_to_mae(input_object, context):
         r"""Convert from the pdb format to mae format needed for Schrodinger"""
         command = [
             context.command + "/utilities/structconvert",
@@ -171,9 +172,8 @@ class Glide(Docking):
             raise ValueError("Invalid ligand file format")
         return prep
 
-
     @staticmethod
-    def PrepProtein(protein,context):
+    def PrepProtein(protein, context):
         r"""Prepare protein structures using Schrödinger's Protein Wizard"""
         command = [
             context.command + "/utilities/prepwizard",
@@ -247,7 +247,18 @@ class Glide(Docking):
                 raise subprocess.CalledProcessError(
                     process.returncode, " ".join(grid_command)
                 )
-        except sub/home/mma121/PubChem_small/try_schrodinger/lignova/tests/tmp/tests/tmpprocess.CalledProcessError as e:
+        except (
+            sub
+            / home
+            / mma121
+            / PubChem_small
+            / try_schrodinger
+            / lignova
+            / tests
+            / tmp
+            / tests
+            / tmpprocess.CalledProcessError
+        ) as e:
             logger.error(f"Error while processing PDB ID {protein.file_id}: {e.stderr}")
         except Exception as e:
             logger.error(

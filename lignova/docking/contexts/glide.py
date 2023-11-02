@@ -9,24 +9,36 @@ DEFAULT_COMMAND = os.environ.get("SCHRODINGER", None)
 DEFAULT_FORCEFIELD = "OPLS_2005"
 DEFAULT_DOCKING_PROTOCOL = "SP"
 DEFAULT_N_ENHANCED_SAMPLING = 4
-DEFAULT_LIG_PH= 7.0
+DEFAULT_LIG_PH = 7.0
 DEFAULT_LIG_PHT = 2.0
 DEFAULT_LIG_FORCEFIELD = "14"
 DEFAULT_LIG_STERIOISOMERS = "32"
 DEFAULT_EPIK_PH = 7.0
 DEFAULT_EPIK_PHT = 2.0
-DEFAULT_PROT_RMSD=0.3
-DEFAULT_PROPKA_PH=7.0
-DEFAULT_GRID_INNERBOX=10.0
+DEFAULT_PROT_RMSD = 0.3
+DEFAULT_PROPKA_PH = 7.0
+DEFAULT_GRID_INNERBOX = 10.0
 
 
 class GlideContext:
     r"""Singleton for Glide docking configuration using `glide_sif.py`."""
 
-    def __init__(self, command: Union[str, None], forcefield: str, docking_protocol: Union[str, None,float] ,
-        n_enhanced_sampling: Union[int,None,str], lig_ph:[str,None, float], lig_pht: Union[float,None,str],
-        lig_forcefield:Union[str,None], lig_stereoisomers: Union[int,None], epik_ph: Union[float,None,str],
-        epik_pht:Union[str,None,float] , prot_rmsd:Union [str,None,float ], propka_ph: Union[str,None,float], grid_innerbox:Union[int,None,str]):
+    def __init__(
+        self,
+        command: Union[str, None],
+        forcefield: str,
+        docking_protocol: Union[str, None, float],
+        n_enhanced_sampling: Union[int, None, str],
+        lig_ph: [str, None, float],
+        lig_pht: Union[float, None, str],
+        lig_forcefield: Union[str, None],
+        lig_stereoisomers: Union[int, None],
+        epik_ph: Union[float, None, str],
+        epik_pht: Union[str, None, float],
+        prot_rmsd: Union[str, None, float],
+        propka_ph: Union[str, None, float],
+        grid_innerbox: Union[int, None, str],
+    ):
         if not os.environ.get("SCHRODINGER") or command is None:
             raise OSError(
                 "Schrödinger is not installed or the $SCHRODINGER environment variable is not set."
@@ -44,7 +56,6 @@ class GlideContext:
         self.prot_rmsd = prot_rmsd
         self.propka_ph = propka_ph
         self.grid_innerbox = grid_innerbox
-
 
     @staticmethod
     def get_current() -> "GlideContext":
@@ -66,7 +77,7 @@ class GlideContext:
                 epik_pht=DEFAULT_EPIK_PHT,
                 prot_rmsd=DEFAULT_PROT_RMSD,
                 propka_ph=DEFAULT_PROPKA_PH,
-                grid_innerbox=DEFAULT_GRID_INNERBOX
+                grid_innerbox=DEFAULT_GRID_INNERBOX,
             )
 
         return _default_glide_context

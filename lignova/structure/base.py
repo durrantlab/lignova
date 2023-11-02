@@ -1,13 +1,16 @@
 r"""Implementation of structure class."""
 from typing import Union
 
-from abc import ABC, abstractmethod
 import os
+from abc import ABC, abstractmethod
+
 
 class Structure(ABC):
     r"""Base class for any physical structure."""
 
-    def __init__(self, file_path: Union[str, None] = None, file_id: Union[str, None] = None):
+    def __init__(
+        self, file_path: Union[str, None] = None, file_id: Union[str, None] = None
+    ):
         # TODO:DONE add in other file info as optional parameters.
         self.file_path = file_path
         if file_id is None and file_path is not None:
@@ -17,7 +20,6 @@ class Structure(ABC):
         elif file_id is not None and self.file_path is not None:
             self.file_id = file_id
             self.file_ext = os.path.splitext(self.file_path)[1].lstrip(".")
-
 
     @abstractmethod
     def load(

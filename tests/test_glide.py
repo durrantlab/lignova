@@ -1,14 +1,14 @@
 import glob
-import pytest
 import os
 import shutil
+
+import pytest
+
 from lignova.docking import Glide
+from lignova.docking.contexts import GlideContext
 from lignova.docking.docking import Docking
 from lignova.structure.ligand import Ligand, PreparedLigand
 from lignova.structure.protein import PreparedProtein, Protein
-from lignova.docking.contexts import GlideContext
-
-
 
 protein_id = "6OAV"
 protein_file = "./files/6oav/6OAV_A.pdb"
@@ -21,23 +21,24 @@ lig_object = Ligand(Ligand_file)
 # prepared_protein = PreparedProtein(file_path="./files/6OAV_A_grid.zip")
 # glide = Glide(prepared_ligand, prepared_protein)
 
-glide=Glide()
-context=GlideContext.get_current()
+glide = Glide()
+context = GlideContext.get_current()
+
+
 @pytest.fixture(autouse=True, scope="session")
 def cleanup_after_tests():
-    #This fixture will be automatically used and executed after all tests in the module.
+    # This fixture will be automatically used and executed after all tests in the module.
     yield
     for file in glob.glob("*"):
-        #if the file extension is not .py and a directory move it to the tmp directory
+        # if the file extension is not .py and a directory move it to the tmp directory
         if file.endswith(".py") or os.path.isdir(file):
             continue
         else:
-            shutil.move(file, "./tmp/"+file)
-
+            shutil.move(file, "./tmp/" + file)
 
 
 def test_convert_protein_to_mae():
-    glide.convert_to_mae(prot_object,context)
+    glide.convert_to_mae(prot_object, context)
     assert os.path.exists("6OAV_A.mae")
 
 

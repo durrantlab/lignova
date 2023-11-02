@@ -2,7 +2,9 @@
 name = "lignova"
 version = "0.0.0"
 description = "TODO"
-authors = ["durrantlab <durrantj@pitt.edu>"]
+authors = [
+    "durrantlab <durrantj@pitt.edu>",
+]
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/durrantlab/lignova"
@@ -36,7 +38,6 @@ mypy-extensions = "^1.0.0"
 bump-my-version = "^0.11.0"
 poetry-dynamic-versioning = "^1.1.0"
 
-
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.2"
 pytest-cov = "^4.1.0"
@@ -44,7 +45,6 @@ coverage = "^7.3.1"
 pytest-html = "^4.0.1"
 colorama = "^0.4.6"
 coverage-badge = "^1.1.0"
-
 
 [tool.poetry.group.docs.dependencies]
 sphinx = "^7.2.6"
@@ -61,6 +61,10 @@ pydocstyle = "^6.3.0"
 sphinx-togglebutton = "^0.3.2"
 sphinxcontrib-bibtex = "^2.6.1"
 
+[tool.poetry.group.docs.dependencies.myst-nb]
+git = "https://github.com/executablebooks/MyST-NB"
+rev = "35ebd5429c1c315d2564af261b4df836651962eb"
+
 [tool.bumpversion]
 current_version = "0.0.0"
 tag = true
@@ -75,89 +79,66 @@ replace = "[Unreleased]\n\n## [{new_version}] - {now:%Y-%m-%d}"
 [tool.poetry-dynamic-versioning]
 enable = true
 vcs = "git"
-format-jinja = """
-    {%- if distance == 0 -%}
-        {{ serialize_pep440(base) }}
-    {%- else -%}
-        {{ serialize_pep440(base, post=distance) }}
-    {%- endif -%}
-"""
+format-jinja = "    {%- if distance == 0 -%}\n        {{ serialize_pep440(base) }}\n    {%- else -%}\n        {{ serialize_pep440(base, post=distance) }}\n    {%- endif -%}\n"
 
 [tool.poetry-dynamic-versioning.substitution]
 patterns = [
     "(^__version__\\s*(?::.*?)?=\\s*['\"])[^'\"]*(['\"])",
 ]
 folders = [
-  { path = "conda_poetry_liaison" }
+    { path = "conda_poetry_liaison" },
 ]
-
-[tool.poetry.group.docs.dependencies.myst-nb]
-git = "https://github.com/executablebooks/MyST-NB"
-rev = "35ebd5429c1c315d2564af261b4df836651962eb"
-
-[build-system]
-requires = [
-    "poetry-core>=1.0.0",
-    "poetry-dynamic-versioning>=1.0.0,<2.0.0"
-]
-build-backend = "poetry_dynamic_versioning.backend"
-
 
 [tool.pylint.messages_control]
-# https://pylint.readthedocs.io/en/latest/
 good-names = [
-  "i",
-  "j",
-  "e",
-  "ex"
+    "i",
+    "j",
+    "e",
+    "ex",
 ]
-ignore = ["CVS", "_version.py", "conf.py"]
-
+ignore = [
+    "CVS",
+    "_version.py",
+    "conf.py",
+]
 
 [tool.black]
-# https://github.com/psf/black
-target-version = ["py311"]
+target-version = [
+    "py311",
+]
 line-length = 88
 color = true
-
-exclude = '''
-/(
-    \.git
-    | \.hg
-    | \.mypy_cache
-    | \.tox
-    | \.venv
-    | _build
-    | buck-out
-    | build
-    | dist
-    | env
-    | venv
-)/
-'''
-
+exclude = "/(\n    \\.git\n    | \\.hg\n    | \\.mypy_cache\n    | \\.tox\n    | \\.venv\n    | _build\n    | buck-out\n    | build\n    | dist\n    | env\n    | venv\n)/\n"
 
 [tool.isort]
-# https://github.com/timothycrosley/isort/
 py_version = 311
 line_length = 88
-
-known_typing = ["typing", "types", "typing_extensions", "mypy", "mypy_extensions"]
-sections = ["FUTURE", "TYPING", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+known_typing = [
+    "typing",
+    "types",
+    "typing_extensions",
+    "mypy",
+    "mypy_extensions",
+]
+sections = [
+    "FUTURE",
+    "TYPING",
+    "STDLIB",
+    "THIRDPARTY",
+    "FIRSTPARTY",
+    "LOCALFOLDER",
+]
 profile = "black"
 include_trailing_comma = true
 multi_line_output = 3
 indent = 4
 color_output = true
 
-
 [tool.mypy]
-# https://mypy.readthedocs.io/en/latest/config_file.html#using-a-pyproject-toml-file
 python_version = 3.9
 pretty = true
 show_traceback = true
 color_output = true
-
 allow_redefinition = false
 check_untyped_defs = true
 disallow_any_generics = true
@@ -177,34 +158,135 @@ warn_unreachable = true
 warn_unused_configs = true
 warn_unused_ignores = true
 
-
 [tool.pytest.ini_options]
-# https://docs.pytest.org/en/6.2.x/customize.html#pyproject-toml
-# Directories that are not visited by pytest collector:
-norecursedirs =["lignova", "*.egg", ".eggs", "dist", "build", "docs", ".tox", ".git", "__pycache__"]
-doctest_optionflags = ["NUMBER", "NORMALIZE_WHITESPACE", "IGNORE_EXCEPTION_DETAIL"]
-
-# Extra options:
+norecursedirs = [
+    "lignova",
+    "*.egg",
+    ".eggs",
+    "dist",
+    "build",
+    "docs",
+    ".tox",
+    ".git",
+    "__pycache__",
+]
+doctest_optionflags = [
+    "NUMBER",
+    "NORMALIZE_WHITESPACE",
+    "IGNORE_EXCEPTION_DETAIL",
+]
 addopts = [
-  "--strict-markers",
-  "--tb=short",
-  "--doctest-modules",
-  "--doctest-continue-on-failure",
+    "--strict-markers",
+    "--tb=short",
+    "--doctest-modules",
+    "--doctest-continue-on-failure",
 ]
 
-
 [tool.coverage.run]
-source = ["tests"]
+source = [
+    "tests",
+]
 
+[build-system]
+requires = [
+    "poetry-core>=1.0.0",
+    "poetry-dynamic-versioning>=1.0.0,<2.0.0",
+]
+build-backend = "poetry_dynamic_versioning.backend"
 
 [coverage.paths]
 source = "lignova"
 
-
 [coverage.run]
 branch = true
-
 
 [coverage.report]
 fail_under = 50
 show_missing = true
+
+["tool.poetry.group.conda.dependencies"]
+appdirs = "^1.4.4"
+attrs = "^23.1.0"
+Brotli = "^1.1.0"
+build = "^0.10.0"
+CacheControl = "^0.13.1"
+cachy = "^0.3.0"
+certifi = "^2023.7.22"
+cffi = "^1.16.0"
+cfgv = "^3.3.1"
+charset-normalizer = "^3.3.2"
+cleo = "^2.1.0"
+click = "^8.1.7"
+click-default-group = "^1.2.4"
+clikit = "^0.6.2"
+colorama = "^0.4.6"
+conda_lock = "^2.4.2"
+conda_poetry_liaison = "^0.1.1"
+crashtest = "^0.4.1"
+cryptography = "^41.0.5"
+distlib = "^0.3.7"
+dulwich = "^0.21.6"
+dunamai = "^1.19.0"
+ensureconda = "^1.4.3"
+filelock = "^3.13.1"
+gitdb = "^4.0.11"
+GitPython = "^3.1.40"
+html5lib = "^1.1"
+identify = "^2.5.31"
+idna = "^3.4"
+importlib-metadata = "^6.8.0"
+importlib-resources = "^6.1.0"
+installer = "^0.7.0"
+"jaraco.classes" = "^3.3.0"
+jeepney = "^0.8.0"
+Jinja2 = "^3.1.2"
+jsonschema = "^4.17.3"
+keyring = "^24.2.0"
+MarkupSafe = "^2.1.3"
+more-itertools = "^10.1.0"
+msgpack = "^1.0.6"
+nodeenv = "^1.8.0"
+numpy = "^1.26.0"
+packaging = "^23.2"
+pastel = "^0.2.1"
+pexpect = "^4.8.0"
+pip = "^23.3.1"
+pkginfo = "^1.9.6"
+pkgutil_resolve_name = "^1.3.10"
+platformdirs = "^3.11.0"
+poetry = "^1.6.1"
+poetry-core = "^1.7.0"
+poetry-dynamic-versioning = "^1.1.1"
+poetry-plugin-export = "^1.6.0"
+pre-commit = "^3.5.0"
+ptyprocess = "^0.7.0"
+pycparser = "^2.21"
+pydantic = "^2.0.3"
+pydantic_core = "^2.3.0"
+pylev = "^1.4.0"
+pyproject_hooks = "^1.0.0"
+pyrsistent = "^0.20.0"
+PySocks = "^1.7.1"
+PyYAML = "^6.0.1"
+rapidfuzz = "^3.4.0"
+requests = "^2.31.0"
+requests-toolbelt = "^1.0.0"
+"ruamel.yaml" = "^0.18.4"
+"ruamel.yaml.clib" = "^0.2.7"
+SecretStorage = "^3.3.3"
+setuptools = "^68.2.2"
+shellingham = "^1.5.4"
+six = "^1.16.0"
+smmap = "^5.0.0"
+tomli = "^2.0.1"
+tomli_w = "^1.0.0"
+tomlkit = "^0.12.2"
+toolz = "^0.12.0"
+trove-classifiers = "^2023.10.18"
+typing_extensions = "^4.8.0"
+ukkonen = "^1.0.1"
+urllib3 = "^1.26.18"
+virtualenv = "^20.24.6"
+webencodings = "^0.5.1"
+wheel = "^0.41.3"
+zipp = "^3.17.0"
