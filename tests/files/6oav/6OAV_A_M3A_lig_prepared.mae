@@ -1,0 +1,199 @@
+{ 
+ s_m_m2io_version
+ :::
+ 2.0.0 
+} 
+
+f_m_ct { 
+ s_m_title
+ i_m_ct_stereo_status
+ s_pdb_PDB_TITLE
+ s_pdb_PDB_ID
+ r_pdb_PDB_CRYST1_a
+ r_pdb_PDB_CRYST1_b
+ r_pdb_PDB_CRYST1_c
+ r_pdb_PDB_CRYST1_alpha
+ r_pdb_PDB_CRYST1_beta
+ r_pdb_PDB_CRYST1_gamma
+ s_pdb_PDB_CRYST1_Space_Group
+ i_pdb_PDB_CRYST1_z
+ s_pdb_PDB_CLASSIFICATION
+ s_pdb_PDB_DEPOSITION_DATE
+ s_pdb_PDB_format_version
+ s_m_source_file
+ i_m_source_file_index
+ i_lp_mmshare_version
+ s_epik_input
+ s_epik_cmdline
+ r_lp_tautomer_probability
+ r_epik_Ionization_Penalty
+ r_epik_Ionization_Penalty_Charging
+ r_epik_Ionization_Penalty_Neutral
+ r_epik_State_Penalty
+ r_epik_Charging_Adjusted_Penalty
+ i_epik_Tot_Q
+ i_epik_Tot_abs_Q
+ i_f3d_flags
+ s_lp_Force_Field
+ r_lp_Energy
+ b_lp_Chiralities_Consistent
+ s_lp_Variant
+ i_m_ct_format
+ :::
+ 6OAV 
+  1
+  "MDANALYSIS FRAME 0: Created by PDBWriter" 
+  6OAV 
+  44.123
+  57.356
+  60.744
+  90
+  110.45
+  90
+  "P 1" 
+  1
+  "TRANSFERASE/TRANSFERASE INHIBITOR" 
+  18-MAR-19 
+  3.0 
+  6OAV_A_M3A_lig.mae 
+  1
+  61128
+  TiNDYyhbY0hdW2NIXTEpW2NIXVtjSF1jMVtOSF1jMm5jKFtOSDJdKW4objIpQyg9TylbTkhdYzNbY0hdW2NIXVtjSF1bY0hdW2NIXTM= 
+  J2VwaWtfcHl0aG9uJywgJy1waHQnLCAnMi4wJywgJy1waCcsICc3LjAnLCAnLXRuJywgJzgnLCAnLW1hJywgJzIwMCcsICctaW1hZScsICc8aW5maWxlLm1hZT4nLCAnLW9tYWUnLCAnPG91dGZpbGUubWFlPic= 
+  1
+    0.0001 
+    0.0000 
+    0.0001 
+   -0.0000 
+  0
+  0
+  0
+  0
+  OPLS_2005 
+  30.024873
+  1
+  6OAV-1 
+  2
+ m_depend[7] { 
+  # First column is dependency index #
+  i_m_depend_dependency
+  s_m_depend_property
+  :::
+  1 10 r_lp_tautomer_probability 
+  2 10 r_epik_Ionization_Penalty 
+  3 10 r_epik_Ionization_Penalty_Charging 
+  4 10 r_epik_Ionization_Penalty_Neutral 
+  5 10 r_epik_State_Penalty 
+  6 10 r_epik_Charging_Adjusted_Penalty 
+  7 10 i_epik_Tot_Q 
+  :::
+ } 
+ m_atom[37] { 
+  # First column is atom index #
+  i_m_mmod_type
+  r_m_x_coord
+  r_m_y_coord
+  r_m_z_coord
+  i_m_residue_number
+  s_m_chain_name
+  i_m_color
+  r_m_charge1
+  r_m_charge2
+  s_m_pdb_residue_name
+  s_m_pdb_atom_name
+  i_m_atomic_number
+  s_m_color_rgb
+  r_m_pdb_occupancy
+  r_m_pdb_tfactor
+  i_pdb_PDB_serial
+  s_pdb_segment_id
+  r_epik_H2O_pKa
+  r_epik_H2O_pKa_uncertainty
+  :::
+  1 2 2.098222 0.875891 -1.249545 901 A 2 0.20000 0.20000 "M3A " " C4 " 6 A0A0A0  1 32.3 1 "A   "  <> <>
+  2 2 -0.073466 -0.053591 -0.294910 901 A 2 0.78060 0.78060 "M3A " " C5 " 6 A0A0A0  1 27.43 2 "A   "  <> <>
+  3 2 -1.896072 -0.692526 0.469233 901 A 2 0.59240 0.59240 "M3A " " C6 " 6 A0A0A0  1 29.1 3 "A   "  <> <>
+  4 25 1.287951 -0.117730 -0.678691 901 A 2 -0.78000 -0.78000 "M3A " " N1 " 7 A0A0A0  1 29.16 4 "A   "   -0.352    2.000 
+  5 2 -3.216525 1.431851 0.258709 901 A 2 0.81370 0.81370 "M3A " " C7 " 6 A0A0A0  1 39.04 5 "A   "  <> <>
+  6 2 -4.006288 3.778339 -0.183309 901 A 2 0.10660 0.10660 "M3A " " C8 " 6 A0A0A0  1 38.42 6 "A   "  <> <>
+  7 25 -0.677098 -1.161616 0.226607 901 A 2 -0.63290 -0.63290 "M3A " " N2 " 7 A0A0A0  1 25.71 7 "A   "    3.162    2.220 
+  8 2 -3.527859 5.015748 -0.664429 901 A 2 -0.11500 -0.11500 "M3A " " C9 " 6 A0A0A0  1 41.89 8 "A   "  <> <>
+  9 2 -4.376856 6.136872 -0.733841 901 A 2 -0.11500 -0.11500 "M3A " " C10" 6 A0A0A0  1 40.65 9 "A   "  <> <>
+  10 2 -5.717790 6.030246 -0.321668 901 A 2 -0.11500 -0.11500 "M3A " " C11" 6 A0A0A0  1 41.92 10 "A   "  <> <>
+  11 2 -6.206588 4.801529 0.159481 901 A 2 -0.11500 -0.11500 "M3A " " C12" 6 A0A0A0  1 40.35 11 "A   "  <> <>
+  12 25 -2.911116 -1.469870 1.016652 901 A 2 -0.92000 -0.92000 "M3A " " N3 " 7 A0A0A0  1 28.91 12 "A   "    2.323    2.220 
+  13 2 -5.358711 3.678520 0.229899 901 A 2 -0.11500 -0.11500 "M3A " " C13" 6 A0A0A0  1 40.73 13 "A   "  <> <>
+  14 2 3.490132 0.796406 -1.033820 901 A 2 -0.11500 -0.11500 "M3A " " C14" 6 A0A0A0  1 34.56 14 "A   "  <> <>
+  15 2 4.358836 1.758611 -1.584811 901 A 2 -0.11500 -0.11500 "M3A " " C15" 6 A0A0A0  1 36.58 15 "A   "  <> <>
+  16 25 -2.023500 0.610161 0.127120 901 A 2 0.06560 0.06560 "M3A " " N4 " 7 A0A0A0  1 27.54 16 "A   "  <> <>
+  17 24 5.447230 4.593518 -3.394460 901 A 2 -0.43000 -0.43000 "M3A " " N  " 7 A0A0A0  1 47.42 17 "A   "  <> <>
+  18 1 4.735829 3.801982 -2.940580 901 A 2 0.39500 0.39500 "M3A " " C  " 6 A0A0A0  1 42.53 18 "A   "  <> <>
+  19 15 -4.247878 0.943419 0.720318 901 A 2 -0.61630 -0.61630 "M3A " " O  " 8 A0A0A0  1 39.9 19 "A   "   -2.030    0.900 
+  20 2 3.841973 2.808043 -2.370168 901 A 2 0.03500 0.03500 "M3A " " C1 " 6 A0A0A0  1 32.49 20 "A   "  <> <>
+  21 2 2.454983 2.885661 -2.605766 901 A 2 -0.11500 -0.11500 "M3A " " C2 " 6 A0A0A0  1 34.51 21 "A   "  <> <>
+  22 2 1.587955 1.923045 -2.052713 901 A 2 -0.11500 -0.11500 "M3A " " C3 " 6 A0A0A0  1 32.12 22 "A   "  <> <>
+  23 25 -3.070963 2.706648 -0.155131 901 A 2 -0.47270 -0.47270 "M3A " " N5 " 7 A0A0A0  1 34.27 23 "A   "  <> <>
+  24 25 -0.835190 1.036875 -0.366381 901 A 2 -0.52820 -0.52820 "M3A " " N6 " 7 A0A0A0  1 28.72 24 "A   "   -1.333    2.220 
+  25 43 1.759367 -0.969627 -0.410545 901 A 21 0.38000 0.38000 "M3A " " HN1" 1 FFFFFF  <> <> <> <>  12.765    1.117 
+  26 41 -2.500389 5.110856 -0.984942 901 A 21 0.11500 0.11500 "M3A " " HC9" 1 FFFFFF  <> <> <> <> <> <>
+  27 41 -3.998633 7.078349 -1.103831 901 A 21 0.11500 0.11500 "M3A " "HC10" 1 FFFFFF  <> <> <> <> <> <>
+  28 41 -6.370446 6.889161 -0.375071 901 A 21 0.11500 0.11500 "M3A " "HC11" 1 FFFFFF  <> <> <> <> <> <>
+  29 41 -7.236110 4.718823 0.475747 901 A 21 0.11500 0.11500 "M3A " "HC12" 1 FFFFFF  <> <> <> <> <> <>
+  30 43 -2.763797 -2.439770 1.255950 901 A 21 0.36000 0.36000 "M3A " "H3_1" 1 FFFFFF  <> <> <> <>  11.515    2.220 
+  31 43 -3.829245 -1.085794 1.192587 901 A 21 0.36000 0.36000 "M3A " "H3_2" 1 FFFFFF  <> <> <> <>  11.515    2.220 
+  32 41 -5.779819 2.759639 0.603452 901 A 21 0.11500 0.11500 "M3A " "HC13" 1 FFFFFF  <> <> <> <> <> <>
+  33 41 3.900104 -0.004011 -0.435009 901 A 21 0.11500 0.11500 "M3A " "HC14" 1 FFFFFF  <> <> <> <> <> <>
+  34 41 5.421356 1.684283 -1.402039 901 A 21 0.11500 0.11500 "M3A " "HC15" 1 FFFFFF  <> <> <> <> <> <>
+  35 41 2.048075 3.679415 -3.215979 901 A 21 0.11500 0.11500 "M3A " " HC2" 1 FFFFFF  <> <> <> <> <> <>
+  36 41 0.534676 1.997784 -2.273529 901 A 21 0.11500 0.11500 "M3A " " HC3" 1 FFFFFF  <> <> <> <> <> <>
+  37 43 -2.150237 2.937999 -0.499481 901 A 21 0.29120 0.29120 "M3A " " HN5" 1 FFFFFF  <> <> <> <>  12.541    0.791 
+  :::
+ } 
+ m_bond[39] { 
+  # First column is bond index #
+  i_m_from
+  i_m_to
+  i_m_order
+  :::
+  1 1 4 1
+  2 1 14 1
+  3 1 22 2
+  4 2 4 1
+  5 2 7 1
+  6 2 24 2
+  7 3 7 2
+  8 3 12 1
+  9 3 16 1
+  10 4 25 1
+  11 5 16 1
+  12 5 19 2
+  13 5 23 1
+  14 6 8 2
+  15 6 13 1
+  16 6 23 1
+  17 8 9 1
+  18 8 26 1
+  19 9 10 2
+  20 9 27 1
+  21 10 11 1
+  22 10 28 1
+  23 11 13 2
+  24 11 29 1
+  25 12 30 1
+  26 12 31 1
+  27 13 32 1
+  28 14 15 2
+  29 14 33 1
+  30 15 20 1
+  31 15 34 1
+  32 16 24 1
+  33 17 18 3
+  34 18 20 1
+  35 20 21 2
+  36 21 22 1
+  37 21 35 1
+  38 22 36 1
+  39 23 37 1
+  :::
+ } 
+} 
