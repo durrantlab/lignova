@@ -18,12 +18,12 @@ conda-create:
 	- conda deactivate
 	conda remove -y -n $(CONDA_NAME) --all
 	conda create -y -n $(CONDA_NAME)
+	$(CONDA) conda install -y python=$(PYTHON_VERSION)
 	$(CONDA) conda install -y conda-lock
 
 # Default packages that we always need.
 .PHONY: conda-setup
 conda-setup:
-	$(CONDA) conda install -y python=$(PYTHON_VERSION)
 	$(CONDA) conda install -y -c conda-forge poetry
 	$(CONDA) conda install -y -c conda-forge pre-commit
 	$(CONDA) conda install -y -c conda-forge tomli tomli-w
@@ -34,11 +34,12 @@ conda-setup:
 conda-dependencies:
 	echo "No conda-only packages are required."
 
-.PHONY: write-conda-lock
-write-conda-lock:
+.PHONY: conda-lock
+conda-lock:
 	- rm $(REPO_PATH)/conda-lock.yml
 	$(CONDA) conda env export --from-history | grep -v "^prefix" > environment.yml
 	$(CONDA) conda-lock -f environment.yml -p linux-64 -p osx-64 -p win-64
+	rm $(REPO_PATH)/environment.yml
 	$(CONDA) cpl-deps $(REPO_PATH)/pyproject.toml --env_name $(CONDA_NAME)
 	$(CONDA) cpl-clean --env_name $(CONDA_NAME)
 
@@ -55,7 +56,6 @@ pre-commit-install:
 .PHONY: poetry-lock
 poetry-lock:
 	$(CONDA) poetry lock --no-interaction
-	$(CONDA) poetry export --without-hashes > requirements.txt
 
 .PHONY: install
 install:
