@@ -13,7 +13,6 @@
 import os
 import sys
 
-
 # -- Project information -----------------------------------------------------
 
 project = "lignova"

@@ -27,7 +27,7 @@ conda-setup:
 	$(CONDA) conda install -y -c conda-forge poetry
 	$(CONDA) conda install -y -c conda-forge pre-commit
 	$(CONDA) conda install -y -c conda-forge tomli tomli-w
-	$(CONDA) pip install conda_poetry_liaison
+	$(CONDA) conda install -y -c conda-forge conda-poetry-liaison
 
 # Conda-only packages specific to this project.
 .PHONY: conda-dependencies
@@ -45,7 +45,6 @@ write-conda-lock:
 .PHONY: from-conda-lock
 from-conda-lock:
 	$(CONDA) conda-lock install -n $(CONDA_NAME) $(REPO_PATH)/conda-lock.yml
-	$(CONDA) pip install conda_poetry_liaison
 	$(CONDA) cpl-clean --env_name $(CONDA_NAME)
 
 .PHONY: pre-commit-install

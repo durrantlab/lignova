@@ -13,9 +13,9 @@
 version: 1
 metadata:
   content_hash:
-    linux-64: c90e32182d063d787e34dc53ee5bd2bf2e2fb96bbb203f6644827227596f75b7
-    osx-64: 7a0351aaf43720ec6f04dc3c2f537194534e836e0dd87f24bb5086dcc4cd3ead
-    win-64: 799dd4521f35e20309d2679071c46e9855138b62bc7dcdf4668f3df4de230b94
+    linux-64: b39fcb1182004d05af1f4084de6ed7edf7a66e3798b8e43c7175a5dcb2b25b20
+    osx-64: 1b35287cc5e6af0fdc637874fe946889ca811ebcd520d9dc48a3794e4384ff30
+    win-64: db1c82ff11aa90796627fc245965af9728fabdfb2df37c4cdd59f1a5f9251535
   channels:
   - url: conda-forge
     used_env_vars: []
@@ -1171,7 +1171,7 @@ package:
   category: main
   optional: false
 - name: ruamel.yaml
-  version: 0.18.4
+  version: 0.18.5
   manager: conda
   platform: linux-64
   dependencies:
@@ -1180,10 +1180,10 @@ package:
     python_abi: 3.11.*
     ruamel.yaml.clib: '>=0.1.2'
     setuptools: ''
-  url: https://conda.anaconda.org/conda-forge/linux-64/ruamel.yaml-0.18.4-py311h459d7ec_0.conda
+  url: https://conda.anaconda.org/conda-forge/linux-64/ruamel.yaml-0.18.5-py311h459d7ec_0.conda
   hash:
-    md5: a73b5092b7b7f3dfa58b02179d7fed8e
-    sha256: 2de8ece99096c7ae0f2567b40bba16a9feffa1e9384eba9090662034d8ab10b7
+    md5: 1101ec27377f8e45d8431a5f21d744f1
+    sha256: c92e7bbb1d02286bcd3d3292208006f796ae45df82af3deec940339493415c04
   category: main
   optional: false
 - name: typing-extensions
@@ -1254,6 +1254,20 @@ package:
   hash:
     md5: 1caf746dab2853ce1cb8e8a98a25b050
     sha256: 49c02ea3c76c8f3c737cd97c4d0bd5382d4e2094db95fbfda23e358582217779
+  category: main
+  optional: false
+- name: dunamai
+  version: 1.19.0
+  manager: conda
+  platform: linux-64
+  dependencies:
+    importlib-metadata: '>=1.6.0'
+    packaging: '>=20.9'
+    python: '>=3.5'
+  url: https://conda.anaconda.org/conda-forge/noarch/dunamai-1.19.0-pyhd8ed1ab_0.conda
+  hash:
+    md5: 91c171d32e52dcc8ef3a356bed422fdd
+    sha256: f76b5984cabfdbea3da8365641503c2400440583918afb790f6b06a4ef486fc0
   category: main
   optional: false
 - name: gitpython
@@ -1438,6 +1452,21 @@ package:
     sha256: a56ec678a4e58d0a450174fd813581e961829def274453e093c9dae836b80cee
   category: main
   optional: false
+- name: poetry-dynamic-versioning
+  version: 1.1.1
+  manager: conda
+  platform: linux-64
+  dependencies:
+    dunamai: '>=1.18.0,<2.0.0'
+    jinja2: '>=2.11.1,<4'
+    python: '>=3.7'
+    tomlkit: '>=0.4'
+  url: https://conda.anaconda.org/conda-forge/noarch/poetry-dynamic-versioning-1.1.1-pyhd8ed1ab_0.conda
+  hash:
+    md5: d3e43cf88fee66844c9bb3d0c44183f0
+    sha256: 1add766c16158145068108d0b1ec08770be18cb9077bf8855002d1f816ced617
+  category: main
+  optional: false
 - name: pydantic
   version: 2.0.3
   manager: conda
@@ -1454,7 +1483,7 @@ package:
   category: main
   optional: false
 - name: rapidfuzz
-  version: 3.4.0
+  version: 3.5.2
   manager: conda
   platform: linux-64
   dependencies:
@@ -1463,10 +1492,10 @@ package:
     numpy: ''
     python: '>=3.11,<3.12.0a0'
     python_abi: 3.11.*
-  url: https://conda.anaconda.org/conda-forge/linux-64/rapidfuzz-3.4.0-py311hb755f60_0.conda
+  url: https://conda.anaconda.org/conda-forge/linux-64/rapidfuzz-3.5.2-py311hb755f60_0.conda
   hash:
-    md5: b92b9110d226b8bb28423ab3dbb4dc25
-    sha256: b8ae3fb2f81f032614894952e6c147c990e39755d17cf7dd465e301b55dae7b8
+    md5: 7b892e69ec188e0737ce5826c7b9826d
+    sha256: da92b038d1bfe007352689e1dfe221b30f308f6fa5be6afb6fabf03128385ba6
   category: main
   optional: false
 - name: requests-toolbelt
@@ -1539,6 +1568,21 @@ package:
   hash:
     md5: 69569ea8a6d1465193345a40421d138b
     sha256: eed2d2cb8792b3ae6434ce49bf5fe1ae5d885253f6bd2e56da933c427705fcbc
+  category: main
+  optional: false
+- name: conda-poetry-liaison
+  version: 0.1.1
+  manager: conda
+  platform: linux-64
+  dependencies:
+    poetry-dynamic-versioning: '>=1.1.0,<2.0.0'
+    python: '>=3.9.0,<4.0.0'
+    tomli: '>=2.0.1,<3.0.0'
+    tomli-w: '>=1.0.0,<2.0.0'
+  url: https://conda.anaconda.org/conda-forge/noarch/conda-poetry-liaison-0.1.1-pyhd8ed1ab_0.conda
+  hash:
+    md5: 01abd6bdef7c8b2e94e65d60a4907a99
+    sha256: 4e47d638594c1f9e96f675e9f75aadd84c5ea317d59a210a9a04d744c0744303
   category: main
   optional: false
 - name: keyring
@@ -2600,7 +2644,7 @@ package:
   category: main
   optional: false
 - name: ruamel.yaml
-  version: 0.18.4
+  version: 0.18.5
   manager: conda
   platform: osx-64
   dependencies:
@@ -2608,10 +2652,10 @@ package:
     python_abi: 3.11.*
     ruamel.yaml.clib: '>=0.1.2'
     setuptools: ''
-  url: https://conda.anaconda.org/conda-forge/osx-64/ruamel.yaml-0.18.4-py311he705e18_0.conda
+  url: https://conda.anaconda.org/conda-forge/osx-64/ruamel.yaml-0.18.5-py311he705e18_0.conda
   hash:
-    md5: 9f9e74af74b1cecb45d2571d9141e90c
-    sha256: fb14ae1ad19f3fb1af001879bd32a99c5a6b549a096f7c77f7d2b496bc34d192
+    md5: b8e2686abf5f980d52579b28441953f9
+    sha256: afdaab0d0f5a288b31450c3da260381da5916c61f122a0b3f5dea76d1ca863bb
   category: main
   optional: false
 - name: typing-extensions
@@ -2665,6 +2709,20 @@ package:
   hash:
     md5: 9edb6b2885bd7d71b098a118a649fa11
     sha256: cf7d0f71fe73559bd85a97490d7b6ed36a8bd9afd087ee743cad0b8b2f0a20d6
+  category: main
+  optional: false
+- name: dunamai
+  version: 1.19.0
+  manager: conda
+  platform: osx-64
+  dependencies:
+    importlib-metadata: '>=1.6.0'
+    packaging: '>=20.9'
+    python: '>=3.5'
+  url: https://conda.anaconda.org/conda-forge/noarch/dunamai-1.19.0-pyhd8ed1ab_0.conda
+  hash:
+    md5: 91c171d32e52dcc8ef3a356bed422fdd
+    sha256: f76b5984cabfdbea3da8365641503c2400440583918afb790f6b06a4ef486fc0
   category: main
   optional: false
 - name: gitpython
@@ -2875,6 +2933,21 @@ package:
     sha256: dedbbb7d109ad054eb80419aaa9aae6f86d39c892bc278aa04a3980c3bddbbea
   category: main
   optional: false
+- name: poetry-dynamic-versioning
+  version: 1.1.1
+  manager: conda
+  platform: osx-64
+  dependencies:
+    dunamai: '>=1.18.0,<2.0.0'
+    jinja2: '>=2.11.1,<4'
+    python: '>=3.7'
+    tomlkit: '>=0.4'
+  url: https://conda.anaconda.org/conda-forge/noarch/poetry-dynamic-versioning-1.1.1-pyhd8ed1ab_0.conda
+  hash:
+    md5: d3e43cf88fee66844c9bb3d0c44183f0
+    sha256: 1add766c16158145068108d0b1ec08770be18cb9077bf8855002d1f816ced617
+  category: main
+  optional: false
 - name: pydantic
   version: 2.0.3
   manager: conda
@@ -2891,7 +2964,7 @@ package:
   category: main
   optional: false
 - name: rapidfuzz
-  version: 3.4.0
+  version: 3.5.2
   manager: conda
   platform: osx-64
   dependencies:
@@ -2900,10 +2973,10 @@ package:
     numpy: ''
     python: '>=3.11,<3.12.0a0'
     python_abi: 3.11.*
-  url: https://conda.anaconda.org/conda-forge/osx-64/rapidfuzz-3.4.0-py311hd39e593_0.conda
+  url: https://conda.anaconda.org/conda-forge/osx-64/rapidfuzz-3.5.2-py311hd39e593_0.conda
   hash:
-    md5: f06e2beccae039610aa74ff9700d31df
-    sha256: 7b3b92d1c8acaf34c0dc1985262c3665dc456260382c0cec04367d9d3a3d95b7
+    md5: 0ee5e42297fabfdf77e4f0674b647642
+    sha256: 13ef78291bfcfaf58763a36d29e6e4109ce1ef274cfc23ff1de9686e9749ad11
   category: main
   optional: false
 - name: requests-toolbelt
@@ -2960,6 +3033,21 @@ package:
   hash:
     md5: 69569ea8a6d1465193345a40421d138b
     sha256: eed2d2cb8792b3ae6434ce49bf5fe1ae5d885253f6bd2e56da933c427705fcbc
+  category: main
+  optional: false
+- name: conda-poetry-liaison
+  version: 0.1.1
+  manager: conda
+  platform: osx-64
+  dependencies:
+    poetry-dynamic-versioning: '>=1.1.0,<2.0.0'
+    python: '>=3.9.0,<4.0.0'
+    tomli: '>=2.0.1,<3.0.0'
+    tomli-w: '>=1.0.0,<2.0.0'
+  url: https://conda.anaconda.org/conda-forge/noarch/conda-poetry-liaison-0.1.1-pyhd8ed1ab_0.conda
+  hash:
+    md5: 01abd6bdef7c8b2e94e65d60a4907a99
+    sha256: 4e47d638594c1f9e96f675e9f75aadd84c5ea317d59a210a9a04d744c0744303
   category: main
   optional: false
 - name: pre-commit
@@ -4052,7 +4140,7 @@ package:
   category: main
   optional: false
 - name: ruamel.yaml
-  version: 0.18.4
+  version: 0.18.5
   manager: conda
   platform: win-64
   dependencies:
@@ -4063,10 +4151,10 @@ package:
     ucrt: '>=10.0.20348.0'
     vc: '>=14.2,<15'
     vc14_runtime: '>=14.29.30139'
-  url: https://conda.anaconda.org/conda-forge/win-64/ruamel.yaml-0.18.4-py311ha68e1ae_0.conda
+  url: https://conda.anaconda.org/conda-forge/win-64/ruamel.yaml-0.18.5-py311ha68e1ae_0.conda
   hash:
-    md5: cc357a9f40b6287a0e3510102b06a743
-    sha256: 7bdfc4e93866be3bc827ef2ea68de0e252d07ae0f9c1f365c3bd60a84fd47734
+    md5: c21c5fda85131862a99f9550aea3bfca
+    sha256: 1714147dd16e2340a43cb616adfb68c408237e4f8d1b0d3cb1da0c302715f2be
   category: main
   optional: false
 - name: tbb
@@ -4120,6 +4208,20 @@ package:
   hash:
     md5: 7c2b6931f9b3548ed78478332095c3e9
     sha256: b36e35d735ddd29d7c592eb3de4b3979e13a9f76f1b4bc939f2cb4402758d6d0
+  category: main
+  optional: false
+- name: dunamai
+  version: 1.19.0
+  manager: conda
+  platform: win-64
+  dependencies:
+    importlib-metadata: '>=1.6.0'
+    packaging: '>=20.9'
+    python: '>=3.5'
+  url: https://conda.anaconda.org/conda-forge/noarch/dunamai-1.19.0-pyhd8ed1ab_0.conda
+  hash:
+    md5: 91c171d32e52dcc8ef3a356bed422fdd
+    sha256: f76b5984cabfdbea3da8365641503c2400440583918afb790f6b06a4ef486fc0
   category: main
   optional: false
 - name: gitpython
@@ -4315,6 +4417,21 @@ package:
     sha256: 915eae5e0dedbf87733a0b8c6f410678c77111a3fb26ca0a272e11ff979e7ef2
   category: main
   optional: false
+- name: poetry-dynamic-versioning
+  version: 1.1.1
+  manager: conda
+  platform: win-64
+  dependencies:
+    dunamai: '>=1.18.0,<2.0.0'
+    jinja2: '>=2.11.1,<4'
+    python: '>=3.7'
+    tomlkit: '>=0.4'
+  url: https://conda.anaconda.org/conda-forge/noarch/poetry-dynamic-versioning-1.1.1-pyhd8ed1ab_0.conda
+  hash:
+    md5: d3e43cf88fee66844c9bb3d0c44183f0
+    sha256: 1add766c16158145068108d0b1ec08770be18cb9077bf8855002d1f816ced617
+  category: main
+  optional: false
 - name: pydantic
   version: 2.0.3
   manager: conda
@@ -4373,6 +4490,21 @@ package:
   hash:
     md5: 174bd699bb5aa9e2622eb4b288276ff8
     sha256: aae7ab3a54989f9bf9273e4a17c911ba339a8b9354250bc11fb8eff2e3f4be60
+  category: main
+  optional: false
+- name: conda-poetry-liaison
+  version: 0.1.1
+  manager: conda
+  platform: win-64
+  dependencies:
+    poetry-dynamic-versioning: '>=1.1.0,<2.0.0'
+    python: '>=3.9.0,<4.0.0'
+    tomli: '>=2.0.1,<3.0.0'
+    tomli-w: '>=1.0.0,<2.0.0'
+  url: https://conda.anaconda.org/conda-forge/noarch/conda-poetry-liaison-0.1.1-pyhd8ed1ab_0.conda
+  hash:
+    md5: 01abd6bdef7c8b2e94e65d60a4907a99
+    sha256: 4e47d638594c1f9e96f675e9f75aadd84c5ea317d59a210a9a04d744c0744303
   category: main
   optional: false
 - name: ensureconda
@@ -4514,7 +4646,7 @@ package:
   category: main
   optional: false
 - name: rapidfuzz
-  version: 3.4.0
+  version: 3.5.2
   manager: conda
   platform: win-64
   dependencies:
@@ -4524,10 +4656,10 @@ package:
     ucrt: '>=10.0.20348.0'
     vc: '>=14.2,<15'
     vc14_runtime: '>=14.29.30139'
-  url: https://conda.anaconda.org/conda-forge/win-64/rapidfuzz-3.4.0-py311h12c1d0e_0.conda
+  url: https://conda.anaconda.org/conda-forge/win-64/rapidfuzz-3.5.2-py311h12c1d0e_0.conda
   hash:
-    md5: 1d81a039b4a932f448ca1aaa206880b4
-    sha256: 6f2b2b435f1c9caafcf8b9e20d0ed1853785e4a4042abb478ea1959e89e64475
+    md5: e1451c662b371778c3083a20876e1d01
+    sha256: 465dc353e303655790564c2ac7ad1608a053230e933e17ffeca279a5a50707af
   category: main
   optional: false
 - name: cleo

@@ -9,3 +9,4 @@ dependencies:
   - pre-commit
   - tomli
   - tomli-w
+  - conda-poetry-liaison
