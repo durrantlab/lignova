@@ -18,12 +18,12 @@ conda-create:
 	- conda deactivate
 	conda remove -y -n $(CONDA_NAME) --all
 	conda create -y -n $(CONDA_NAME)
-	$(CONDA) conda install -y python=$(PYTHON_VERSION)
 	$(CONDA) conda install -y conda-lock
 
 # Default packages that we always need.
 .PHONY: conda-setup
 conda-setup:
+	$(CONDA) conda install -y python=$(PYTHON_VERSION)
 	$(CONDA) conda install -y -c conda-forge poetry
 	$(CONDA) conda install -y -c conda-forge pre-commit
 	$(CONDA) conda install -y -c conda-forge tomli tomli-w
