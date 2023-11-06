@@ -7,6 +7,7 @@ PACKAGE_PATH := $(REPO_PATH)/$(PACKAGE_NAME)
 TESTS_PATH := $(REPO_PATH)/tests
 CONDA_NAME := $(PACKAGE_NAME)-dev
 CONDA := conda run -n $(CONDA_NAME)
+CONDA_LOCK_OPTIONS := -p linux-64 -p osx-64 -p win-64 --channel conda-forge
 DOCS_URL := https://durrantlab.github.io/lignova
 
 
@@ -38,7 +39,7 @@ conda-dependencies:
 conda-lock:
 	- rm $(REPO_PATH)/conda-lock.yml
 	$(CONDA) conda env export --from-history | grep -v "^prefix" > environment.yml
-	$(CONDA) conda-lock -f environment.yml -p linux-64 -p osx-64 -p win-64
+	$(CONDA) conda-lock -f environment.yml $(CONDA_LOCK_OPTIONS)
 	rm $(REPO_PATH)/environment.yml
 	$(CONDA) cpl-deps $(REPO_PATH)/pyproject.toml --env_name $(CONDA_NAME)
 	$(CONDA) cpl-clean --env_name $(CONDA_NAME)
@@ -65,6 +66,9 @@ install:
 
 .PHONY: refresh
 refresh: conda-create from-conda-lock pre-commit-install install
+
+.PHONY: refresh-locks
+refresh-locks: conda-create conda-setup conda-lock pre-commit-install poetry-lock install
 
 
 
