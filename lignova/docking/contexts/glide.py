@@ -18,7 +18,7 @@ DEFAULT_EPIK_PHT = 2.0
 DEFAULT_PROT_RMSD = 0.3
 DEFAULT_PROPKA_PH = 7.0
 DEFAULT_GRID_INNERBOX = 10.0
-
+DEFAULT_POSTDOCK_N_POSES = 100
 
 class GlideContext:
     r"""Singleton for Glide docking configuration using `glide_sif.py`."""
@@ -38,6 +38,7 @@ class GlideContext:
         prot_rmsd: Union[str, None, float],
         propka_ph: Union[str, None, float],
         grid_innerbox: Union[int, None, str],
+        postdock_nposes: Union[int, None, str],
     ):
         if not os.environ.get("SCHRODINGER") or command is None:
             raise OSError(
@@ -56,6 +57,7 @@ class GlideContext:
         self.prot_rmsd = prot_rmsd
         self.propka_ph = propka_ph
         self.grid_innerbox = grid_innerbox
+        self.postdock_nposes = postdock_nposes
 
     @staticmethod
     def get_current() -> "GlideContext":
@@ -78,6 +80,7 @@ class GlideContext:
                 prot_rmsd=DEFAULT_PROT_RMSD,
                 propka_ph=DEFAULT_PROPKA_PH,
                 grid_innerbox=DEFAULT_GRID_INNERBOX,
+                postdock_nposes=DEFAULT_POSTDOCK_N_POSES,
             )
 
         return _default_glide_context

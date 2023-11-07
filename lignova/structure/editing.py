@@ -67,8 +67,22 @@ def remove_hetatoms(u: mda.Universe) -> mda.Universe:
     """
     return u.select_atoms("not record_type HETATM")
 
+def filter_hetatoms(u: mda.Universe) -> mda.Universe:
+    r"""Filter hetero atoms.
+
+    Parameters
+    ----------
+    u
+        MDAnalysis universe to process.
+    """
+    return u.select_atoms("record_type HETATM")
 
 def separate_protein_ligand(pdb: Union[str, TextIO]) -> tuple["Protein", "Ligand"]:
-    # TODO: Function that takes in PDB, cleans (e.g., remove waters), and provides
-    # Protein and Ligand objects.
-    pass
+    # TODO: DONE? Function that takes in PDB, cleans (e.g., remove waters), and provides
+    # Protein and Ligand objects
+    pdb_obj=get_mda_universe(pdb)
+    selection=select_chains(pdb_obj)
+    protein=remove_residues(selection, residues=["HOH"])
+    hetatm=filter_hetatoms(selection)
+    ligand=remove_residues(u, residues=["HOH"])
+    return protein, ligand

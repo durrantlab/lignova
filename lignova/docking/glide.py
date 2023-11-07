@@ -44,13 +44,13 @@ class Glide(Docking):
             "-calc_input_rms",
             "yes",
             "-forcefield",
-            "OPLS_2005",
+            context.forcefield,
             "-precision",
-            "SP",
+            context.docking_protocol,
             "-nenhanced_sampling",
-            "4",
+            context.n_enhanced_sampling,
             "-postdock_npose",
-            "100",
+            context.postdock_nposes,
             f"{jobname}",
         ]
 
