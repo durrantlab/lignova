@@ -33,6 +33,8 @@ class Protein(Structure):
         pdb_text = Protein.get_pdb_from_rcsb(pdb_id)
         if write:
             if write_path is None:
+                raise ValueError("Must provide write_path if write is True.")
+            else:
                 self._pdb_file_path = write_text(pdb_text, write_path, file_ext="pdb")
         else:
             self._pdb_text = pdb_text
@@ -70,7 +72,7 @@ class Protein(Structure):
         """
         if file_path is not None:
             self._pdb_file_path = file_path
-        if pdb_id is not None:
+        if pdb_id is not None: 
             self._load_from_pdb_id(pdb_id, write, write_path)
 
 

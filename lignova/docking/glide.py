@@ -27,8 +27,7 @@ class Glide(Docking):
 
     def run(self, target, ligand, context):
         r"""Dock ligand into protein grid."""
-        # TODO: Break apart into functions and update with new arguments
-
+        # TODO:DONE Break apart into functions and update with new arguments
         # ensure that prepped_ligand and grid_file are defined and if not raise an error and exit
         if not prepped_ligand or not self.grid_file:
             logger.error("Prepared Ligand or Prepared Protein not defined.")

@@ -9,12 +9,27 @@ from lignova.docking.contexts import GlideContext
 from lignova.docking.docking import Docking
 from lignova.structure.ligand import Ligand, PreparedLigand
 from lignova.structure.protein import PreparedProtein, Protein
+from lignova.structure.utils import separate_protein_ligand
+from lignova.io import *
+from lignova.structure.editing import *
 
-protein_id = "6OAV"
-protein_file = "./files/6oav/6OAV_A.pdb"
-prot_object = Protein(protein_file)
-Ligand_file = "./files/6oav/6OAV_A_M3A_lig.pdb"
-lig_object = Ligand(Ligand_file)
+
+# Ensures we execute from file directory (for relative paths).
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
+
+
+
+def prep_dirs():
+    os.makedirs(context_protein_6Oav["write_dir"])
+
+context_protein_6Oav = {
+    "id": "6OAV",
+    "file_path": "./files/6oav/6oav.pdb",
+    "write_dir": "./tmp/6oav",
+}
+
+prot_object = Protein(context_protein_6Oav["file_path"])
+
 # ligand_file_mae = "./files/6OAV_A_M3A_lig.mae"
 # lig_object_mae = Ligand(ligand_file_mae)
 # prepared_ligand = PreparedLigand(file_path="./files/6OAV_A_M3A_lig_prepared.mae")
@@ -24,21 +39,6 @@ lig_object = Ligand(Ligand_file)
 glide = Glide()
 context = GlideContext.get_current()
 
-# Ensures we execute from file directory (for relative paths).
-os.chdir(os.path.dirname(os.path.realpath(__file__)))
-
-"""
-@pytest.fixture(autouse=True, scope="session")
-def cleanup_after_tests():
-    # This fixture will be automatically used and executed after all tests in the module.
-    yield
-    for file in glob.glob("*"):
-        # if the file extension is not .py and a directory move it to the tmp directory
-        if file.endswith(".py") or os.path.isdir(file):
-            continue
-        else:
-            shutil.move(file, "./tmp/" + file)
-"""
 
 def test_convert_protein_to_mae():
     glide.convert_to_mae(prot_object, context)
