@@ -50,7 +50,7 @@ class Glide(Docking):
             context.n_enhanced_sampling,
             "-postdock_npose",
             context.postdock_nposes,
-            f"{jobname}",
+            os.path.join(context.write_dir, f"{jobname}.in"),
         ]
 
         try:
@@ -73,7 +73,7 @@ class Glide(Docking):
         except Exception as e:
             logger.error(f"An error occurred during docking: {str(e)}")
             raise e
-        command = [os.environ["SCHRODINGER"] + "/glide", "-WAIT", f"{jobname}.in"]
+        command = [os.environ["SCHRODINGER"] + "/glide", "-WAIT", os.path.join(context.write_dir,  f"{jobname}.in")]
         try:
             process = subprocess.Popen(
                 command,
@@ -100,7 +100,7 @@ class Glide(Docking):
         command = [
             context.command + "/utilities/structconvert",
             input_object.file_path,
-            f"{input_object.file_id}.mae",
+            os.path.join(context.write_dir,f"{input_object.file_id}.mae"),
         ]
         try:
             process = subprocess.Popen(
@@ -123,15 +123,16 @@ class Glide(Docking):
         r"""Check the extension of the ligand file using the split function and
         Prepare ligands for docking using Schrödinger's LigPrep"""
         if ligand.file_ext == "pdb":
-            self.convert_to_mae(ligand)
-            ligand = Ligand(f"{ligand.file_id}.mae")
+            Glide().convert_to_mae(ligand,context)
+            ligand = Ligand(file_path=os.path.join(context.write_dir,f"{ligand.file_id}.mae"))
+        logger.debug(ligand.file_path)
         if ligand.file_ext in ["sd", "mae", "smi", "csv"]:
             command = [
-                self.command + "/ligprep",
+                context.command + "/ligprep",
                 "-i" + ligand.file_ext,
                 ligand.file_path,
                 "-omae",
-                f"{ligand.file_id}_prepared.mae",
+                os.path.join(context.write_dir, f"{ligand.file_id}_prepared.mae"),
                 "-WAIT",
                 "-epik",
                 "-ph",
@@ -154,7 +155,7 @@ class Glide(Docking):
                 stdout, stderr = process.communicate()
                 if process.returncode == 0:
                     logger.info(f"Ligand preparation completed for {ligand.file_id}")
-                    prep = PreparedLigand(f"{ligand.file_id}_prepared.mae")
+                    prep = PreparedLigand(os.path.join(context.write_dir, f"{ligand.file_id}_prepared.mae"))
                 else:
                     logger.error(f"Ligand preparation failed for {ligand.file_id}")
                     logger.error(f"Error Output:\n{stderr}")
@@ -177,6 +178,7 @@ class Glide(Docking):
         command = [
             context.command + "/utilities/prepwizard",
             f"{protein.file_id}.mae",
+            os.path.join(context.write_dir, f"{protein.file_id}_protein_prepared.mae"),
             f"{protein.file_id}_protein_prepared.mae",
             "-WAIT",
             "-epik_pH",
@@ -246,18 +248,7 @@ class Glide(Docking):
                 raise subprocess.CalledProcessError(
                     process.returncode, " ".join(grid_command)
                 )
-        except (
-            sub
-            / home
-            / mma121
-            / PubChem_small
-            / try_schrodinger
-            / lignova
-            / tests
-            / tmp
-            / tests
-            / tmpprocess.CalledProcessError
-        ) as e:
+        except Exception as e:
             logger.error(f"Error while processing PDB ID {protein.file_id}: {e.stderr}")
         except Exception as e:
             logger.error(

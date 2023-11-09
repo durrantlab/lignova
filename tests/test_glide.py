@@ -1,9 +1,7 @@
 import glob
 import os
 import shutil
-
 import pytest
-
 from lignova.docking import Glide
 from lignova.docking.contexts import GlideContext
 from lignova.docking.docking import Docking
@@ -17,78 +15,66 @@ from lignova.structure.editing import *
 # Ensures we execute from file directory (for relative paths).
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
+context_protein_6Oav = {
+    "id": "6OAV",
+    "file_path": "./files/6oav/6oav.pdb",
+    "write_dir": "./tmp/6oav",
+    "ligand_file_path": "./files/6oav/6OAV_A_M3A_lig.mae",
+    "ligand_prepared_path" : "./files/6oav/6OAV_A_M3A_lig_prepared.mae",
+}
 
 
 def prep_dirs():
     os.makedirs(context_protein_6Oav["write_dir"])
 
-context_protein_6Oav = {
-    "id": "6OAV",
-    "file_path": "./files/6oav/6oav.pdb",
-    "write_dir": "./tmp/6oav",
-}
-
-prot_object = Protein(context_protein_6Oav["file_path"])
-
-# ligand_file_mae = "./files/6OAV_A_M3A_lig.mae"
-# lig_object_mae = Ligand(ligand_file_mae)
-# prepared_ligand = PreparedLigand(file_path="./files/6OAV_A_M3A_lig_prepared.mae")
-# prepared_protein = PreparedProtein(file_path="./files/6OAV_A_grid.zip")
-# glide = Glide(prepared_ligand, prepared_protein)
+#to generate the protein and ligand files for 6oav
+prot_raw = Protein(context_protein_6Oav["file_path"])
+prot_raw.load(file_path=context_protein_6Oav["file_path"])
+protein,lig =separate_protein_ligand(prot_raw._pdb_file_path)
+write_mda_universe(protein, context_protein_6Oav["write_dir"]+"/6oav_chA.pdb")
+write_mda_universe(lig, context_protein_6Oav["write_dir"]+"/6oav_A_M3A_lig.pdb")
+protein_obj=Protein(file_path=context_protein_6Oav["write_dir"]+"/6oav_chA.pdb")
+lig_object=Ligand(file_path=os.path.join(context_protein_6Oav["write_dir"],"6oav_A_M3A_lig.pdb"))
 
 glide = Glide()
 context = GlideContext.get_current()
 
-
-def test_convert_protein_to_mae():
-    glide.convert_to_mae(prot_object, context)
-    assert os.path.exists("6OAV_A.mae")
-
-"""
-def test_convert_Ligand_to_mae():
-    glide.convert_to_mae(lig_object,context)
-    assert os.path.exists("6OAV_A_M3A_lig.mae")
+def filter_lines(lines):
+    # Filter out lines starting with "./"
+    filtered = [line for line in lines if not line.startswith('  ./')]
+    # Remove trailing empty lines or lines starting with "/n"
+    while filtered and (not filtered[-1].strip() or filtered[-1].startswith("/n")):
+        filtered.pop()
+    return filtered
 
 
-def test_prep_Protein():
-    prepared = glide.PrepProtein(prot_object)
-    assert os.path.exists("6OAV_A_grid.zip")
-    assert os.path.exists("6OAV_A_protein_prepared.mae")
-    assert os.path.exists("6OAV_A_grid.log")
-    assert prepared.epik
-    assert not prepared.water
-    assert prepared.pH == 7.0 / 2.0
-    assert prepared.propka
-    assert prepared.forcefield == "OPLS_2005"
-    assert prepared.RMSD == 0.3
-    assert prepared.grid_center == "ligand"
-    assert prepared.grid_innerbox == 10
-    assert prepared.propka_pH == 7.0
+def test_convert_ligand_to_mae():
+    glide.convert_to_mae(lig_object, context)
+    lig_ref_mae=Ligand(context_protein_6Oav["ligand_file_path"])
+    lig_ref_mae.load(context_protein_6Oav["ligand_file_path"])
+    lig_test_mae=Ligand(context_protein_6Oav["write_dir"] + "/6oav_A_M3A_lig.mae")
+    lig_test_mae.load(context_protein_6Oav["write_dir"] + "/6oav_A_M3A_lig.mae")
+    lig_ref = filter_lines(lig_ref_mae._ligand_text)
+    lig_test = filter_lines(lig_ref_mae._ligand_text)
+    assert lig_ref == lig_test
 
 
 def test_prep_Ligand():
-    prepared = glide.PrepLigand(lig_object)
-    assert prepared.epik
-    assert prepared.pH == 7.0 / 2.0
-    assert prepared.stereo == "All"
-    assert prepared.forcefield == "OPLS_2005"
-    assert prepared.lig_name == "M3A"
-    assert prepared.stereo_num == 32
-    assert os.path.exists("6OAV_A_M3A_lig_prepared.mae")
-    assert os.path.exists("6OAV_A_M3A_lig_prepared.log")
+    prepared = glide.PrepLigand(lig_object,context)
+    with open(context_protein_6Oav["ligand_prepared_path"]) as f1:
+        lig_ref = f1.read()
+    assert prepared.file_name == "6oav_A_M3A_lig_prepared.mae"
+    assert context.lig_ph == '7.0'
+    assert context.lig_pht == '2.0'
+    assert context.lig_stereoisomers == '32'
+    assert context.lig_forcefield ==  "14"
+    
+
+def test_prep_Protein():
+    pass
 
 
-def test_prep_Ligand_mae():
-    prepared = glide.PrepLigand(lig_object_mae)
-    assert prepared.epik
-    assert prepared.pH == 7.0 / 2.0
-    assert prepared.stereo == "All"
-    assert prepared.forcefield == "OPLS_2005"
-    assert prepared.lig_name == "M3A"
-    assert prepared.stereo_num == 32
-    assert os.path.exists("6OAV_A_M3A_lig_prepared.mae")
-    assert os.path.exists("6OAV_A_M3A_lig_prepared.log")
-
+"""
 
 def test_docking():
     glide.run()

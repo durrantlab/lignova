@@ -76,3 +76,16 @@ def filter_hetatoms(u: mda.Universe) -> mda.Universe:
         MDAnalysis universe to process.
     """
     return u.select_atoms("record_type HETATM")
+
+
+def write_mda_universe(u: mda.Universe, file_path: str) -> TextIO:
+    r"""Write MDAnalysis universe to file.
+
+    Parameters
+    ----------
+    u
+        MDAnalysis universe to process.
+    file_path
+        File to write to.
+    """
+    return u.write(file_path)
