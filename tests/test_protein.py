@@ -19,6 +19,7 @@ def prep_dirs():
     os.makedirs(context_protein_6Oav["write_dir"])
 
 
+
 def test_get_pdb_6oav():
     r"""Retrieve PDB from RCSB"""
     pdb_test = Protein.get_pdb_from_rcsb("6OAV")
@@ -57,4 +58,3 @@ def test_separate_protein_ligand():
     protein_p, ligand_p = separate_protein_ligand(protein._pdb_file_path)
     assert len(set(protein_p.segments.segids)) == 1
     assert ligand_p.resnames.all() == "M3A"
-

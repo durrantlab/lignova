@@ -13,6 +13,8 @@ class Ligand(Structure):
     # Define a property to access _ligand_text
     @property
     def ligand_text(self):
+        r"""Return the ligand text."""
+        self.load(self.file_path)
         return self._ligand_text
     
     def load(
@@ -45,6 +47,7 @@ class Ligand(Structure):
 
 
 class PreparedLigand(Ligand, Prepared):
+    r"""Class for prepared ligands to be docked to proteins."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

@@ -2,7 +2,7 @@
 import glob
 import os
 import subprocess
-
+import shutil
 from loguru import logger
 
 from ..structure.ligand import Ligand, PreparedLigand
@@ -155,7 +155,7 @@ class Glide(Docking):
                 stdout, stderr = process.communicate()
                 if process.returncode == 0:
                     logger.info(f"Ligand preparation completed for {ligand.file_id}")
-                    prep = PreparedLigand(os.path.join(context.write_dir, f"{ligand.file_id}_prepared.mae"))
+                    prep = PreparedLigand(file_path=os.path.join(context.write_dir, f"{ligand.file_id}_prepared.mae"))
                 else:
                     logger.error(f"Ligand preparation failed for {ligand.file_id}")
                     logger.error(f"Error Output:\n{stderr}")
@@ -177,19 +177,18 @@ class Glide(Docking):
         r"""Prepare protein structures using Schrödinger's Protein Wizard"""
         command = [
             context.command + "/utilities/prepwizard",
-            f"{protein.file_id}.mae",
+            protein.file_path,
             os.path.join(context.write_dir, f"{protein.file_id}_protein_prepared.mae"),
-            f"{protein.file_id}_protein_prepared.mae",
             "-WAIT",
             "-epik_pH",
-            context.epik_pH,
+            context.epik_ph,
             "-epik_pHt",
-            context.epik_pHt,
+            context.epik_pht,
             "-propka_pH",
-            context.propka_pH,
+            context.propka_ph,
             "-r",
-            context.rmsd,
-            "-f".join(context.forcefield),
+            context.prot_rmsd,
+            "-f"+context.forcefield,
         ]
         logger.info(f"Preparing protein for PDB ID {protein.file_id}")
         try:
@@ -216,11 +215,11 @@ class Glide(Docking):
         grid_command = [
             context.command + "/utilities/generate_glide_grids",
             "-rec_file",
-            f"{protein.file_id}_protein_prepared.mae",
+            os.path.join(context.write_dir, f"{protein.file_id}_protein_prepared.mae"),
             "-lig_asl",
             "ligand",
             "-inner_box",
-            context.inner_box,
+            context.grid_innerbox,
             "-verbose",
             "-forcefield",
             context.forcefield,
@@ -241,6 +240,8 @@ class Glide(Docking):
                 grid_file = glob.glob("generate-grids-gridgen.zip")[0]
                 os.rename(grid_file, f"{protein.file_id}_grid.zip")
                 os.rename("generate_glide_grids_run.log", f"{protein.file_id}_grid.log")
+                shutil.move(f"{protein.file_id}_grid.zip", os.path.join(context.write_dir, f"{protein.file_id}_grid.zip"))
+                shutil.move(f"{protein.file_id}_grid.log", os.path.join(context.write_dir, f"{protein.file_id}_grid.log"))
                 prep = PreparedProtein(file_path=f"{protein.file_id}_grid.zip")
             else:
                 logger.error(f"Grid generation failed for PDB ID {protein.file_id}")

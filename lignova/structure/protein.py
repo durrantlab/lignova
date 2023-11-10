@@ -78,3 +78,6 @@ class Protein(Structure):
 
 class PreparedProtein(Protein, Prepared):
     r"""A protein that has been prepared for some downstream application."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+    
