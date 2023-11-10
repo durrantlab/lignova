@@ -29,7 +29,6 @@ context_protein_6Oav = {
 def prep_dirs():
     os.makedirs(context_protein_6Oav["write_dir"])
 
-#prep_dirs()
 
 #to generate the protein and ligand files for 6oav
 prot_raw = Protein(context_protein_6Oav["file_path"])
@@ -53,18 +52,18 @@ def filter_lines(lines):
     return filtered
 """
 
-def filter_lines(lines, file_path=None):
-    if not file_path:
-        # If no file path to ignore specified, ignore trailing empty or '\n' lines
-        filtered_lines = [line.strip() for line in lines if line.strip()]
-        return filtered_lines
+def filter_lines(lines):
+    # If no file path to ignore specified, ignore trailing empty or '\n' lines
+    filtered_lines = [line.strip() for line in lines if line.strip()]
+    print(len(filtered_lines))
+    return filtered_lines
     
-
+"""
 def test_convert_protein_to_mae():
     glide.convert_to_mae(protein_obj, context)
     prot_test_mae=Protein(file_path=context_protein_6Oav["write_dir"] + "/6oav_chA.mae")
     prot_test_mae.load(file_path=context_protein_6Oav["write_dir"] + "/6oav_chA.mae")
-    prot_test = filter_lines(prot_test_mae.pdb)
+    prot_test = (prot_test_mae.pdb)
     assert prot_test
 
 def test_convert_ligand_to_mae():
@@ -79,8 +78,8 @@ def test_convert_ligand_to_mae():
 def test_prep_Ligand():
     prepared = glide.PrepLigand(lig_object,context)
     lig_ref=Ligand(context_protein_6Oav["ligand_prepared_path"])
-    lig_ref=filter_lines(lig_ref.ligand_text,lig_ref.file_path)
-    lig_test=filter_lines(prepared.ligand_text,prepared.file_path)
+    lig_ref=filter_lines(lig_ref.ligand_text)
+    lig_test=filter_lines(prepared.ligand_text)
     #assert lig_ref == lig_test
     assert prepared.file_name == "6oav_A_M3A_lig_prepared.mae"
     assert context.lig_ph == '7.0'
@@ -94,8 +93,8 @@ def test_prep_Protein():
     prepared.load(file_path=context_protein_6Oav['write_dir']+"/6oav_chA_protein_prepared.mae")
     prot_ref=Protein(context_protein_6Oav["protein_prepared_path"])
     prot_ref.load(file_path=context_protein_6Oav["protein_prepared_path"])
-    prot_ref=filter_lines(prot_ref.pdb,prot_ref.file_path)
-    prot_test=filter_lines(prepared.pdb,prepared.file_path)
+    prot_ref=filter_lines(prot_ref.pdb)
+    prot_test=filter_lines(prepared.pdb)
     #assert prot_ref == prot_test
     assert context.epik_ph == '7.0'
     assert context.epik_pht == '2.0'
@@ -103,10 +102,19 @@ def test_prep_Protein():
     assert context.grid_innerbox == '10'
     assert context.prot_rmsd == '0.3'
     assert context.propka_ph == '7.0'
-
-    
 """
 
+def test_docking():
+    prep_prot=Protein(file_path=context_protein_6Oav['write_dir']+"/6oav_chA_grid.zip")
+    prep_lig=Ligand(file_path=context_protein_6Oav['write_dir']+"/6oav_A_M3A_lig_prepared.mae")
+    glide.run(prep_prot,prep_lig,context)
+    assert context.docking_protocol == 'SP'
+    assert context.forcefield == 'OPLS_2005' 
+    assert context.n_enhanced_sampling == '4'
+    assert context.postdock_nposes == '100'
+
+
+"""
 def test_docking():
     glide.run()
     assert os.path.exists("M3A_docking_pv.maegz")

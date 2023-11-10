@@ -25,22 +25,24 @@ class Glide(Docking):
         # self.context= GlideContext.get_current()
         pass
 
-    def run(self, target, ligand, context):
+    @staticmethod
+    def run(target, ligand, context):
         r"""Dock ligand into protein grid."""
         # TODO:DONE Break apart into functions and update with new arguments
         # ensure that prepped_ligand and grid_file are defined and if not raise an error and exit
-        if not prepped_ligand or not self.grid_file:
-            logger.error("Prepared Ligand or Prepared Protein not defined.")
-            raise SystemExit(1)
-        jobname = prepped_ligand.lig_name + "_docking"
+        logger.info(ligand.file_path,ligand.file_id)
+        jobname = str(ligand.file_id.split('_prepared')[0]) + "_docking"
+        logger.info(jobname)
         command = [
-            os.environ["SCHRODINGER"] + "/run",
+            context.command + "/run",
             "glide_sif.py",
             "-gridfile",
-            self.grid_file.file_path,
+            target.file_path,
             "-ligandfile",
-            prepped_ligand.file_path,
+            ligand.file_path,
             "-calc_input_rms",
+            "yes",
+            "-nosort",
             "yes",
             "-forcefield",
             context.forcefield,
@@ -50,9 +52,8 @@ class Glide(Docking):
             context.n_enhanced_sampling,
             "-postdock_npose",
             context.postdock_nposes,
-            os.path.join(context.write_dir, f"{jobname}.in"),
+            os.path.join(context.write_dir,jobname),
         ]
-
         try:
             process = subprocess.Popen(
                 command,
@@ -63,17 +64,17 @@ class Glide(Docking):
             stdout, stderr = process.communicate()
             if process.returncode == 0:
                 logger.info(
-                    f"Docking completed for {self.grid_file.protein_name} and {prepped_ligand.lig_name}"
+                    f"Docking completed for {target.file_id} and {ligand.file_id}"
                 )
             else:
                 logger.error(
-                    f"Docking failed for {self.grid_file.protein_name} and {prepped_ligand.lig_name}"
+                    f"Docking failed for {target.file_id} and {ligand.file_id}"
                 )
                 logger.error(f"Error Output:\n{stderr}")
         except Exception as e:
             logger.error(f"An error occurred during docking: {str(e)}")
             raise e
-        command = [os.environ["SCHRODINGER"] + "/glide", "-WAIT", os.path.join(context.write_dir,  f"{jobname}.in")]
+        command = [context.command+ "/glide", "-WAIT", os.path.join(context.write_dir,  f"{jobname}.in"),"-OVERWRITE","-adjust"]
         try:
             process = subprocess.Popen(
                 command,
@@ -84,6 +85,10 @@ class Glide(Docking):
             stdout, stderr = process.communicate()
             if process.returncode == 0:
                 logger.info(f"Glide docking completed for {jobname}")
+                shutil.move(f'{jobname}.csv',os.path.join(context.write_dir,f'{jobname}.csv'))
+                shutil.move(f'{jobname}.maegz',os.path.join(context.write_dir,f'{jobname}.maegz'))
+                shutil.move(f'{jobname}.log',os.path.join(context.write_dir,f'{jobname}.log'))
+                shutil.move(f'{jobname}_skip.csv',os.path.join(context.write_dir,f'{jobname}_skip.csv'))
             else:
                 logger.error(f"Glide docking failed for {jobname}")
                 logger.error(f"Error Output:\n{stderr}")
