@@ -67,6 +67,7 @@ def remove_hetatoms(u: mda.Universe) -> mda.Universe:
     """
     return u.select_atoms("not record_type HETATM")
 
+
 def filter_hetatoms(u: mda.Universe) -> mda.Universe:
     r"""Filter hetero atoms.
 

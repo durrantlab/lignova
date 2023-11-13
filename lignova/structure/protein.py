@@ -72,12 +72,12 @@ class Protein(Structure):
         """
         if file_path is not None:
             self._pdb_file_path = file_path
-        if pdb_id is not None: 
+        if pdb_id is not None:
             self._load_from_pdb_id(pdb_id, write, write_path)
 
 
 class PreparedProtein(Protein, Prepared):
     r"""A protein that has been prepared for some downstream application."""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-    

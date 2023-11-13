@@ -1,8 +1,9 @@
 """Implements the Docking class."""
 import glob
 import os
-import subprocess
 import shutil
+import subprocess
+
 from loguru import logger
 
 from ..structure.ligand import Ligand, PreparedLigand
@@ -30,8 +31,8 @@ class Glide(Docking):
         r"""Dock ligand into protein grid."""
         # TODO:DONE Break apart into functions and update with new arguments
         # ensure that prepped_ligand and grid_file are defined and if not raise an error and exit
-        logger.info(ligand.file_path,ligand.file_id)
-        jobname = str(ligand.file_id.split('_prepared')[0]) + "_docking"
+        logger.info(ligand.file_path, ligand.file_id)
+        jobname = str(ligand.file_id.split("_prepared")[0]) + "_docking"
         logger.info(jobname)
         command = [
             context.command + "/run",
@@ -52,7 +53,7 @@ class Glide(Docking):
             context.n_enhanced_sampling,
             "-postdock_npose",
             context.postdock_nposes,
-            os.path.join(context.write_dir,jobname),
+            os.path.join(context.write_dir, jobname),
         ]
         try:
             process = subprocess.Popen(
@@ -74,7 +75,13 @@ class Glide(Docking):
         except Exception as e:
             logger.error(f"An error occurred during docking: {str(e)}")
             raise e
-        command = [context.command+ "/glide", "-WAIT", os.path.join(context.write_dir,  f"{jobname}.in"),"-OVERWRITE","-adjust"]
+        command = [
+            context.command + "/glide",
+            "-WAIT",
+            os.path.join(context.write_dir, f"{jobname}.in"),
+            "-OVERWRITE",
+            "-adjust",
+        ]
         try:
             process = subprocess.Popen(
                 command,
@@ -85,10 +92,20 @@ class Glide(Docking):
             stdout, stderr = process.communicate()
             if process.returncode == 0:
                 logger.info(f"Glide docking completed for {jobname}")
-                shutil.move(f'{jobname}.csv',os.path.join(context.write_dir,f'{jobname}.csv'))
-                shutil.move(f'{jobname}.maegz',os.path.join(context.write_dir,f'{jobname}.maegz'))
-                shutil.move(f'{jobname}.log',os.path.join(context.write_dir,f'{jobname}.log'))
-                shutil.move(f'{jobname}_skip.csv',os.path.join(context.write_dir,f'{jobname}_skip.csv'))
+                shutil.move(
+                    f"{jobname}.csv", os.path.join(context.write_dir, f"{jobname}.csv")
+                )
+                shutil.move(
+                    f"{jobname}.maegz",
+                    os.path.join(context.write_dir, f"{jobname}.maegz"),
+                )
+                shutil.move(
+                    f"{jobname}.log", os.path.join(context.write_dir, f"{jobname}.log")
+                )
+                shutil.move(
+                    f"{jobname}_skip.csv",
+                    os.path.join(context.write_dir, f"{jobname}_skip.csv"),
+                )
             else:
                 logger.error(f"Glide docking failed for {jobname}")
                 logger.error(f"Error Output:\n{stderr}")
@@ -105,7 +122,7 @@ class Glide(Docking):
         command = [
             context.command + "/utilities/structconvert",
             input_object.file_path,
-            os.path.join(context.write_dir,f"{input_object.file_id}.mae"),
+            os.path.join(context.write_dir, f"{input_object.file_id}.mae"),
         ]
         try:
             process = subprocess.Popen(
@@ -128,8 +145,10 @@ class Glide(Docking):
         r"""Check the extension of the ligand file using the split function and
         Prepare ligands for docking using Schrödinger's LigPrep"""
         if ligand.file_ext == "pdb":
-            Glide().convert_to_mae(ligand,context)
-            ligand = Ligand(file_path=os.path.join(context.write_dir,f"{ligand.file_id}.mae"))
+            Glide().convert_to_mae(ligand, context)
+            ligand = Ligand(
+                file_path=os.path.join(context.write_dir, f"{ligand.file_id}.mae")
+            )
         logger.debug(ligand.file_path)
         if ligand.file_ext in ["sd", "mae", "smi", "csv"]:
             command = [
@@ -160,7 +179,11 @@ class Glide(Docking):
                 stdout, stderr = process.communicate()
                 if process.returncode == 0:
                     logger.info(f"Ligand preparation completed for {ligand.file_id}")
-                    prep = PreparedLigand(file_path=os.path.join(context.write_dir, f"{ligand.file_id}_prepared.mae"))
+                    prep = PreparedLigand(
+                        file_path=os.path.join(
+                            context.write_dir, f"{ligand.file_id}_prepared.mae"
+                        )
+                    )
                 else:
                     logger.error(f"Ligand preparation failed for {ligand.file_id}")
                     logger.error(f"Error Output:\n{stderr}")
@@ -193,7 +216,7 @@ class Glide(Docking):
             context.propka_ph,
             "-r",
             context.prot_rmsd,
-            "-f"+context.forcefield,
+            "-f" + context.forcefield,
         ]
         logger.info(f"Preparing protein for PDB ID {protein.file_id}")
         try:
@@ -245,8 +268,14 @@ class Glide(Docking):
                 grid_file = glob.glob("generate-grids-gridgen.zip")[0]
                 os.rename(grid_file, f"{protein.file_id}_grid.zip")
                 os.rename("generate_glide_grids_run.log", f"{protein.file_id}_grid.log")
-                shutil.move(f"{protein.file_id}_grid.zip", os.path.join(context.write_dir, f"{protein.file_id}_grid.zip"))
-                shutil.move(f"{protein.file_id}_grid.log", os.path.join(context.write_dir, f"{protein.file_id}_grid.log"))
+                shutil.move(
+                    f"{protein.file_id}_grid.zip",
+                    os.path.join(context.write_dir, f"{protein.file_id}_grid.zip"),
+                )
+                shutil.move(
+                    f"{protein.file_id}_grid.log",
+                    os.path.join(context.write_dir, f"{protein.file_id}_grid.log"),
+                )
                 prep = PreparedProtein(file_path=f"{protein.file_id}_grid.zip")
             else:
                 logger.error(f"Grid generation failed for PDB ID {protein.file_id}")

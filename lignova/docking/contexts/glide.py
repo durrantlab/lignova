@@ -8,18 +8,20 @@ DEFAULT_COMMAND = os.environ.get("SCHRODINGER", None)
 
 DEFAULT_FORCEFIELD = "OPLS_2005"
 DEFAULT_DOCKING_PROTOCOL = "SP"
-DEFAULT_N_ENHANCED_SAMPLING = '4'
-DEFAULT_LIG_PH = '7.0'
-DEFAULT_LIG_PHT = '2.0'
+DEFAULT_N_ENHANCED_SAMPLING = "4"
+DEFAULT_LIG_PH = "7.0"
+DEFAULT_LIG_PHT = "2.0"
 DEFAULT_LIG_FORCEFIELD = "14"
 DEFAULT_LIG_STERIOISOMERS = "32"
-DEFAULT_EPIK_PH = '7.0'
-DEFAULT_EPIK_PHT = '2.0'
-DEFAULT_PROT_RMSD = '0.3'
-DEFAULT_PROPKA_PH = '7.0'
-DEFAULT_GRID_INNERBOX = '10'
-DEFAULT_POSTDOCK_N_POSES = '100'
+DEFAULT_EPIK_PH = "7.0"
+DEFAULT_EPIK_PHT = "2.0"
+DEFAULT_PROT_RMSD = "0.3"
+DEFAULT_PROPKA_PH = "7.0"
+DEFAULT_GRID_INNERBOX = "10"
+DEFAULT_POSTDOCK_N_POSES = "100"
 DEFAULT_WRITE_DIR = "./tmp/6oav"
+
+
 class GlideContext:
     r"""Singleton for Glide docking configuration using `glide_sif.py`."""
 
@@ -28,17 +30,17 @@ class GlideContext:
         command: Union[str, None],
         forcefield: str,
         docking_protocol: Union[str, None],
-        n_enhanced_sampling: Union[ None, str],
+        n_enhanced_sampling: Union[None, str],
         lig_ph: [str, None],
-        lig_pht: Union[ None, str],
+        lig_pht: Union[None, str],
         lig_forcefield: Union[str, None],
         lig_stereoisomers: Union[str, None],
-        epik_ph: Union[ None, str],
+        epik_ph: Union[None, str],
         epik_pht: Union[str, None],
         prot_rmsd: Union[str, None],
         propka_ph: Union[str, None],
-        grid_innerbox: Union[ None, str],
-        postdock_nposes: Union[ None, str],
+        grid_innerbox: Union[None, str],
+        postdock_nposes: Union[None, str],
         write_dir: Union[str, None],
     ):
         if not os.environ.get("SCHRODINGER") or command is None:
