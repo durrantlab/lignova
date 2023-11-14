@@ -13,5 +13,4 @@ def separate_protein_ligand(pdb: Union[str, TextIO]) -> tuple["Protein", "Ligand
     # protein = remove_residues(selection, residues=["HOH"])
     hetatm = filter_hetatoms(selection)
     ligand = remove_residues(hetatm, residues=["HOH"])
-    print(selection)
     return selection.atoms, ligand
