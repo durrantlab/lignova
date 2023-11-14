@@ -1,3 +1,4 @@
+import csv
 import glob
 import os
 import shutil
@@ -24,12 +25,17 @@ context_protein_6Oav = {
     "ligand_file_path": "./files/6oav/6OAV_A_M3A_lig.mae",
     "ligand_prepared_path": "./files/6oav/6OAV_A_M3A_lig_prepared.mae",
     "protein_prepared_path": "./files/6oav/6OAV_A_protein_prepared.mae",
+    "docking_results_path": "./files/6oav/6OAV_A_M3A_lig_docking.csv",
+    "grid_log_path": "./files/6oav/6OAV_chA_grid.log",
 }
 
 
 def prep_dirs():
     os.makedirs(context_protein_6Oav["write_dir"])
 
+
+if not os.path.exists(context_protein_6Oav["write_dir"]):
+    prep_dirs()
 
 # to generate the protein and ligand files for 6oav
 prot_raw = Protein(context_protein_6Oav["file_path"])
@@ -45,69 +51,82 @@ lig_object = Ligand(
 glide = Glide()
 context = GlideContext.get_current()
 
-""" WIP
-def filter_lines(lines):
-    # Filter out lines starting with "./"
-    filtered = [line for line in lines if not (line.startswith('  ./') or line.startswith('/'))]
-    # Remove trailing empty lines or lines starting with "/n"
-    while filtered and (not filtered[-1].strip() or filtered[-1].startswith("/n")):
-        filtered.pop()
-    return filtered
-"""
-
 
 def filter_lines(lines):
     # If no file path to ignore specified, ignore trailing empty or '\n' lines
     filtered_lines = [line.strip() for line in lines if line.strip()]
-    print(len(filtered_lines))
     return filtered_lines
 
 
-"""
 def test_convert_protein_to_mae():
     glide.convert_to_mae(protein_obj, context)
-    prot_test_mae=Protein(file_path=context_protein_6Oav["write_dir"] + "/6oav_chA.mae")
+    prot_test_mae = Protein(
+        file_path=context_protein_6Oav["write_dir"] + "/6oav_chA.mae"
+    )
     prot_test_mae.load(file_path=context_protein_6Oav["write_dir"] + "/6oav_chA.mae")
-    prot_test = (prot_test_mae.pdb)
+    prot_test = prot_test_mae.pdb
     assert prot_test
+
 
 def test_convert_ligand_to_mae():
     glide.convert_to_mae(lig_object, context)
-    lig_ref_mae=Ligand(context_protein_6Oav["ligand_file_path"])
-    lig_test_mae=Ligand(file_path=context_protein_6Oav["write_dir"] + "/6oav_A_M3A_lig_prepared.mae")
+    lig_ref_mae = Ligand(context_protein_6Oav["ligand_file_path"])
+    lig_test_mae = Ligand(
+        file_path=context_protein_6Oav["write_dir"] + "/6oav_A_M3A_lig_prepared.mae"
+    )
     lig_ref = filter_lines(lig_ref_mae.ligand_text)
     lig_test = filter_lines(lig_ref_mae.ligand_text)
     assert lig_ref == lig_test
 
 
 def test_prep_Ligand():
-    prepared = glide.PrepLigand(lig_object,context)
-    lig_ref=Ligand(context_protein_6Oav["ligand_prepared_path"])
-    lig_ref=filter_lines(lig_ref.ligand_text)
-    lig_test=filter_lines(prepared.ligand_text)
-    #assert lig_ref == lig_test
+    prepared = glide.PrepLigand(lig_object, context)
+    lig_ref = Ligand(context_protein_6Oav["ligand_prepared_path"])
+    lig_ref = filter_lines(lig_ref.ligand_text)
+    lig_test = filter_lines(prepared.ligand_text)
+    # assert lig_ref == lig_test
     assert prepared.file_name == "6oav_A_M3A_lig_prepared.mae"
-    assert context.lig_ph == '7.0'
-    assert context.lig_pht == '2.0'
-    assert context.lig_stereoisomers == '32'
-    assert context.lig_forcefield ==  "14"
-    
+    assert context.lig_ph == "7.0"
+    assert context.lig_pht == "2.0"
+    assert context.lig_stereoisomers == "32"
+    assert context.lig_forcefield == "14"
+
+
 def test_prep_Protein():
-    prot_mae=Protein(file_path=os.path.join(context_protein_6Oav["write_dir"],"6oav_chA.mae"))
-    prepared=glide.PrepProtein(prot_mae,context)
-    prepared.load(file_path=context_protein_6Oav['write_dir']+"/6oav_chA_protein_prepared.mae")
-    prot_ref=Protein(context_protein_6Oav["protein_prepared_path"])
-    prot_ref.load(file_path=context_protein_6Oav["protein_prepared_path"])
-    prot_ref=filter_lines(prot_ref.pdb)
-    prot_test=filter_lines(prepared.pdb)
-    #assert prot_ref == prot_test
-    assert context.epik_ph == '7.0'
-    assert context.epik_pht == '2.0'
-    assert context.forcefield == 'OPLS_2005'
-    assert context.grid_innerbox == '10'
-    assert context.prot_rmsd == '0.3'
-    assert context.propka_ph == '7.0'
-"""
+    prot_mae = Protein(
+        file_path=os.path.join(context_protein_6Oav["write_dir"], "6oav_chA.mae")
+    )
+    prepared = glide.PrepProtein(prot_mae, context)
+    prepared.load(
+        file_path=context_protein_6Oav["write_dir"] + "/6oav_chA_protein_prepared.mae"
+    )
+    # read the grid log file and get the OUTERBOX value and the grid center
+    with open(context_protein_6Oav["grid_log_path"], "r") as file:
+        lines = file.readlines()
+        for line in lines:
+            if "OUTERBOX" in line:
+                outerbox_ref = line.split()[1]
+                print(outerbox_ref)
+            if "GRID_CENTER" in line:
+                grid_center_ref = [line.split()[1], line.split()[2], line.split()[3]]
+                print(grid_center_ref)
+    with open(context_protein_6Oav["write_dir"] + "/6oav_chA_grid.log", "r") as file:
+        lines = file.readlines()
+        for line in lines:
+            if "OUTERBOX" in line:
+                outerbox_test = line.split()[1]
+                print(outerbox_test)
+            if "GRID_CENTER" in line:
+                grid_center_test = [line.split()[1], line.split()[2], line.split()[3]]
+                print(grid_center_test)
+    assert outerbox_ref == outerbox_test
+    assert grid_center_ref == grid_center_test
+    assert context.epik_ph == "7.0"
+    assert context.epik_pht == "2.0"
+    assert context.forcefield == "OPLS_2005"
+    assert context.grid_innerbox == "10"
+    assert context.prot_rmsd == "0.3"
+    assert context.propka_ph == "7.0"
 
 
 def test_docking():
@@ -118,18 +137,19 @@ def test_docking():
         file_path=context_protein_6Oav["write_dir"] + "/6oav_A_M3A_lig_prepared.mae"
     )
     glide.run(prep_prot, prep_lig, context)
+    with open(context_protein_6Oav["docking_results_path"], "r") as file:
+        docking_results_ref_reader = csv.DictReader(file)
+        docking_results_ref = list(docking_results_ref_reader)
+    test_file_path = context_protein_6Oav["write_dir"] + "/6oav_A_M3A_lig_docking.csv"
+    with open(test_file_path, "r") as file:
+        docking_results_test_reader = csv.DictReader(file)
+        docking_results_test = list(docking_results_test_reader)
+    assert (
+        docking_results_ref[0]["r_i_glide_gscore"]
+        == docking_results_test[0]["r_i_glide_gscore"]
+    )
+    assert len(docking_results_ref) == len(docking_results_test)
     assert context.docking_protocol == "SP"
     assert context.forcefield == "OPLS_2005"
     assert context.n_enhanced_sampling == "4"
     assert context.postdock_nposes == "100"
-
-
-"""
-def test_docking():
-    glide.run()
-    assert os.path.exists("M3A_docking_pv.maegz")
-    assert os.path.exists("M3A_docking.in")
-    assert os.path.exists("M3A_docking.csv")
-    assert os.path.exists("M3A_docking_skip.csv")
-    assert os.path.exists("M3A_docking.log")
-"""

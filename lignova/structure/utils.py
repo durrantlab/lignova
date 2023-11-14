@@ -10,7 +10,8 @@ def separate_protein_ligand(pdb: Union[str, TextIO]) -> tuple["Protein", "Ligand
     # Protein and Ligand objects
     pdb_obj = get_mda_universe(pdb)
     selection = select_chains(pdb_obj)
-    protein = remove_residues(selection, residues=["HOH"])
+    # protein = remove_residues(selection, residues=["HOH"])
     hetatm = filter_hetatoms(selection)
     ligand = remove_residues(hetatm, residues=["HOH"])
-    return protein, ligand
+    print(selection)
+    return selection.atoms, ligand

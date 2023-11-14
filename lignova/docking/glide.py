@@ -41,10 +41,6 @@ class Glide(Docking):
             target.file_path,
             "-ligandfile",
             ligand.file_path,
-            "-calc_input_rms",
-            "yes",
-            "-nosort",
-            "yes",
             "-forcefield",
             context.forcefield,
             "-precision",
@@ -53,6 +49,8 @@ class Glide(Docking):
             context.n_enhanced_sampling,
             "-postdock_npose",
             context.postdock_nposes,
+            "-poses_per_lig",
+            context.poses_per_lig,
             os.path.join(context.write_dir, jobname),
         ]
         try:
@@ -79,8 +77,6 @@ class Glide(Docking):
             context.command + "/glide",
             "-WAIT",
             os.path.join(context.write_dir, f"{jobname}.in"),
-            "-OVERWRITE",
-            "-adjust",
         ]
         try:
             process = subprocess.Popen(
@@ -96,8 +92,8 @@ class Glide(Docking):
                     f"{jobname}.csv", os.path.join(context.write_dir, f"{jobname}.csv")
                 )
                 shutil.move(
-                    f"{jobname}.maegz",
-                    os.path.join(context.write_dir, f"{jobname}.maegz"),
+                    f"{jobname}_pv.maegz",
+                    os.path.join(context.write_dir, f"{jobname}_pv.maegz"),
                 )
                 shutil.move(
                     f"{jobname}.log", os.path.join(context.write_dir, f"{jobname}.log")
@@ -157,6 +153,8 @@ class Glide(Docking):
                 ligand.file_path,
                 "-omae",
                 os.path.join(context.write_dir, f"{ligand.file_id}_prepared.mae"),
+                "-ma",
+                context.lig_max_mw,
                 "-WAIT",
                 "-epik",
                 "-ph",
@@ -165,7 +163,6 @@ class Glide(Docking):
                 context.lig_pht,
                 "-bff",
                 context.lig_forcefield,
-                "-ac",
                 "-s",
                 context.lig_stereoisomers,
             ]
@@ -208,6 +205,11 @@ class Glide(Docking):
             protein.file_path,
             os.path.join(context.write_dir, f"{protein.file_id}_protein_prepared.mae"),
             "-WAIT",
+            "-fillsidechains",
+            "-disulfides",
+            "-rehtreat",
+            "-samplewater",
+            "-minimize_adj_h",
             "-epik_pH",
             context.epik_ph,
             "-epik_pHt",
@@ -217,6 +219,8 @@ class Glide(Docking):
             "-r",
             context.prot_rmsd,
             "-f" + context.forcefield,
+            "-watdist",
+            context.prot_watdist,
         ]
         logger.info(f"Preparing protein for PDB ID {protein.file_id}")
         try:

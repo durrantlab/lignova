@@ -5,7 +5,7 @@ import os
 _default_glide_context: "Optional[GlideContext]" = None
 
 DEFAULT_COMMAND = os.environ.get("SCHRODINGER", None)
-
+DEFAULT_POSES_PER_LIG = "100"
 DEFAULT_FORCEFIELD = "OPLS_2005"
 DEFAULT_DOCKING_PROTOCOL = "SP"
 DEFAULT_N_ENHANCED_SAMPLING = "4"
@@ -20,6 +20,8 @@ DEFAULT_PROPKA_PH = "7.0"
 DEFAULT_GRID_INNERBOX = "10"
 DEFAULT_POSTDOCK_N_POSES = "100"
 DEFAULT_WRITE_DIR = "./tmp/6oav"
+DEFAULT_LIG_MAX_MW = "500"
+DEFAULT_PROT_WATER_DIST = "5.0"
 
 
 class GlideContext:
@@ -42,6 +44,9 @@ class GlideContext:
         grid_innerbox: Union[None, str],
         postdock_nposes: Union[None, str],
         write_dir: Union[str, None],
+        lig_max_mw: Union[str, None],
+        prot_watdist: Union[str, None],
+        poses_per_lig: Union[str, None],
     ):
         if not os.environ.get("SCHRODINGER") or command is None:
             raise OSError(
@@ -62,6 +67,9 @@ class GlideContext:
         self.grid_innerbox = grid_innerbox
         self.postdock_nposes = postdock_nposes
         self.write_dir = write_dir
+        self.lig_max_mw = lig_max_mw
+        self.prot_watdist = prot_watdist
+        self.poses_per_lig = poses_per_lig
 
     @staticmethod
     def get_current() -> "GlideContext":
@@ -86,8 +94,10 @@ class GlideContext:
                 grid_innerbox=DEFAULT_GRID_INNERBOX,
                 postdock_nposes=DEFAULT_POSTDOCK_N_POSES,
                 write_dir=DEFAULT_WRITE_DIR,
+                lig_max_mw=DEFAULT_LIG_MAX_MW,
+                prot_watdist=DEFAULT_PROT_WATER_DIST,
+                poses_per_lig=DEFAULT_POSES_PER_LIG,
             )
-
         return _default_glide_context
 
     @staticmethod
