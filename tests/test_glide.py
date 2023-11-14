@@ -81,10 +81,14 @@ def test_convert_ligand_to_mae():
 
 def test_prep_Ligand():
     prepared = glide.PrepLigand(lig_object, context)
-    lig_ref = Ligand(context_protein_6Oav["ligand_prepared_path"])
-    lig_ref = filter_lines(lig_ref.ligand_text)
-    lig_test = filter_lines(prepared.ligand_text)
-    # assert lig_ref == lig_test
+    # read the ref and test files and compare the lines
+    with open(context_protein_6Oav["ligand_prepared_path"], "r") as file:
+        lig_ref = file.readlines()
+    with open(
+        context_protein_6Oav["write_dir"] + "/6oav_A_M3A_lig_prepared.mae", "r"
+    ) as file:
+        lig_test = file.readlines()
+    assert lig_ref[113] == lig_test[113]
     assert prepared.file_name == "6oav_A_M3A_lig_prepared.mae"
     assert context.lig_ph == "7.0"
     assert context.lig_pht == "2.0"
@@ -106,19 +110,15 @@ def test_prep_Protein():
         for line in lines:
             if "OUTERBOX" in line:
                 outerbox_ref = line.split()[1]
-                print(outerbox_ref)
             if "GRID_CENTER" in line:
                 grid_center_ref = [line.split()[1], line.split()[2], line.split()[3]]
-                print(grid_center_ref)
     with open(context_protein_6Oav["write_dir"] + "/6oav_chA_grid.log", "r") as file:
         lines = file.readlines()
         for line in lines:
             if "OUTERBOX" in line:
                 outerbox_test = line.split()[1]
-                print(outerbox_test)
             if "GRID_CENTER" in line:
                 grid_center_test = [line.split()[1], line.split()[2], line.split()[3]]
-                print(grid_center_test)
     assert outerbox_ref == outerbox_test
     assert grid_center_ref == grid_center_test
     assert context.epik_ph == "7.0"
