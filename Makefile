@@ -67,8 +67,8 @@ install:
 	- mkdir .mypy_cache
 	- $(CONDA) poetry run mypy --install-types --non-interactive --explicit-package-bases $(PACKAGE_NAME)
 
-.PHONY: refresh
-refresh: conda-create from-conda-lock pre-commit-install install
+.PHONY: environment
+environment: conda-create from-conda-lock pre-commit-install install
 
 .PHONY: refresh-locks
 refresh-locks: conda-create conda-setup conda-lock pre-commit-install poetry-lock install

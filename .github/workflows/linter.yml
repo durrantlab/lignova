@@ -25,14 +25,8 @@ jobs:
             auto-update-conda: true
             python-version: "3.11"
 
-        - name: Initialize conda environment
-          run: make conda-setup
-
-        - name: Install conda packages
-          run: make from-conda-lock
-
-        - name: Poetry install
-          run: make install
+        - name: Create environment
+          run: make environment
 
         - name: Style checks
           run: make check-codestyle
