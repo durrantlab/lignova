@@ -1,8 +1,6 @@
 """Implementation of protein class."""
 from typing import Union
 
-from collections.abc import Iterable
-
 import requests
 from loguru import logger
 
@@ -11,13 +9,24 @@ from .base import Prepared, Structure
 
 
 class Protein(Structure):
-    """Proteins."""
+    """Protein class that contains functions for loading proteins
+    and preparing them for docking class."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     @staticmethod
     def get_pdb_from_rcsb(pdb_id: str) -> str:
+        r"""Download a PDB file from the RCSB PDB database.
+        Parameters
+        ----------
+        pdb_id
+            PDB ID of the protein to download.
+        Returns
+        -------
+        str of PDB file
+            The PDB file as a string.
+        """
         pdb_url = f"https://files.rcsb.org/download/{pdb_id}.pdb"
         try:
             response = requests.get(pdb_url, timeout=30)
@@ -30,20 +39,33 @@ class Protein(Structure):
     def _load_from_pdb_id(
         self, pdb_id: str, write: bool = False, write_path: Union[None, str] = None
     ) -> None:
+        r"""Load structural information for a protein from RCSB.
+        Parameters
+        ----------
+        pdb_id
+            PDB ID to load structure from RCSB.
+        write
+            Keep structure in file and load when requested. If ``False``, this will
+            keep the structure in memory.
+        write_path
+            Path to write to file.
+        """
         pdb_text = Protein.get_pdb_from_rcsb(pdb_id)
         if write:
             if write_path is None:
-                self._pdb_file_path = write_text(pdb_text, write_path, file_ext="pdb")
+                raise ValueError("Must provide write_path if write is True.")
+            self._pdb_file_path = write_text(pdb_text, write_path, file_ext="pdb")
         else:
             self._pdb_text = pdb_text
 
     @property
     def pdb(self) -> Union[str, None]:
+        r"""Return the PDB text."""
         if hasattr(self, "_pdb_text"):
             return self._pdb_text
         if hasattr(self, "_pdb_file_path"):
-            with open(self._pdb_file_path, encoding="utf-8") as f:
-                return f.read()
+            with open(self._pdb_file_path, encoding="utf-8") as file:
+                return file.read()
         return None
 
     def load(

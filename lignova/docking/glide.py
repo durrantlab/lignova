@@ -1,13 +1,13 @@
 """Implements the Docking class."""
 import glob
 import os
+import shutil
 import subprocess
 
 from loguru import logger
 
 from ..structure.ligand import Ligand, PreparedLigand
 from ..structure.protein import PreparedProtein
-from .contexts import GlideContext
 from .docking import Docking
 
 
@@ -21,39 +21,34 @@ class Glide(Docking):
     """
 
     def __init__(self) -> None:
-        # TODO:DONE? move this check with context in run
         # self.context= GlideContext.get_current()
         pass
 
     def run(self, target, ligand, context):
         r"""Dock ligand into protein grid."""
-        # TODO: Break apart into functions and update with new arguments
-
         # ensure that prepped_ligand and grid_file are defined and if not raise an error and exit
-        if not prepped_ligand or not self.grid_file:
-            logger.error("Prepared Ligand or Prepared Protein not defined.")
-            raise SystemExit(1)
-        jobname = prepped_ligand.lig_name + "_docking"
+        logger.info(ligand.file_path, ligand.file_id)
+        jobname = str(ligand.file_id.split("_prepared")[0]) + "_docking"
+        logger.info(jobname)
         command = [
-            os.environ["SCHRODINGER"] + "/run",
+            context.command + "/run",
             "glide_sif.py",
             "-gridfile",
-            self.grid_file.file_path,
+            target.file_path,
             "-ligandfile",
-            prepped_ligand.file_path,
-            "-calc_input_rms",
-            "yes",
+            ligand.file_path,
             "-forcefield",
-            "OPLS_2005",
+            context.forcefield,
             "-precision",
-            "SP",
+            context.docking_protocol,
             "-nenhanced_sampling",
-            "4",
+            context.n_enhanced_sampling,
             "-postdock_npose",
-            "100",
-            f"{jobname}",
+            context.postdock_nposes,
+            "-poses_per_lig",
+            context.poses_per_lig,
+            os.path.join(context.write_dir, jobname),
         ]
-
         try:
             process = subprocess.Popen(
                 command,
@@ -64,17 +59,21 @@ class Glide(Docking):
             stdout, stderr = process.communicate()
             if process.returncode == 0:
                 logger.info(
-                    f"Docking completed for {self.grid_file.protein_name} and {prepped_ligand.lig_name}"
+                    f"Docking completed for {target.file_id} and {ligand.file_id}"
                 )
             else:
                 logger.error(
-                    f"Docking failed for {self.grid_file.protein_name} and {prepped_ligand.lig_name}"
+                    f"Docking failed for {target.file_id} and {ligand.file_id}"
                 )
                 logger.error(f"Error Output:\n{stderr}")
         except Exception as e:
             logger.error(f"An error occurred during docking: {str(e)}")
             raise e
-        command = [os.environ["SCHRODINGER"] + "/glide", "-WAIT", f"{jobname}.in"]
+        command = [
+            context.command + "/glide",
+            "-WAIT",
+            os.path.join(context.write_dir, f"{jobname}.in"),
+        ]
         try:
             process = subprocess.Popen(
                 command,
@@ -85,6 +84,20 @@ class Glide(Docking):
             stdout, stderr = process.communicate()
             if process.returncode == 0:
                 logger.info(f"Glide docking completed for {jobname}")
+                shutil.move(
+                    f"{jobname}.csv", os.path.join(context.write_dir, f"{jobname}.csv")
+                )
+                shutil.move(
+                    f"{jobname}_pv.maegz",
+                    os.path.join(context.write_dir, f"{jobname}_pv.maegz"),
+                )
+                shutil.move(
+                    f"{jobname}.log", os.path.join(context.write_dir, f"{jobname}.log")
+                )
+                shutil.move(
+                    f"{jobname}_skip.csv",
+                    os.path.join(context.write_dir, f"{jobname}_skip.csv"),
+                )
             else:
                 logger.error(f"Glide docking failed for {jobname}")
                 logger.error(f"Error Output:\n{stderr}")
@@ -101,7 +114,7 @@ class Glide(Docking):
         command = [
             context.command + "/utilities/structconvert",
             input_object.file_path,
-            f"{input_object.file_id}.mae",
+            os.path.join(context.write_dir, f"{input_object.file_id}.mae"),
         ]
         try:
             process = subprocess.Popen(
@@ -124,24 +137,28 @@ class Glide(Docking):
         r"""Check the extension of the ligand file using the split function and
         Prepare ligands for docking using Schrödinger's LigPrep"""
         if ligand.file_ext == "pdb":
-            self.convert_to_mae(ligand)
-            ligand = Ligand(f"{ligand.file_id}.mae")
+            Glide().convert_to_mae(ligand, context)
+            ligand = Ligand(
+                file_path=os.path.join(context.write_dir, f"{ligand.file_id}.mae")
+            )
+        logger.debug(ligand.file_path)
         if ligand.file_ext in ["sd", "mae", "smi", "csv"]:
             command = [
-                self.command + "/ligprep",
+                context.command + "/ligprep",
                 "-i" + ligand.file_ext,
                 ligand.file_path,
                 "-omae",
-                f"{ligand.file_id}_prepared.mae",
+                os.path.join(context.write_dir, f"{ligand.file_id}_prepared.mae"),
+                "-ma",
+                context.lig_max_mw,
                 "-WAIT",
-                "-epik",
+                "-epik" if context.lig_epik else "",
                 "-ph",
                 context.lig_ph,
                 "-pht",
                 context.lig_pht,
                 "-bff",
                 context.lig_forcefield,
-                "-ac",
                 "-s",
                 context.lig_stereoisomers,
             ]
@@ -155,7 +172,11 @@ class Glide(Docking):
                 stdout, stderr = process.communicate()
                 if process.returncode == 0:
                     logger.info(f"Ligand preparation completed for {ligand.file_id}")
-                    prep = PreparedLigand(f"{ligand.file_id}_prepared.mae")
+                    prep = PreparedLigand(
+                        file_path=os.path.join(
+                            context.write_dir, f"{ligand.file_id}_prepared.mae"
+                        )
+                    )
                 else:
                     logger.error(f"Ligand preparation failed for {ligand.file_id}")
                     logger.error(f"Error Output:\n{stderr}")
@@ -167,7 +188,7 @@ class Glide(Docking):
                 raise e
         else:
             logger.error(
-                "The ligand file is not in the correct format. Please check the extension of the ligand file"
+                "The ligand file is not in the correct format. Please check the extension"
             )
             raise ValueError("Invalid ligand file format")
         return prep
@@ -177,18 +198,25 @@ class Glide(Docking):
         r"""Prepare protein structures using Schrödinger's Protein Wizard"""
         command = [
             context.command + "/utilities/prepwizard",
-            f"{protein.file_id}.mae",
-            f"{protein.file_id}_protein_prepared.mae",
+            protein.file_path,
+            os.path.join(context.write_dir, f"{protein.file_id}_protein_prepared.mae"),
             "-WAIT",
+            "-fillsidechains" if context.fillsidechains else "",
+            "-disulfides" if context.disulfides else "",
+            "-rehtreat" if context.rehtreat else "",
+            "-samplewater" if context.samplewater else "",
+            "-minimize_adj_h" if context.minimize_adj_h else "",
             "-epik_pH",
-            context.epik_pH,
+            context.epik_ph,
             "-epik_pHt",
-            context.epik_pHt,
+            context.epik_pht,
             "-propka_pH",
-            context.propka_pH,
+            context.propka_ph,
             "-r",
-            context.rmsd,
-            "-f".join(context.forcefield),
+            context.prot_rmsd,
+            "-f" + context.forcefield,
+            "-watdist",
+            context.prot_watdist,
         ]
         logger.info(f"Preparing protein for PDB ID {protein.file_id}")
         try:
@@ -215,11 +243,11 @@ class Glide(Docking):
         grid_command = [
             context.command + "/utilities/generate_glide_grids",
             "-rec_file",
-            f"{protein.file_id}_protein_prepared.mae",
+            os.path.join(context.write_dir, f"{protein.file_id}_protein_prepared.mae"),
             "-lig_asl",
             "ligand",
             "-inner_box",
-            context.inner_box,
+            context.grid_innerbox,
             "-verbose",
             "-forcefield",
             context.forcefield,
@@ -240,6 +268,14 @@ class Glide(Docking):
                 grid_file = glob.glob("generate-grids-gridgen.zip")[0]
                 os.rename(grid_file, f"{protein.file_id}_grid.zip")
                 os.rename("generate_glide_grids_run.log", f"{protein.file_id}_grid.log")
+                shutil.move(
+                    f"{protein.file_id}_grid.zip",
+                    os.path.join(context.write_dir, f"{protein.file_id}_grid.zip"),
+                )
+                shutil.move(
+                    f"{protein.file_id}_grid.log",
+                    os.path.join(context.write_dir, f"{protein.file_id}_grid.log"),
+                )
                 prep = PreparedProtein(file_path=f"{protein.file_id}_grid.zip")
             else:
                 logger.error(f"Grid generation failed for PDB ID {protein.file_id}")
@@ -247,19 +283,6 @@ class Glide(Docking):
                 raise subprocess.CalledProcessError(
                     process.returncode, " ".join(grid_command)
                 )
-        except (
-            sub
-            / home
-            / mma121
-            / PubChem_small
-            / try_schrodinger
-            / lignova
-            / tests
-            / tmp
-            / tests
-            / tmpprocess.CalledProcessError
-        ) as e:
-            logger.error(f"Error while processing PDB ID {protein.file_id}: {e.stderr}")
         except Exception as e:
             logger.error(
                 f"An unexpected error occurred for PDB ID {protein.file_id}: {str(e)}"

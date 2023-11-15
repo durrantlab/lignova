@@ -10,7 +10,13 @@ class Ligand(Structure):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    # TODO _MA: figure out how best to use load in ligand context
+    # Define a property to access _ligand_text
+    @property
+    def ligand_text(self):
+        r"""Return the ligand text."""
+        self.load(self.file_path)
+        return self._ligand_text
+
     def load(
         self,
         file_path: Union[str, None] = None,
@@ -18,14 +24,36 @@ class Ligand(Structure):
         write_path: Union[None, str] = None,
         pdb_id: Union[str, None] = None,
     ) -> None:
-        pass
+        r"""Load structural information for a ligand.
+
+        Parameters
+          ----------
+             file_path : str, optional
+                 Path to ligand file.
+             write_path : str, optional
+                 Path to write the ligand file to disk.
+             pdb_id : str, optional
+                 PDB ID of ligand to download.
+        """
+        if file_path is not None:
+            # read in file
+            with open(file_path, encoding="utf-8") as file:
+                self._ligand_text = file.read()
+        if write_path:
+            # write to file
+            with open(write_path, "w") as file:
+                file.write(self._ligand_text)
 
 
 class PreparedLigand(Ligand, Prepared):
+    r"""Class for prepared ligands to be docked to proteins."""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
 
 class DockedLigand(Ligand):
+    r"""Class for docked ligands to be docked to proteins."""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

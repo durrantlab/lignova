@@ -1,3 +1,4 @@
+r""" Initialization of structure classes. """
 from .base import Structure
 from .ligand import Ligand, PreparedLigand
 from .protein import PreparedProtein, Protein

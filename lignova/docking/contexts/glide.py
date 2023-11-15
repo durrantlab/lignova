@@ -1,3 +1,4 @@
+r""" Implementation of the GlideContext class containing the configuration for Glide docking."""
 from typing import Optional, Union
 
 import os
@@ -5,39 +6,60 @@ import os
 _default_glide_context: "Optional[GlideContext]" = None
 
 DEFAULT_COMMAND = os.environ.get("SCHRODINGER", None)
-
+DEFAULT_POSES_PER_LIG = "100"
 DEFAULT_FORCEFIELD = "OPLS_2005"
 DEFAULT_DOCKING_PROTOCOL = "SP"
-DEFAULT_N_ENHANCED_SAMPLING = 4
-DEFAULT_LIG_PH = 7.0
-DEFAULT_LIG_PHT = 2.0
+DEFAULT_N_ENHANCED_SAMPLING = "4"
+DEFAULT_LIG_PH = "7.0"
+DEFAULT_LIG_PHT = "2.0"
 DEFAULT_LIG_FORCEFIELD = "14"
 DEFAULT_LIG_STERIOISOMERS = "32"
-DEFAULT_EPIK_PH = 7.0
-DEFAULT_EPIK_PHT = 2.0
-DEFAULT_PROT_RMSD = 0.3
-DEFAULT_PROPKA_PH = 7.0
-DEFAULT_GRID_INNERBOX = 10.0
+DEFAULT_EPIK_PH = "7.0"
+DEFAULT_EPIK_PHT = "2.0"
+DEFAULT_PROT_RMSD = "0.3"
+DEFAULT_PROPKA_PH = "7.0"
+DEFAULT_GRID_INNERBOX = "10"
+DEFAULT_POSTDOCK_N_POSES = "100"
+DEFAULT_WRITE_DIR = "./tmp/6oav"
+DEFAULT_LIG_MAX_MW = "500"
+DEFAULT_PROT_WATER_DIST = "5.0"
+DEFAULT_FILLSIDECHAINS = "True"
+DEFAULT_DISULFIDES = "True"
+DEFAULT_REHTREAT = "True"
+DEFAULT_SAMPLEWATER = "True"
+DEFUALT_MINIMIZE_ADJ_H = "True"
+DEFAULT_LIG_EPIK = "True"
 
 
 class GlideContext:
-    r"""Singleton for Glide docking configuration using `glide_sif.py`."""
+    r"""Singleton for Glide docking configuration."""
 
     def __init__(
         self,
         command: Union[str, None],
         forcefield: str,
-        docking_protocol: Union[str, None, float],
-        n_enhanced_sampling: Union[int, None, str],
-        lig_ph: [str, None, float],
-        lig_pht: Union[float, None, str],
+        docking_protocol: Union[str, None],
+        n_enhanced_sampling: Union[None, str],
+        lig_ph: [str, None],
+        lig_pht: Union[None, str],
         lig_forcefield: Union[str, None],
-        lig_stereoisomers: Union[int, None],
-        epik_ph: Union[float, None, str],
-        epik_pht: Union[str, None, float],
-        prot_rmsd: Union[str, None, float],
-        propka_ph: Union[str, None, float],
-        grid_innerbox: Union[int, None, str],
+        lig_stereoisomers: Union[str, None],
+        epik_ph: Union[None, str],
+        epik_pht: Union[str, None],
+        prot_rmsd: Union[str, None],
+        propka_ph: Union[str, None],
+        grid_innerbox: Union[None, str],
+        postdock_nposes: Union[None, str],
+        write_dir: Union[str, None],
+        lig_max_mw: Union[str, None],
+        prot_watdist: Union[str, None],
+        poses_per_lig: Union[str, None],
+        fillsidechains: Union[bool, None],
+        disulfides: Union[bool, None],
+        rehtreat: Union[bool, None],
+        samplewater: Union[bool, None],
+        minimize_adj_h: Union[bool, None],
+        lig_epik: Union[bool, None],
     ):
         if not os.environ.get("SCHRODINGER") or command is None:
             raise OSError(
@@ -56,6 +78,17 @@ class GlideContext:
         self.prot_rmsd = prot_rmsd
         self.propka_ph = propka_ph
         self.grid_innerbox = grid_innerbox
+        self.postdock_nposes = postdock_nposes
+        self.write_dir = write_dir
+        self.lig_max_mw = lig_max_mw
+        self.prot_watdist = prot_watdist
+        self.poses_per_lig = poses_per_lig
+        self.fillsidechains = fillsidechains
+        self.disulfides = disulfides
+        self.rehtreat = rehtreat
+        self.samplewater = samplewater
+        self.minimize_adj_h = minimize_adj_h
+        self.lig_epik = lig_epik
 
     @staticmethod
     def get_current() -> "GlideContext":
@@ -78,8 +111,18 @@ class GlideContext:
                 prot_rmsd=DEFAULT_PROT_RMSD,
                 propka_ph=DEFAULT_PROPKA_PH,
                 grid_innerbox=DEFAULT_GRID_INNERBOX,
+                postdock_nposes=DEFAULT_POSTDOCK_N_POSES,
+                write_dir=DEFAULT_WRITE_DIR,
+                lig_max_mw=DEFAULT_LIG_MAX_MW,
+                prot_watdist=DEFAULT_PROT_WATER_DIST,
+                poses_per_lig=DEFAULT_POSES_PER_LIG,
+                fillsidechains=DEFAULT_FILLSIDECHAINS,
+                disulfides=DEFAULT_DISULFIDES,
+                rehtreat=DEFAULT_REHTREAT,
+                samplewater=DEFAULT_SAMPLEWATER,
+                minimize_adj_h=DEFUALT_MINIMIZE_ADJ_H,
+                lig_epik=DEFAULT_LIG_EPIK,
             )
-
         return _default_glide_context
 
     @staticmethod

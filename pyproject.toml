@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lignova"
-version = "0.0.0"
+version = "0.0.0.post17"
 description = "TODO"
 authors = [
     "durrantlab <durrantj@pitt.edu>",
@@ -78,7 +78,7 @@ search = "\\[Unreleased\\]"
 replace = "[Unreleased]\n\n## [{new_version}] - {now:%Y-%m-%d}"
 
 [tool.poetry-dynamic-versioning]
-enable = true
+enable = false
 vcs = "git"
 format-jinja = "    {%- if distance == 0 -%}\n        {{ serialize_pep440(base) }}\n    {%- else -%}\n        {{ serialize_pep440(base, post=distance) }}\n    {%- endif -%}\n"
 
