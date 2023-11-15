@@ -1,4 +1,4 @@
-"""Implements the Docking class."""
+r"""Implements the Docking class."""
 from typing import Union
 
 from abc import ABC, abstractmethod
@@ -10,6 +10,8 @@ from .contexts import GlideContext
 
 
 class Docking(ABC):
+    r"""Abstract class for docking ."""
+
     @abstractmethod
     def run(
         self,

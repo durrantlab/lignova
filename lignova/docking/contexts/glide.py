@@ -1,3 +1,4 @@
+r""" Implementation of the GlideContext class containing the configuration for Glide docking."""
 from typing import Optional, Union
 
 import os
@@ -22,10 +23,16 @@ DEFAULT_POSTDOCK_N_POSES = "100"
 DEFAULT_WRITE_DIR = "./tmp/6oav"
 DEFAULT_LIG_MAX_MW = "500"
 DEFAULT_PROT_WATER_DIST = "5.0"
+DEFAULT_FILLSIDECHAINS = "True"
+DEFAULT_DISULFIDES = "True"
+DEFAULT_REHTREAT = "True"
+DEFAULT_SAMPLEWATER = "True"
+DEFUALT_MINIMIZE_ADJ_H = "True"
+DEFAULT_LIG_EPIK = "True"
 
 
 class GlideContext:
-    r"""Singleton for Glide docking configuration using `glide_sif.py`."""
+    r"""Singleton for Glide docking configuration."""
 
     def __init__(
         self,
@@ -47,6 +54,12 @@ class GlideContext:
         lig_max_mw: Union[str, None],
         prot_watdist: Union[str, None],
         poses_per_lig: Union[str, None],
+        fillsidechains: Union[bool, None],
+        disulfides: Union[bool, None],
+        rehtreat: Union[bool, None],
+        samplewater: Union[bool, None],
+        minimize_adj_h: Union[bool, None],
+        lig_epik: Union[bool, None],
     ):
         if not os.environ.get("SCHRODINGER") or command is None:
             raise OSError(
@@ -70,6 +83,12 @@ class GlideContext:
         self.lig_max_mw = lig_max_mw
         self.prot_watdist = prot_watdist
         self.poses_per_lig = poses_per_lig
+        self.fillsidechains = fillsidechains
+        self.disulfides = disulfides
+        self.rehtreat = rehtreat
+        self.samplewater = samplewater
+        self.minimize_adj_h = minimize_adj_h
+        self.lig_epik = lig_epik
 
     @staticmethod
     def get_current() -> "GlideContext":
@@ -97,6 +116,12 @@ class GlideContext:
                 lig_max_mw=DEFAULT_LIG_MAX_MW,
                 prot_watdist=DEFAULT_PROT_WATER_DIST,
                 poses_per_lig=DEFAULT_POSES_PER_LIG,
+                fillsidechains=DEFAULT_FILLSIDECHAINS,
+                disulfides=DEFAULT_DISULFIDES,
+                rehtreat=DEFAULT_REHTREAT,
+                samplewater=DEFAULT_SAMPLEWATER,
+                minimize_adj_h=DEFUALT_MINIMIZE_ADJ_H,
+                lig_epik=DEFAULT_LIG_EPIK,
             )
         return _default_glide_context
 

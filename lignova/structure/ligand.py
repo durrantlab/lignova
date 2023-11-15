@@ -37,12 +37,12 @@ class Ligand(Structure):
         """
         if file_path is not None:
             # read in file
-            with open(file_path, encoding="utf-8") as f:
-                self._ligand_text = f.read()
+            with open(file_path, encoding="utf-8") as file:
+                self._ligand_text = file.read()
         if write_path:
             # write to file
-            with open(write_path, "w") as f:
-                f.write(self._ligand_text)
+            with open(write_path, "w") as file:
+                file.write(self._ligand_text)
 
 
 class PreparedLigand(Ligand, Prepared):
@@ -53,5 +53,7 @@ class PreparedLigand(Ligand, Prepared):
 
 
 class DockedLigand(Ligand):
+    r"""Class for docked ligands to be docked to proteins."""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

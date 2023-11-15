@@ -8,7 +8,6 @@ from loguru import logger
 
 from ..structure.ligand import Ligand, PreparedLigand
 from ..structure.protein import PreparedProtein
-from .contexts import GlideContext
 from .docking import Docking
 
 
@@ -22,14 +21,11 @@ class Glide(Docking):
     """
 
     def __init__(self) -> None:
-        # TODO:DONE? move this check with context in run
         # self.context= GlideContext.get_current()
         pass
 
-    @staticmethod
-    def run(target, ligand, context):
+    def run(self, target, ligand, context):
         r"""Dock ligand into protein grid."""
-        # TODO:DONE Break apart into functions and update with new arguments
         # ensure that prepped_ligand and grid_file are defined and if not raise an error and exit
         logger.info(ligand.file_path, ligand.file_id)
         jobname = str(ligand.file_id.split("_prepared")[0]) + "_docking"
@@ -156,7 +152,7 @@ class Glide(Docking):
                 "-ma",
                 context.lig_max_mw,
                 "-WAIT",
-                "-epik",
+                "-epik" if context.lig_epik else "",
                 "-ph",
                 context.lig_ph,
                 "-pht",
@@ -192,7 +188,7 @@ class Glide(Docking):
                 raise e
         else:
             logger.error(
-                "The ligand file is not in the correct format. Please check the extension of the ligand file"
+                "The ligand file is not in the correct format. Please check the extension"
             )
             raise ValueError("Invalid ligand file format")
         return prep
@@ -205,11 +201,11 @@ class Glide(Docking):
             protein.file_path,
             os.path.join(context.write_dir, f"{protein.file_id}_protein_prepared.mae"),
             "-WAIT",
-            "-fillsidechains",
-            "-disulfides",
-            "-rehtreat",
-            "-samplewater",
-            "-minimize_adj_h",
+            "-fillsidechains" if context.fillsidechains else "",
+            "-disulfides" if context.disulfides else "",
+            "-rehtreat" if context.rehtreat else "",
+            "-samplewater" if context.samplewater else "",
+            "-minimize_adj_h" if context.minimize_adj_h else "",
             "-epik_pH",
             context.epik_ph,
             "-epik_pHt",
@@ -287,8 +283,6 @@ class Glide(Docking):
                 raise subprocess.CalledProcessError(
                     process.returncode, " ".join(grid_command)
                 )
-        except Exception as e:
-            logger.error(f"Error while processing PDB ID {protein.file_id}: {e.stderr}")
         except Exception as e:
             logger.error(
                 f"An unexpected error occurred for PDB ID {protein.file_id}: {str(e)}"

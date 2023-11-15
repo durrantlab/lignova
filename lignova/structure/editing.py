@@ -1,3 +1,4 @@
+r""" Implementation for editing protein structures using MDAnalysis."""
 from typing import TextIO, Union
 
 from collections.abc import Iterable
@@ -12,7 +13,7 @@ def get_mda_universe(pdb) -> mda.Universe:
 
 
 def select_chains(
-    u: mda.Universe, chains: Union[str, Iterable[str], None] = None
+    mda_univ: mda.Universe, chains: Union[str, Iterable[str], None] = None
 ) -> mda.Universe:
     r"""Select specific chains.
 
@@ -23,11 +24,11 @@ def select_chains(
     chains
         Chains to keep.
     """
-    n_chains = len(set(u.segments.segids))
+    n_chains = len(set(mda_univ.segments.segids))
     logger.info("There are {} chains in the structure", n_chains)
     if n_chains == 1:
         logger.info("Selecting the only chain available")
-        return u
+        return mda_univ
 
     # There are multiple chains in the structure
     if isinstance(chains, str):
@@ -35,11 +36,11 @@ def select_chains(
     if chains is None:
         chains = ["A"]
     selection = " and ".join([f"segid {c}" for c in chains])
-    return u.select_atoms(selection)
+    return mda_univ.select_atoms(selection)
 
 
 def remove_residues(
-    u: mda.Universe, residues: Union[str, Iterable[str]]
+    mda_univ: mda.Universe, residues: Union[str, Iterable[str]]
 ) -> mda.Universe:
     r"""Remove residues from structure.
 
@@ -54,10 +55,10 @@ def remove_residues(
         residues = [residues]
     selection = " and ".join([f"not resname {r}" for r in residues])
     logger.info("MDAnalysis selection: {}", selection)
-    return u.select_atoms(selection)
+    return mda_univ.select_atoms(selection)
 
 
-def remove_hetatoms(u: mda.Universe) -> mda.Universe:
+def remove_hetatoms(mda_univ: mda.Universe) -> mda.Universe:
     r"""Remove hetero atoms.
 
     Parameters
@@ -65,10 +66,10 @@ def remove_hetatoms(u: mda.Universe) -> mda.Universe:
     u
         MDAnalysis universe to process.
     """
-    return u.select_atoms("not record_type HETATM")
+    return mda_univ.select_atoms("not record_type HETATM")
 
 
-def filter_hetatoms(u: mda.Universe) -> mda.Universe:
+def filter_hetatoms(mda_univ: mda.Universe) -> mda.Universe:
     r"""Filter hetero atoms.
 
     Parameters
@@ -76,10 +77,10 @@ def filter_hetatoms(u: mda.Universe) -> mda.Universe:
     u
         MDAnalysis universe to process.
     """
-    return u.select_atoms("record_type HETATM")
+    return mda_univ.select_atoms("record_type HETATM")
 
 
-def write_mda_universe(u: mda.Universe, file_path: str) -> TextIO:
+def write_mda_universe(mda_univ: mda.Universe, file_path: str) -> TextIO:
     r"""Write MDAnalysis universe to file.
 
     Parameters
@@ -89,4 +90,4 @@ def write_mda_universe(u: mda.Universe, file_path: str) -> TextIO:
     file_path
         File to write to.
     """
-    return u.write(file_path)
+    return mda_univ.write(file_path)

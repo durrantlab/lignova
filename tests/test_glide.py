@@ -81,6 +81,7 @@ def test_convert_ligand_to_mae():
 
 def test_prep_Ligand():
     prepared = glide.PrepLigand(lig_object, context)
+    prep_info = prepared.get_info(context)
     # read the ref and test files and compare the lines
     with open(context_protein_6Oav["ligand_prepared_path"], "r") as file:
         lig_ref = file.readlines()
@@ -90,10 +91,10 @@ def test_prep_Ligand():
         lig_test = file.readlines()
     assert lig_ref[113] == lig_test[113]
     assert prepared.file_name == "6oav_A_M3A_lig_prepared.mae"
-    assert context.lig_ph == "7.0"
-    assert context.lig_pht == "2.0"
-    assert context.lig_stereoisomers == "32"
-    assert context.lig_forcefield == "14"
+    assert prep_info["pH"] == "7.0"
+    assert prep_info["pHt"] == "2.0"
+    assert prep_info["stereoisomers"] == "32"
+    assert prep_info["forcefield"] == "14"
 
 
 def test_prep_Protein():
@@ -104,6 +105,7 @@ def test_prep_Protein():
     prepared.load(
         file_path=context_protein_6Oav["write_dir"] + "/6oav_chA_protein_prepared.mae"
     )
+    prep_info = prepared.get_info(context)
     # read the grid log file and get the OUTERBOX value and the grid center
     with open(context_protein_6Oav["grid_log_path"], "r") as file:
         lines = file.readlines()
@@ -121,12 +123,18 @@ def test_prep_Protein():
                 grid_center_test = [line.split()[1], line.split()[2], line.split()[3]]
     assert outerbox_ref == outerbox_test
     assert grid_center_ref == grid_center_test
-    assert context.epik_ph == "7.0"
-    assert context.epik_pht == "2.0"
-    assert context.forcefield == "OPLS_2005"
-    assert context.grid_innerbox == "10"
-    assert context.prot_rmsd == "0.3"
-    assert context.propka_ph == "7.0"
+    assert prep_info["epik_pH"] == "7.0"
+    assert prep_info["epik_pHt"] == "2.0"
+    assert prep_info["forcefield"] == "OPLS_2005"
+    assert prep_info["grid_innerbox"] == "10"
+    assert prep_info["rmsd"] == "0.3"
+    assert prep_info["propka_pH"] == "7.0"
+    assert prep_info["fillsidechains"]
+    assert prep_info["disulfides"]
+    assert prep_info["water_distance"]
+    assert prep_info["sample_water"]
+    assert prep_info["minimize_adj_h"]
+    assert prep_info["hydrogen_addition"]
 
 
 def test_docking():
