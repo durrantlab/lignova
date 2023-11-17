@@ -3,6 +3,8 @@ from typing import Optional, Union
 
 import os
 
+from loguru import logger
+
 _default_glide_context: "Optional[GlideContext]" = None
 
 DEFAULT_COMMAND = os.environ.get("SCHRODINGER", None)
@@ -62,6 +64,9 @@ class GlideContext:
         lig_epik: Union[bool, None],
     ):
         if not os.environ.get("SCHRODINGER") or command is None:
+            logger.critical(
+                "Schrödinger is not installed or the $SCHRODINGER environment variable is not set."
+            )
             raise OSError(
                 "Schrödinger is not installed or the $SCHRODINGER environment variable is not set."
             )
