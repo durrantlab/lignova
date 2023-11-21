@@ -7,71 +7,11 @@ import subprocess
 
 from loguru import logger
 
+from .contexts.combind import CombindContext
 
-class Combind:
+
+class Combind(CombindContext):
     r"""Combind class for pose prediction/selection."""
-
-    def __init__(
-        self,
-        command: Union[str, None] = None,
-        schrodinger: Union[str, None] = None,
-        work_dir: Union[str, None] = None,
-    ):
-        if not os.environ.get("SCHRODINGER") or command is None:
-            logger.critical(
-                "Schrödinger is not installed or the $SCHRODINGER environment variable is not set."
-            )
-            if not os.environ.get("COMBINDHOME"):
-                logger.critical(
-                    "Combind is not found. Please follow the installation instruction "
-                    "at https://github.com/drorlab/combind"
-                )
-                if schrodinger is None or not os.path.exists(
-                    os.path.join(work_dir, "schrodinger.ve")
-                ):
-                    logger.critical("shrodinger.ve is not found.")
-                    raise OSError(
-                        "Schrödinger is not installed or the $SCHRODINGER "
-                        "environment variable is not set."
-                    )
-            raise OSError(
-                "Schrödinger is not installed or the $SCHRODINGER environment variable is not set."
-            )
-        self.command = command
-        self.schrodinger = schrodinger
-        self.work_dir = work_dir
-
-    def activate_env(self):
-        r"""Activate the Schrodinger environment."""
-        command = ["source", self.schrodinger, "/bin/activate"]
-        logger.info("Activating Schrodinger virtual environment.")
-        try:
-            process = subprocess.Popen(
-                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-            )
-            stdout, stderr = process.communicate()
-            if process.returncode == 0:
-                logger.info("Schrodinger virtual environment activated.")
-            else:
-                logger.error(
-                    f"Schrodinger virtual environment activation failed\n{stderr}."
-                )
-        except Exception as e:
-            logger.error(f"Schrodinger virtual environment activation failed. {str(e)}")
-            raise e
-        command = ["source", self.command, "/setup.sh"]
-        try:
-            process = subprocess.Popen(
-                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-            )
-            stdout, stderr = process.communicate()
-            if process.returncode == 0:
-                logger.info("Combind variables activated.")
-            else:
-                logger.error(f"Combind variables activation failed\n{stderr}.")
-        except Exception as e:
-            logger.error(f"Combind variables activation failed. {str(e)}")
-            raise e
 
     def featurize(
         self,
