@@ -36,7 +36,6 @@ class CombindContext:
 
         self.schrodinger = schrodinger
         self.schrodinger_env = schrodinger_env
-
         # Check if Schrödinger virtual environment is not found and create it
         if schrodinger_env and schrodinger_env not in os.listdir(self.work_dir):
             logger.debug(
@@ -68,58 +67,25 @@ class CombindContext:
             )
             logger.critical(error_message)
             raise NotImplementedError(error_message)
-
         logger.info("Setting up combind specific variables.")
-
-        # Update shebang line in setup.sh
-        activate_combind = os.path.join(command, "setup.sh")
-        with open(activate_combind, "r", encoding="utf-8") as file:
-            script_content = file.read()
-
-        shebang_line = (
-            "#!/bin/bash\n" if not script_content.startswith("#!/bin/bash") else ""
-        )
-        modified_script_content = shebang_line + script_content
-
-        with open(activate_combind, "w", encoding="utf-8") as file:
-            file.write(modified_script_content)
-
-        # Run chmod +x setup.sh
-        chmod_command = ["chmod", "u+x", activate_combind]
-        process = subprocess.Popen(
-            chmod_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
-        stderr = process.communicate()
-
-        if process.returncode == 0:
-            logger.info("chmod DONE.")
-            current_directory = os.getcwd()
-            os.chdir(command)
-            source_command = f"source setup.sh && echo COMBINDHOME=$COMBINDHOME"
-            process = subprocess.Popen(
-                source_command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                shell=True,
-                executable="/bin/bash",
-            )
-            stdout, stderr = process.communicate()
-            output_lines = stdout.decode().splitlines()
-            for environment_variable in output_lines:
-                key, value = environment_variable.split("=")
-                print(key, value)
-                os.environ[key] = value
-
+        current_directory = os.getcwd()
+        combind_variables = {
+            "COMBINDHOME": command,
+            "PATH": os.pathsep.join([os.environ.get("PATH"), command]),
+        }
+        for key, value in combind_variables.items():
+            os.environ[key] = value
             # Get the value of COMBINDHOME from the environment
             combind_home = os.environ.get("COMBINDHOME")
-            print("COMBINDHOME:", combind_home)
-            print("PATH:", os.environ.get("PATH"))
+            if combind_home not in os.environ.get("PATH"):
+                os.environ["PATH"] += os.pathsep + combind_home
         # Activate Combind environment
         if os.environ.get("COMBINDHOME"):
             logger.info("Combind environment activated.")
             os.chdir(current_directory)
             print(os.getcwd())
             self.command = os.environ.get("COMBINDHOME")
+            logger.info(f"Combind command: {self.command}")
             activate = [
                 "source",
                 os.path.join(work_dir, self.schrodinger_env, "bin/activate"),
