@@ -11,7 +11,7 @@ _default_combind_context: "Optional[CombindContext]" = None
 DEFAULT_COMMAND = "/home/mma121/PubChem_small/combind"
 DEFAULT_WORK_DIR = "./tmp/6oav"
 DEFAULT_SCHRODINGER = os.environ.get("SCHRODINGER", None)
-DEFAULT_SCHRODINGER_ENV = "schrodinger.ve"
+DEFAULT_SCHRODINGER_ENV = "./tmp/6oav/schrodinger.ve"
 
 
 class CombindContext:
@@ -36,8 +36,7 @@ class CombindContext:
 
         self.schrodinger = schrodinger
         self.schrodinger_env = schrodinger_env
-        # Check if Schrödinger virtual environment is not found and create it
-        if schrodinger_env and schrodinger_env not in os.listdir(self.work_dir):
+        if not os.path.exists(schrodinger_env):
             logger.debug(
                 "Schrödinger virtual environment is not found. Creating in work directory..."
             )
@@ -83,24 +82,9 @@ class CombindContext:
         if os.environ.get("COMBINDHOME"):
             logger.info("Combind environment activated.")
             os.chdir(current_directory)
-            print(os.getcwd())
+            logger.debug(os.getcwd())
             self.command = os.environ.get("COMBINDHOME")
             logger.info(f"Combind command: {self.command}")
-            activate = [
-                "source",
-                os.path.join(work_dir, self.schrodinger_env, "bin/activate"),
-            ]
-            process = subprocess.Popen(
-                activate, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
-            )
-            stderr = process.communicate()
-
-            if process.returncode != 0:
-                error_message = (
-                    f"Failed to activate Schrodinger virtual environment\n{stderr[1]}."
-                )
-                logger.critical(error_message)
-                raise NotImplementedError(error_message)
         else:
             error_message = f"Combind environment activation failed\n{stderr[1]}."
             logger.critical(error_message)
