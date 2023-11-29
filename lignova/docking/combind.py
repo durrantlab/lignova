@@ -126,7 +126,10 @@ class Combind(CombindContext):
             raise e
 
     def get_3d_top_pose(
-        self, docking_filepath: Union[str, TextIO], combind_csv: Union[str, TextIO]
+        self,
+        docking_filepath: Union[str, TextIO],
+        combind_csv: Union[str, TextIO],
+        extract_filename: Union[str],
     ):
         r"""Get the top ligand pose after combind prediction.
         Parameters
@@ -135,6 +138,8 @@ class Combind(CombindContext):
             Path to the docking file from GLIDE.
         combind_csv : str, file-like object
             Path to the combind csv file.
+        extract_filename : str
+            Name of the output file.
         """
         command1 = [
             self.activate,
@@ -155,6 +160,16 @@ class Combind(CombindContext):
             )
             if process.returncode == 0:
                 logger.info("Pose extraction from the docking file completed.")
+                output_file = glob.glob(
+                    os.path.join(
+                        self.work_dir,
+                        f"{os.path.splitext(os.path.basename(combind_csv))[0]}_pv.maegz",
+                    )
+                )
+                os.rename(
+                    output_file[0],
+                    os.path.join(self.work_dir, f"{extract_filename}_pv.maegz"),
+                )
             else:
                 error_message = (
                     "Failed to activate extract the top pose from the docking file"
@@ -260,9 +275,6 @@ class Combind(CombindContext):
                         command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
                     )
                     stdout, stderr = process.communicate()
-                    print(command)
-                    print(stdout.decode())
-                    print(stderr.decode())
                     if process.returncode == 0:
                         logger.info("Combind score application sorting completed.")
                         with open(
