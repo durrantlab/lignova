@@ -32,7 +32,7 @@ def test_combindcontext():
     assert combind.command == "/home/mma121/PubChem_small/combind"
     assert combind.work_dir == context_protein_6Oav["write_dir"]
     assert combind.schrodinger == os.environ["SCHRODINGER"]
-    assert combind.schrodinger_env == "./tmp/6oav/schrodinger.ve"
+    assert os.path.basename(combind.schrodinger_env) == "schrodinger.ve"
 
 
 def test_featurize():
@@ -71,9 +71,6 @@ def test_select_pose():
     )
     assert os.path.exists(
         os.path.join(context_protein_6Oav["write_dir"], "6oav_m3a.csv")
-    )
-    assert os.path.exists(
-        os.path.join(context_protein_6Oav["write_dir"], "6oav_m3a_pose_selection.log")
     )
 
 
@@ -129,8 +126,11 @@ def test_apply_combind_score():
         output_filename="6oav_m3a",
     )
     assert os.path.exists(
-        os.path.join(context_protein_6Oav["write_dir"], "6oav_m3a_combind_score.maegz")
+        os.path.join(context_protein_6Oav["write_dir"], "6oav_m3a_combind_sorted.maegz")
     )
     assert os.path.exists(
-        os.path.join(context_protein_6Oav["write_dir"], "6oav_m3a_combind_score.log")
+        os.path.join(context_protein_6Oav["write_dir"], "6oav_m3a_combind_sort.log")
+    )
+    assert os.path.exists(
+        os.path.join(context_protein_6Oav["write_dir"], "6oav_m3a_combind.maegz")
     )

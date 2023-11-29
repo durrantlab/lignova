@@ -114,12 +114,6 @@ class Combind(CombindContext):
                 logger.info(
                     "Schrodinger virtual environment activated & Pose prediction completed."
                 )
-                with open(
-                    os.path.join(self.work_dir, f"{file_name}_pose_selection.log"),
-                    "w",
-                    encoding="utf-8",
-                ) as file:
-                    file.write(process.stdout.decode())
             else:
                 error_message = (
                     "Failed to activate Schrodinger virtual environment"
@@ -257,13 +251,18 @@ class Combind(CombindContext):
                         "-use_prop_d",
                         "r_i_combind_score",
                         "-o",
-                        f"{output_filename}_combind_sorted.maegz",
-                        f"{output_filename}_combind.maegz",
+                        os.path.join(
+                            self.work_dir, f"{output_filename}_combind_sorted.maegz"
+                        ),
+                        os.path.join(self.work_dir, f"{output_filename}_combind.maegz"),
                     ]
                     process = subprocess.Popen(
                         command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
                     )
                     stdout, stderr = process.communicate()
+                    print(command)
+                    print(stdout.decode())
+                    print(stderr.decode())
                     if process.returncode == 0:
                         logger.info("Combind score application sorting completed.")
                         with open(
@@ -280,7 +279,7 @@ class Combind(CombindContext):
                             + f"\n{stderr.decode()}."
                         )
                         logger.critical(error_message)
-                    raise NotImplementedError(error_message)
+                        raise NotImplementedError(error_message)
             else:
                 error_message = (
                     "Failed to apply the combind score"

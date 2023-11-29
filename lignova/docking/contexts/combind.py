@@ -11,7 +11,7 @@ _default_combind_context: "Optional[CombindContext]" = None
 DEFAULT_COMMAND = "/home/mma121/PubChem_small/combind"
 DEFAULT_WORK_DIR = "./tmp/6oav"
 DEFAULT_SCHRODINGER = os.environ.get("SCHRODINGER", None)
-DEFAULT_SCHRODINGER_ENV = "./tmp/6oav/schrodinger.ve"
+DEFAULT_SCHRODINGER_ENV = "schrodinger.ve"
 
 
 class CombindContext:
@@ -26,7 +26,6 @@ class CombindContext:
     ):
         """Initialize the combind context."""
         self.work_dir = work_dir
-
         # Check if Schrödinger is installed or the $SCHRODINGER environment variable is set
         if not os.environ.get("SCHRODINGER") and schrodinger is None:
             error_message = "Schrödinger is not installed"
@@ -35,30 +34,39 @@ class CombindContext:
             raise NotImplementedError(error_message)
 
         self.schrodinger = schrodinger
-        self.schrodinger_env = schrodinger_env
-        if not os.path.exists(schrodinger_env):
+        current_directory = os.getcwd()
+        logger.debug(f"Current working directory before: {os.getcwd()}")
+        os.chdir(work_dir)
+        if not os.path.isdir(schrodinger_env):
             logger.debug(
-                "Schrödinger virtual environment is not found. Creating in work directory..."
+                "Schrodinger virtual environment is not found. Creating in work directory..."
             )
-            command = [
+            logger.debug(f"Current working directory after: {os.getcwd()}")
+            command_run = [
                 self.schrodinger + "/run",
                 "schrodinger_virtualenv.py",
-                os.path.join(work_dir, schrodinger_env),
+                schrodinger_env,
             ]
             process = subprocess.Popen(
-                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
+                command_run,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
             )
             stderr = process.communicate()
             if process.returncode == 0:
                 logger.info("Schrodinger virtual environment created.")
+                self.schrodinger_env = os.path.join(os.getcwd(), schrodinger_env)
+                os.chdir(path=current_directory)
             else:
                 error_message = (
-                    f"Schrodinger virtual environment creation failed\n{stderr[1]}."
+                    f"Schrodinger virtual environment failed\n{stderr[1].decode()}."
                 )
                 logger.critical(error_message)
                 raise NotImplementedError(error_message)
-
-        # Check if command is provided
+        else:
+            logger.info("Schrodinger virtual environment found.")
+            self.schrodinger_env = os.path.join(self.work_dir, schrodinger_env)
+            os.chdir(path=current_directory)
         if command is None:
             error_message = (
                 "Please provide the path to combind. If you have not installed combind,"
@@ -67,7 +75,6 @@ class CombindContext:
             logger.critical(error_message)
             raise NotImplementedError(error_message)
         logger.info("Setting up combind specific variables.")
-        current_directory = os.getcwd()
         combind_variables = {
             "COMBINDHOME": command,
             "PATH": os.pathsep.join([os.environ.get("PATH"), command]),
