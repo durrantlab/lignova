@@ -32,8 +32,20 @@ class Protein(Structure):
             response = requests.get(pdb_url, timeout=30)
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to download PDB {pdb_id}: {e}")
-            raise e
+            if response.status_code == 404:
+                logger.warning(
+                    f"PDB file not found for {pdb_id} Trying the PDBx/mmCIF."
+                )
+                pdbx_url = f"https://files.rcsb.org/download/{pdb_id}.cif"
+                try:
+                    response = requests.get(pdbx_url, timeout=30)
+                    response.raise_for_status()
+                except requests.exceptions.RequestException as e:
+                    logger.error(f"PDB file not found for {pdb_id}.")
+                    raise e
+            else:
+                logger.error(f"PDB file not found for {pdb_id}.")
+                raise e
         return response.text
 
     def _load_from_pdb_id(
@@ -48,13 +60,14 @@ class Protein(Structure):
             Keep structure in file and load when requested. If ``False``, this will
             keep the structure in memory.
         write_path
-            Path to write to file.
+            Path to write to file
         """
         pdb_text = Protein.get_pdb_from_rcsb(pdb_id)
         if write:
             if write_path is None:
                 raise ValueError("Must provide write_path if write is True.")
-            self._pdb_file_path = write_text(pdb_text, write_path, file_ext="pdb")
+            file_ext = "pdb" if pdb_text.startswith("HEADER") else "cif"
+            self._pdb_file_path = write_text(pdb_text, write_path, file_ext=file_ext)
         else:
             self._pdb_text = pdb_text
 
