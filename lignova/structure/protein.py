@@ -40,9 +40,9 @@ class Protein(Structure):
                 try:
                     response = requests.get(pdbx_url, timeout=30)
                     response.raise_for_status()
-                except requests.exceptions.RequestException as e:
+                except requests.exceptions.RequestException as exp:
                     logger.error(f"PDB file not found for {pdb_id}.")
-                    raise e
+                    raise exp
             else:
                 logger.error(f"PDB file not found for {pdb_id}.")
                 raise e

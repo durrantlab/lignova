@@ -1,13 +1,17 @@
 r" Implemtnation for a wrapper to use lignova for validation"
 from typing import TextIO, Union
 
+import glob
 import os
 
 from loguru import logger
 
-from lignova.structure.base import Structure
+from lignova.docking import Glide
+from lignova.docking.contexts import GlideContext
+from lignova.structure.editing import write_mda_universe
 from lignova.structure.ligand import Ligand
 from lignova.structure.protein import Protein
+from lignova.structure.utils import separate_protein_ligand
 
 
 def clean_cluster_files(file_path: str, delim: list = ["[", "]"]):
@@ -75,7 +79,7 @@ def get_coordinates(
                 if protein.get_pdb_from_rcsb(pdb_id).startswith("HEADER")
                 else "cif"
             )
-            protein._load_from_pdb_id(
+            protein.load(
                 pdb_id,
                 write=True,
                 write_path=os.path.join(work_dir, pdb_id + "." + file_ext),
@@ -105,7 +109,7 @@ def get_coordinates(
                         if protein.get_pdb_from_rcsb(tmp).startswith("HEADER")
                         else "cif"
                     )
-                    protein._load_from_pdb_id(
+                    protein.load(
                         pdb_id=tmp,
                         write=True,
                         write_path=os.path.join(work_dir, tmp.lower() + "." + file_ext),
@@ -120,11 +124,77 @@ def get_coordinates(
                 if protein.get_pdb_from_rcsb(pdb_id).startswith("HEADER")
                 else "cif"
             )
-            protein._load_from_pdb_id(
+            protein.load(
                 pdb_id=pdb_id,
                 write=True,
                 write_path=os.path.join(work_dir, pdb_id.lower() + "." + file_ext),
             )
+
+
+def prep_structure(
+    input_dir: str, output_dir: str, pdb_id: Union[str, list, None], limit: int = 10
+):
+    """
+    This function takes a PDB ID and a ligand ID and returns a Structure object.
+    Parameters
+    ----------
+    directory : str
+        The directory where the PDB file is located.
+    pdb_id : Optional[str]
+        The PDB ID of the protein. The default is None.
+    limit : int
+        The number of PDB IDs to prep. The default is 50.
+    Returns
+    -------
+    """
+    failed = []
+    glide = Glide()
+    context = GlideContext.get_current()
+    if not os.path.exists(input_dir):
+        raise FileNotFoundError("Input directory not found")
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+    if pdb_id is not None:
+        if isinstance(pdb_id, str):
+            pdb_id = [pdb_id]
+        for ids in pdb_id:
+            if not os.path.exists(
+                os.path.join(input_dir, ids.lower() + ".pdb")
+            ) and not os.path.exists(os.path.join(input_dir, ids.lower() + ".cif")):
+                logger.warning(f"{ids} not found in the directory. Downloading it now")
+
+                get_coordinates(ids, input_dir, limit=1)
+    # NOTE:REMEMBER TO DEAL WITH THE CIF FILES
+    pdb_files = glob.glob(os.path.join(input_dir, "*.pdb"))
+    limit = len(pdb_files) if len(pdb_files) < limit else limit
+    pdb_files = pdb_files[:limit] if len(pdb_files) > limit else pdb_files
+    for pdb_file in pdb_files:
+        if "_lig" not in pdb_file:
+            prot = Protein(pdb_file)
+            prot.load(file_path=pdb_file)
+            logger.info(f"Prepping {pdb_file}")
+            if os.path.exists(
+                os.path.join(input_dir, pdb_file.replace(".pdb", "_lig.pdb"))
+            ):
+                continue
+            protein, ligand = separate_protein_ligand(prot.file_path)
+            write_mda_universe(protein, os.path.join(input_dir, pdb_file))
+            # NOTE:I can have this named with the lig name should i do it?
+            try:
+                write_mda_universe(
+                    ligand,
+                    os.path.join(input_dir, pdb_file.replace(".pdb", "_lig.pdb")),
+                )
+                raw_prot = Protein(pdb_file)
+                raw_lig = Ligand(pdb_file.replace(".pdb", "_lig.pdb"))
+            except:
+                logger.warning(f"Failed to prep {pdb_file}")
+                failed.append(pdb_file)
+                continue
+        if len(failed) > 0:
+            with open(os.path.join(output_dir, "failed.txt"), "w") as f:
+                for i in failed:
+                    f.write(i + "\n")
 
 
 if __name__ == "__main__":
@@ -133,4 +203,10 @@ if __name__ == "__main__":
         "/home/mma121/PubChem_small/try_schrodinger/new_clusters_pdb_postfilter.csv"
     )
 
-    get_coordinates(RAW_FILE, "/home/mma121/PubChem_small/representatives")
+    # get_coordinates(RAW_FILE, "/home/mma121/PubChem_small/representatives")
+    prep_structure(
+        "/home/mma121/PubChem_small/representatives",
+        "/home/mma121/PubChem_small/prepped",
+        pdb_id=None,
+        limit=10,
+    )
