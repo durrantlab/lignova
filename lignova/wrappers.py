@@ -11,7 +11,7 @@ from lignova.docking.contexts import GlideContext
 from lignova.structure.editing import write_mda_universe
 from lignova.structure.ligand import Ligand
 from lignova.structure.protein import Protein
-from lignova.structure.utils import separate_protein_ligand
+from lignova.structure.utils import is_xray_structure, separate_protein_ligand
 
 
 def clean_cluster_files(file_path: str, delim: list = ["[", "]"]):
@@ -102,18 +102,18 @@ def get_coordinates(
                 if os.path.exists(os.path.join(work_dir, tmp.lower() + ".pdb")):
                     logger.info(f"PDB file for {tmp} already exists")
                     continue
-                else:
-                    logger.info(f"Downloading PDB file for {tmp}")
-                    file_ext = (
-                        "pdb"
-                        if protein.get_pdb_from_rcsb(tmp).startswith("HEADER")
-                        else "cif"
-                    )
-                    protein.load(
-                        pdb_id=tmp,
-                        write=True,
-                        write_path=os.path.join(work_dir, tmp.lower() + "." + file_ext),
-                    )
+
+                logger.info(f"Downloading PDB file for {tmp}")
+                file_ext = (
+                    "pdb"
+                    if protein.get_pdb_from_rcsb(tmp).startswith("HEADER")
+                    else "cif"
+                )
+                protein.load(
+                    pdb_id=tmp,
+                    write=True,
+                    write_path=os.path.join(work_dir, tmp.lower() + "." + file_ext),
+                )
         else:
             # check if the input is a single pdb id
             logger.info("Input is a single PDB ID")
@@ -132,7 +132,7 @@ def get_coordinates(
 
 
 def prep_structure(
-    input_dir: str, output_dir: str, pdb_id: Union[str, list, None], limit: int = 10
+    input_dir: str, output_dir: str, pdb_id: Union[str, list, None], limit: int = 500
 ):
     """
     This function takes a PDB ID and a ligand ID and returns a Structure object.
@@ -147,7 +147,6 @@ def prep_structure(
     Returns
     -------
     """
-    failed = []
     glide = Glide()
     context = GlideContext.get_current()
     if not os.path.exists(input_dir):
@@ -166,35 +165,37 @@ def prep_structure(
                 get_coordinates(ids, input_dir, limit=1)
     # NOTE:REMEMBER TO DEAL WITH THE CIF FILES
     pdb_files = glob.glob(os.path.join(input_dir, "*.pdb"))
+    logger.info(f"Found a total of {len(pdb_files)} PDB files in the directory")
     limit = len(pdb_files) if len(pdb_files) < limit else limit
     pdb_files = pdb_files[:limit] if len(pdb_files) > limit else pdb_files
     for pdb_file in pdb_files:
         if "_lig" not in pdb_file:
             prot = Protein(pdb_file)
             prot.load(file_path=pdb_file)
-            logger.info(f"Prepping {pdb_file}")
             if os.path.exists(
                 os.path.join(input_dir, pdb_file.replace(".pdb", "_lig.pdb"))
             ):
                 continue
-            protein, ligand = separate_protein_ligand(prot.file_path)
-            write_mda_universe(protein, os.path.join(input_dir, pdb_file))
-            # NOTE:I can have this named with the lig name should i do it?
-            try:
+            if is_xray_structure(prot.file_path):
+                logger.info(f"Prepping {pdb_file}")
+                protein, ligand = separate_protein_ligand(prot.file_path)
+                write_mda_universe(protein, os.path.join(input_dir, pdb_file))
+                # NOTE:I can have this named with the lig name should i do it?
                 write_mda_universe(
                     ligand,
                     os.path.join(input_dir, pdb_file.replace(".pdb", "_lig.pdb")),
                 )
-                raw_prot = Protein(pdb_file)
-                raw_lig = Ligand(pdb_file.replace(".pdb", "_lig.pdb"))
-            except:
-                logger.warning(f"Failed to prep {pdb_file}")
-                failed.append(pdb_file)
-                continue
-        if len(failed) > 0:
-            with open(os.path.join(output_dir, "failed.txt"), "w") as f:
-                for i in failed:
-                    f.write(i + "\n")
+            raw_prot = Protein(pdb_file)
+            raw_lig = Ligand(raw_prot.file_path.replace(".pdb", "_lig.pdb"))
+            context.write_dir = output_dir
+            prepared_lig = glide.PrepLigand(raw_lig, context)
+            glide.convert_to_mae(raw_prot, context)
+            prot_mae = Protein(
+                file_path=os.path.join(
+                    context.write_dir, raw_prot.file_name.replace(".pdb", ".mae")
+                )
+            )
+            prepared_prot = glide.PrepProtein(prot_mae, context)
 
 
 if __name__ == "__main__":
@@ -203,10 +204,10 @@ if __name__ == "__main__":
         "/home/mma121/PubChem_small/try_schrodinger/new_clusters_pdb_postfilter.csv"
     )
 
-    # get_coordinates(RAW_FILE, "/home/mma121/PubChem_small/representatives")
+    get_coordinates(RAW_FILE, "/home/mma121/PubChem_small/representatives", limit=20)
     prep_structure(
         "/home/mma121/PubChem_small/representatives",
-        "/home/mma121/PubChem_small/prepped",
+        "./prepped",
         pdb_id=None,
-        limit=10,
+        limit=20,
     )

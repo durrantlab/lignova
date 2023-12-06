@@ -35,7 +35,7 @@ def select_chains(
         chains = [chains]
     if chains is None:
         chains = ["A"]
-    selection = " and ".join([f"segid {c}" for c in chains])
+    selection = " or ".join([f"segid {c}" for c in chains])
     return mda_univ.select_atoms(selection)
 
 
