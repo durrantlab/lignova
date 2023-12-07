@@ -148,7 +148,10 @@ def prep_structure(
     -------
     """
     glide = Glide()
+    failed = []
     context = GlideContext.get_current()
+    context.write_dir = output_dir
+    context.set_current(context)
     if not os.path.exists(input_dir):
         raise FileNotFoundError("Input directory not found")
     if not os.path.exists(output_dir):
@@ -156,26 +159,23 @@ def prep_structure(
     if pdb_id is not None:
         if isinstance(pdb_id, str):
             pdb_id = [pdb_id]
-        for ids in pdb_id:
-            if not os.path.exists(
-                os.path.join(input_dir, ids.lower() + ".pdb")
-            ) and not os.path.exists(os.path.join(input_dir, ids.lower() + ".cif")):
-                logger.warning(f"{ids} not found in the directory. Downloading it now")
-
-                get_coordinates(ids, input_dir, limit=1)
-    # NOTE:REMEMBER TO DEAL WITH THE CIF FILES
-    pdb_files = glob.glob(os.path.join(input_dir, "*.pdb"))
-    logger.info(f"Found a total of {len(pdb_files)} PDB files in the directory")
-    limit = len(pdb_files) if len(pdb_files) < limit else limit
-    pdb_files = pdb_files[:limit] if len(pdb_files) > limit else pdb_files
-    for pdb_file in pdb_files:
-        if "_lig" not in pdb_file:
-            prot = Protein(pdb_file)
-            prot.load(file_path=pdb_file)
-            if os.path.exists(
-                os.path.join(input_dir, pdb_file.replace(".pdb", "_lig.pdb"))
-            ):
-                continue
+    else:
+        # NOTE:REMEMBER TO DEAL WITH THE CIF FILES
+        pdb_id = glob.glob(os.path.join(input_dir, "*.pdb"))
+        logger.info(f"Found a total of {len(pdb_id)} PDB files in the directory")
+    limit = len(pdb_id) if len(pdb_id) < limit else limit
+    for pdb_file in pdb_id[:limit]:
+        ids = os.path.basename(pdb_file).split(".")[0]
+        if not os.path.exists(
+            os.path.join(input_dir, ids.lower() + ".pdb")
+        ) and not os.path.exists(os.path.join(input_dir, ids.lower() + ".cif")):
+            logger.warning(f"{ids} not found in the directory. Downloading it now")
+            get_coordinates(ids, input_dir)
+        prot = Protein(pdb_file)
+        prot.load(file_path=pdb_file)
+        if "_lig" not in pdb_file and not os.path.exists(
+            os.path.join(input_dir, pdb_file.replace(".pdb", "_lig.pdb"))
+        ):
             if is_xray_structure(prot.file_path):
                 logger.info(f"Prepping {pdb_file}")
                 protein, ligand = separate_protein_ligand(prot.file_path)
@@ -185,17 +185,61 @@ def prep_structure(
                     ligand,
                     os.path.join(input_dir, pdb_file.replace(".pdb", "_lig.pdb")),
                 )
-            raw_prot = Protein(pdb_file)
-            raw_lig = Ligand(raw_prot.file_path.replace(".pdb", "_lig.pdb"))
-            context.write_dir = output_dir
-            prepared_lig = glide.PrepLigand(raw_lig, context)
-            glide.convert_to_mae(raw_prot, context)
-            prot_mae = Protein(
-                file_path=os.path.join(
-                    context.write_dir, raw_prot.file_name.replace(".pdb", ".mae")
+            else:
+                logger.warning(f"{pdb_file} is not an X-ray structure")
+                os.remove(pdb_file)
+                continue
+        if (
+            len(
+                glob.glob(os.path.join(output_dir, prot.file_name.replace(".pdb", "*")))
+            )
+            == 2
+            or "_lig" in pdb_file
+        ):
+            logger.info(f"{prot.file_name} already prepped")
+            continue
+        raw_prot = Protein(pdb_file)
+        raw_lig = Ligand(raw_prot.file_path.replace(".pdb", "_lig.pdb"))
+        prepared_lig = glide.PrepLigand(raw_lig, context)
+        glide.convert_to_mae(raw_prot, context)
+        prot_mae = Protein(
+            file_path=os.path.join(
+                context.write_dir, raw_prot.file_name.replace(".pdb", ".mae")
+            )
+        )
+        try:
+            prepared_prot = glide.PrepProtein(prot_mae, context)
+            os.remove(
+                os.path.join(
+                    context.write_dir, raw_prot.file_name.replace(".pdb", "_grid.log")
                 )
             )
-            prepared_prot = glide.PrepProtein(prot_mae, context)
+            os.remove(os.path.join(context.write_dir, prot_mae.file_name))
+            os.remove(
+                os.path.join(
+                    context.write_dir, raw_prot.file_name.replace(".pdb", "_lig.mae")
+                )
+            )
+            os.remove(
+                os.path.join(
+                    context.write_dir,
+                    raw_prot.file_name.replace(".pdb", "_protein_prepared.mae"),
+                )
+            )
+        except:
+            logger.warning(f"Could not prepare {prot.file_name}")
+            # save the pdb file in a folder called failed
+            failed.append(prot.file_name)
+            # remove any files in the output directory With the same name
+            for file in glob.glob(
+                os.path.join(output_dir, prot.file_name.replace(".pdb", "*"))
+            ):
+                os.remove(file)
+            continue
+    # save the failed list to a folder called failed.txt in the output directory if it is not empty
+    if len(failed) > 0:
+        with open(os.path.join(output_dir, "failed.txt"), "a") as f:
+            f.write("\n".join(failed))
 
 
 if __name__ == "__main__":
@@ -204,10 +248,17 @@ if __name__ == "__main__":
         "/home/mma121/PubChem_small/try_schrodinger/new_clusters_pdb_postfilter.csv"
     )
 
-    get_coordinates(RAW_FILE, "/home/mma121/PubChem_small/representatives", limit=20)
+    get_coordinates(RAW_FILE, "/home/mma121/PubChem_small/representatives", limit=100)
+    pdb_files = glob.glob(
+        os.path.join("/home/mma121/PubChem_small/representatives", "*.pdb")
+    )
+    cif_files = glob.glob(
+        os.path.join("/home/mma121/PubChem_small/representatives", "*.cif")
+    )
+
     prep_structure(
         "/home/mma121/PubChem_small/representatives",
         "./prepped",
-        pdb_id=None,
-        limit=20,
+        pdb_id=pdb_files,
+        limit=100,
     )
