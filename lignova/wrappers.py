@@ -161,6 +161,8 @@ def prep_structure(
         # NOTE:REMEMBER TO DEAL WITH THE CIF FILES
         pdb_id = glob.glob(os.path.join(input_dir, "*.pdb"))
         logger.info(f"Found a total of {len(pdb_id)} PDB files in the directory")
+        if len(pdb_id) == 0:
+            raise FileNotFoundError("No PDB files found in the directory")
     limit = len(pdb_id) if len(pdb_id) < limit else limit
     for pdb_file in pdb_id[:limit]:
         ids = os.path.basename(pdb_file).split(".")[0]
@@ -243,23 +245,73 @@ def prep_structure(
             file.write("\n".join(failed))
 
 
+def dock_ligand(
+    input_dir: str, output_dir: str, pdb: [str, list, None], limit: int = 10
+):
+    """
+    Dock the ligand to the protein
+    Parameters
+    ----------
+    input_dir : str
+        The directory containing the prepped protein and ligand files
+    output_dir : str
+        The directory to save the docked files
+    pdb : Optional[str,list]
+        The pdb file to dock. If None, all the pdb files in the input directory will be docked
+    limit : int, optional
+        The number of files to dock, by default 10
+    """
+    # check if the output directory exists and create it if it does not
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+    # check if the input directory exists and if not raise an error
+    if not os.path.exists(input_dir):
+        raise FileNotFoundError(f"{input_dir} does not exist")
+    # check if the pdb is not none and if it is not a list, raise an error
+    if pdb is not None:
+        if isinstance(pdb, str):
+            pdb = [pdb]
+    else:
+        print(input_dir)
+        pdb = glob.glob(os.path.join(input_dir, "*_grid.zip"))
+        logger.info(f"Found {len(pdb)} docking files")
+        if len(pdb) == 0:
+            raise FileNotFoundError(f"No docking files found in {input_dir}")
+    glide = Glide()
+    context = GlideContext.get_current()
+    context.write_dir = output_dir
+    context.set_current(context)
+    limit = min(limit, len(pdb))
+    pdb = pdb[:limit]
+    for pdb_file in pdb:
+        logger.info(f"Docking {pdb_file}")
+        prep_prot = Protein(pdb_file)
+        prep_lig = Ligand(
+            os.path.join(
+                input_dir, prep_prot.file_id.replace("grid", "lig_prepared.mae")
+            )
+        )
+        logger.info(f"Docking {prep_lig.file_name} to {prep_prot.file_name}")
+        glide.run(prep_prot, prep_lig, context)
+
+
 if __name__ == "__main__":
     RAW_FILE = "/home/mma121/PubChem_small/try_schrodinger/clusters.csv"
     FILTERED_FILE = (
         "/home/mma121/PubChem_small/try_schrodinger/new_clusters_pdb_postfilter.csv"
     )
+    raw_input_dir = "/home/mma121/PubChem_small/representatives"
+    prepped_dir = "./prepped"
+    docked_dir = "./docked"
 
-    # get_coordinates(RAW_FILE, "/home/mma121/PubChem_small/representatives", limit=100)
-    pdb_files = glob.glob(
-        os.path.join("/home/mma121/PubChem_small/representatives", "*.pdb")
-    )
-    cif_files = glob.glob(
-        os.path.join("/home/mma121/PubChem_small/representatives", "*.cif")
-    )
-
-    prep_structure(
-        "/home/mma121/PubChem_small/representatives",
-        "./prepped",
+    output_dir = "/home/mma121/PubChem_small/docked"
+    # get_coordinates(RAW_FILE,raw_input_dir, limit=100)
+    pdb_files = glob.glob(os.path.join(raw_input_dir, "*.pdb"))
+    cif_files = glob.glob(os.path.join(raw_input_dir, "*.cif"))
+    """
+    prep_structure(raw_input_dir,prepped_dir,
         pdb_id=pdb_files,
         limit=150,
     )
+    """
+    dock_ligand(prepped_dir, docked_dir, pdb=None, limit=2)
