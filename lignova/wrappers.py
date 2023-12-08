@@ -144,8 +144,6 @@ def prep_structure(
         The PDB ID of the protein. The default is None.
     limit : int
         The number of PDB IDs to prep. The default is 50.
-    Returns
-    -------
     """
     glide = Glide()
     failed = []
@@ -171,7 +169,7 @@ def prep_structure(
         ) and not os.path.exists(os.path.join(input_dir, ids.lower() + ".cif")):
             logger.warning(f"{ids} not found in the directory. Downloading it now")
             get_coordinates(ids, input_dir)
-        prot = Protein(pdb_file)
+        prot = Protein(os.path.join(input_dir, pdb_file))
         prot.load(file_path=pdb_file)
         if "_lig" not in pdb_file and not os.path.exists(
             os.path.join(input_dir, pdb_file.replace(".pdb", "_lig.pdb"))
@@ -198,35 +196,29 @@ def prep_structure(
         ):
             logger.info(f"{prot.file_name} already prepped")
             continue
-        raw_prot = Protein(pdb_file)
-        raw_lig = Ligand(raw_prot.file_path.replace(".pdb", "_lig.pdb"))
-        prepared_lig = glide.PrepLigand(raw_lig, context)
+        raw_prot = Protein(os.path.join(input_dir, pdb_file))
+        lig_file = os.path.join(input_dir, raw_prot.file_id + "_lig.pdb")
+        print(lig_file)
+        raw_lig = Ligand(file_path=lig_file)
+        glide.convert_to_mae(raw_lig, context)
+        lig_mae = Ligand(os.path.join(context.write_dir, raw_lig.file_id + ".mae"))
+        glide.PrepLigand(lig_mae, context)
         glide.convert_to_mae(raw_prot, context)
         prot_mae = Protein(
-            file_path=os.path.join(
-                context.write_dir, raw_prot.file_name.replace(".pdb", ".mae")
-            )
+            file_path=os.path.join(context.write_dir, raw_prot.file_id + ".mae")
         )
         try:
-            prepared_prot = glide.PrepProtein(prot_mae, context)
-            os.remove(
-                os.path.join(
-                    context.write_dir, raw_prot.file_name.replace(".pdb", "_grid.log")
-                )
-            )
+            glide.PrepProtein(prot_mae, context)
+            os.remove(os.path.join(context.write_dir, raw_prot.file_id + "_grid.log"))
             os.remove(os.path.join(context.write_dir, prot_mae.file_name))
-            os.remove(
-                os.path.join(
-                    context.write_dir, raw_prot.file_name.replace(".pdb", "_lig.mae")
-                )
-            )
+            os.remove(os.path.join(context.write_dir, raw_prot.file_id + "_lig.mae"))
             os.remove(
                 os.path.join(
                     context.write_dir,
-                    raw_prot.file_name.replace(".pdb", "_protein_prepared.mae"),
+                    raw_prot.file_id + "_protein_prepared.mae",
                 )
             )
-        except:
+        except Exception:
             logger.warning(f"Could not prepare {prot.file_name}")
             # save the pdb file in a folder called failed
             failed.append(prot.file_name)
@@ -238,8 +230,17 @@ def prep_structure(
             continue
     # save the failed list to a folder called failed.txt in the output directory if it is not empty
     if len(failed) > 0:
-        with open(os.path.join(output_dir, "failed.txt"), "a") as f:
-            f.write("\n".join(failed))
+        # read the file if it exists
+        if os.path.exists(os.path.join(output_dir, "failed.txt")):
+            with open(
+                os.path.join(output_dir, "failed.txt"), "r", encoding="utf-8"
+            ) as file:
+                file_line = file.read().splitlines()
+            failed = list(set(failed).union(set(file_line)))
+        with open(
+            os.path.join(output_dir, "failed.txt"), "w", encoding="utf-8"
+        ) as file:
+            file.write("\n".join(failed))
 
 
 if __name__ == "__main__":
@@ -248,7 +249,7 @@ if __name__ == "__main__":
         "/home/mma121/PubChem_small/try_schrodinger/new_clusters_pdb_postfilter.csv"
     )
 
-    get_coordinates(RAW_FILE, "/home/mma121/PubChem_small/representatives", limit=100)
+    # get_coordinates(RAW_FILE, "/home/mma121/PubChem_small/representatives", limit=100)
     pdb_files = glob.glob(
         os.path.join("/home/mma121/PubChem_small/representatives", "*.pdb")
     )
@@ -260,5 +261,5 @@ if __name__ == "__main__":
         "/home/mma121/PubChem_small/representatives",
         "./prepped",
         pdb_id=pdb_files,
-        limit=100,
+        limit=150,
     )
