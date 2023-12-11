@@ -163,7 +163,7 @@ def prep_structure(
         logger.info(f"Found a total of {len(pdb_id)} PDB files in the directory")
         if len(pdb_id) == 0:
             raise FileNotFoundError("No PDB files found in the directory")
-    limit = len(pdb_id) if len(pdb_id) < limit else limit
+    limit = min(len(pdb_id), limit)
     for pdb_file in pdb_id[:limit]:
         ids = os.path.basename(pdb_file).split(".")[0]
         if not os.path.exists(
@@ -261,6 +261,7 @@ def dock_ligand(
     limit : int, optional
         The number of files to dock, by default 10
     """
+    failed = []
     # check if the output directory exists and create it if it does not
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
@@ -292,7 +293,97 @@ def dock_ligand(
             )
         )
         logger.info(f"Docking {prep_lig.file_name} to {prep_prot.file_name}")
-        glide.run(prep_prot, prep_lig, context)
+        if os.path.exists(
+            os.path.join(
+                context.write_dir,
+                prep_prot.file_id.replace("grid", "lig_docking_pv.maegz"),
+            )
+        ) and os.path.exists(
+            os.path.join(
+                context.write_dir, prep_prot.file_id.replace("grid", "lig_docking.csv")
+            )
+        ):
+            logger.info(f"{prep_lig.file_name} already docked")
+            continue
+        try:
+            glide.run(prep_prot, prep_lig, context)
+            os.remove(
+                os.path.join(
+                    context.write_dir,
+                    prep_prot.file_id.replace("grid", "lig_docking.in"),
+                )
+            )
+            logger.info("Docking is completed")
+            os.remove(
+                os.path.join(
+                    context.write_dir,
+                    prep_prot.file_id.replace("grid", "lig_docking.log"),
+                )
+            )
+            os.remove(
+                os.path.join(
+                    context.write_dir,
+                    prep_prot.file_id.replace("grid", "lig_docking_skip.csv"),
+                )
+            )
+        except Exception:
+            logger.warning(
+                f"Could not dock {prep_lig.file_name} to {prep_prot.file_name}"
+            )
+            # save the pdb file in a folder called failed
+            failed.append(prep_lig.file_name)
+            # remove any files in the output directory With the same name
+            continue
+    # save the failed list to a folder called failed.txt in the output directory if it is not empty
+    if len(failed) > 0:
+        # read the file if it exists
+        if os.path.exists(os.path.join(output_dir, "failed.txt")):
+            with open(
+                os.path.join(output_dir, "failed.txt"), "r", encoding="utf-8"
+            ) as file:
+                file_line = file.read().splitlines()
+            failed = list(set(failed).union(set(file_line)))
+        with open(
+            os.path.join(output_dir, "failed.txt"), "w", encoding="utf-8"
+        ) as file:
+            file.write("\n".join(failed))
+
+
+def combind_pose_selction(
+    input_dir: str, output_dir: str, pdb: Union[str, list, None], limit: int = 50
+):
+    """
+    Combine the poses from the docking
+    Parameters
+    ----------
+    input_dir : str
+        The directory containing the docked files
+    output_dir : str
+        The directory to save the combined files
+    pdb : Optional[str,list]
+        The pdb file to combine. If None, all the pdb files in the input directory will be combined
+    limit : int, optional
+        The number of files to combine, by default 50
+    """
+    # check if the output directory exists and create it if it does not
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+    # check if the input directory exists and if not raise an error
+    if not os.path.exists(input_dir):
+        raise FileNotFoundError(f"{input_dir} does not exist")
+    # check if the pdb is not none and if it is not a list, raise an error
+    if pdb is not None:
+        if isinstance(pdb, str):
+            pdb = [pdb]
+    else:
+        pdb = glob.glob(os.path.join(input_dir, "*_docking_pv.maegz"))
+        logger.info(f"Found {len(pdb)} docking files")
+        if len(pdb) == 0:
+            raise FileNotFoundError(f"No docking files found in {input_dir}")
+    limit = min(limit, len(pdb))
+    pdb = pdb[:limit]
+    for pdb_file in pdb:
+        pass
 
 
 if __name__ == "__main__":
@@ -300,18 +391,18 @@ if __name__ == "__main__":
     FILTERED_FILE = (
         "/home/mma121/PubChem_small/try_schrodinger/new_clusters_pdb_postfilter.csv"
     )
-    raw_input_dir = "/home/mma121/PubChem_small/representatives"
-    prepped_dir = "./prepped"
-    docked_dir = "./docked"
-
-    output_dir = "/home/mma121/PubChem_small/docked"
-    # get_coordinates(RAW_FILE,raw_input_dir, limit=100)
-    pdb_files = glob.glob(os.path.join(raw_input_dir, "*.pdb"))
-    cif_files = glob.glob(os.path.join(raw_input_dir, "*.cif"))
+    RAW_INPUT_DIR = "/home/mma121/PubChem_small/representatives"
+    PREPPED_DIR = "./prepped"
+    DOCKED_DIR = "./docked"
+    # get_coordinates(RAW_FILE,RAW_INPUT_DIR, limit=100)
+    pdb_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.pdb"))
+    cif_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.cif"))
     """
-    prep_structure(raw_input_dir,prepped_dir,
+    prep_structure(
+        RAW_INPUT_DIR,
+        PREPPED_DIR,
         pdb_id=pdb_files,
         limit=150,
     )
     """
-    dock_ligand(prepped_dir, docked_dir, pdb=None, limit=2)
+    dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=None, limit=150)
