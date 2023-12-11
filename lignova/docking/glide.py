@@ -59,11 +59,11 @@ class Glide(Docking):
             stdout, stderr = process.communicate()
             if process.returncode == 0:
                 logger.info(
-                    f"Docking completed for {target.file_id} and {ligand.file_id}"
+                    f"Docking jobname file created for {target.file_id} and {ligand.file_id}"
                 )
             else:
                 logger.error(
-                    f"Docking failed for {target.file_id} and {ligand.file_id}"
+                    f"Docking jobname file failed for {target.file_id} and {ligand.file_id}"
                 )
                 logger.error(f"Error Output:\n{stderr}")
         except Exception as e:

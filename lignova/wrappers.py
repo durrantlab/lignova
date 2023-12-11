@@ -4,16 +4,20 @@ from typing import TextIO, Union
 import glob
 import os
 
+from line_profiler import LineProfiler, profile
 from loguru import logger
 
 from lignova.docking import Glide
+from lignova.docking.combind import Combind
 from lignova.docking.contexts import GlideContext
+from lignova.docking.contexts.combind import CombindContext
 from lignova.structure.editing import write_mda_universe
-from lignova.structure.ligand import Ligand
+from lignova.structure.ligand import DockedLigand, Ligand
 from lignova.structure.protein import Protein
 from lignova.structure.utils import is_xray_structure, separate_protein_ligand
 
 
+@profile
 def clean_cluster_files(file_path: str, delim: list = ["[", "]"]):
     """
     This function takes a file containing a list of PDB IDs and returns a list of PDB IDs.
@@ -46,6 +50,7 @@ def clean_cluster_files(file_path: str, delim: list = ["[", "]"]):
         return pdb_ids
 
 
+@profile
 def get_coordinates(
     pdb_ids: Union[str, TextIO, list], work_dir: str, limit: int = 1000
 ):
@@ -131,6 +136,7 @@ def get_coordinates(
             )
 
 
+@profile
 def prep_structure(
     input_dir: str, output_dir: str, pdb_id: Union[str, list, None], limit: int = 500
 ):
@@ -147,6 +153,12 @@ def prep_structure(
     """
     glide = Glide()
     failed = []
+    if os.path.exists(os.path.join(output_dir, "failed.txt")):
+        with open(
+            os.path.join(output_dir, "failed.txt"), "r", encoding="utf-8"
+        ) as file:
+            file_line = file.read().splitlines()
+        failed = list(set(failed).union(set(file_line)))
     context = GlideContext.get_current()
     context.write_dir = output_dir
     context.set_current(context)
@@ -195,6 +207,7 @@ def prep_structure(
             )
             == 2
             or "_lig" in pdb_file
+            or prot.file_name in failed
         ):
             logger.info(f"{prot.file_name} already prepped")
             continue
@@ -230,21 +243,11 @@ def prep_structure(
             ):
                 os.remove(file)
             continue
-    # save the failed list to a folder called failed.txt in the output directory if it is not empty
-    if len(failed) > 0:
-        # read the file if it exists
-        if os.path.exists(os.path.join(output_dir, "failed.txt")):
-            with open(
-                os.path.join(output_dir, "failed.txt"), "r", encoding="utf-8"
-            ) as file:
-                file_line = file.read().splitlines()
-            failed = list(set(failed).union(set(file_line)))
-        with open(
-            os.path.join(output_dir, "failed.txt"), "w", encoding="utf-8"
-        ) as file:
-            file.write("\n".join(failed))
+    with open(os.path.join(output_dir, "failed.txt"), "w", encoding="utf-8") as file:
+        file.write("\n".join(failed))
 
 
+@profile
 def dock_ligand(
     input_dir: str, output_dir: str, pdb: [str, list, None], limit: int = 10
 ):
@@ -262,6 +265,12 @@ def dock_ligand(
         The number of files to dock, by default 10
     """
     failed = []
+    if os.path.exists(os.path.join(output_dir, "failed.txt")):
+        with open(
+            os.path.join(output_dir, "failed.txt"), "r", encoding="utf-8"
+        ) as file:
+            file_line = file.read().splitlines()
+        failed = list(set(failed).union(set(file_line)))
     # check if the output directory exists and create it if it does not
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
@@ -334,19 +343,8 @@ def dock_ligand(
             failed.append(prep_lig.file_name)
             # remove any files in the output directory With the same name
             continue
-    # save the failed list to a folder called failed.txt in the output directory if it is not empty
-    if len(failed) > 0:
-        # read the file if it exists
-        if os.path.exists(os.path.join(output_dir, "failed.txt")):
-            with open(
-                os.path.join(output_dir, "failed.txt"), "r", encoding="utf-8"
-            ) as file:
-                file_line = file.read().splitlines()
-            failed = list(set(failed).union(set(file_line)))
-        with open(
-            os.path.join(output_dir, "failed.txt"), "w", encoding="utf-8"
-        ) as file:
-            file.write("\n".join(failed))
+    with open(os.path.join(output_dir, "failed.txt"), "w", encoding="utf-8") as file:
+        file.write("\n".join(failed))
 
 
 def combind_pose_selction(
@@ -365,6 +363,9 @@ def combind_pose_selction(
     limit : int, optional
         The number of files to combine, by default 50
     """
+    context = CombindContext.get_current()
+    context.work_dir = output_dir
+    context.set_current(context)
     # check if the output directory exists and create it if it does not
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
@@ -383,7 +384,20 @@ def combind_pose_selction(
     limit = min(limit, len(pdb))
     pdb = pdb[:limit]
     for pdb_file in pdb:
-        pass
+        docking_file = DockedLigand(pdb_file)
+        combind = Combind(
+            command=context.command,
+            work_dir=context.work_dir,
+            schrodinger=context.schrodinger,
+            schrodinger_env=context.schrodinger_env,
+        )
+        print(docking_file.file_name)
+        combind.featurize(docking_file.file_path, docking_file.file_name)
+        exit()
+        combind.select_pose(
+            docking_file.file_name,
+            os.path.join(context.work_dir, docking_file.file_name),
+        )
 
 
 if __name__ == "__main__":
@@ -394,15 +408,19 @@ if __name__ == "__main__":
     RAW_INPUT_DIR = "/home/mma121/PubChem_small/representatives"
     PREPPED_DIR = "./prepped"
     DOCKED_DIR = "./docked"
-    # get_coordinates(RAW_FILE,RAW_INPUT_DIR, limit=100)
+    COMBIND_DIR = "./combind"
+    # get_coordinates(RAW_FILE, RAW_INPUT_DIR, limit=10000)
     pdb_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.pdb"))
+    print(len(pdb_files))
     cif_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.cif"))
     """
     prep_structure(
         RAW_INPUT_DIR,
         PREPPED_DIR,
         pdb_id=pdb_files,
-        limit=150,
+        limit=5,
     )
     """
-    dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=None, limit=150)
+    # dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=None, limit=5)
+    # lp.print_stats()
+    combind_pose_selction(DOCKED_DIR, COMBIND_DIR, pdb=None, limit=10)
