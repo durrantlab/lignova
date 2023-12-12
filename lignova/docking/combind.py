@@ -15,6 +15,8 @@ class Combind(CombindContext):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if not self.validate():
+            raise ValueError("Validation failed. Combind intialization aborted")
         self.activate = f'source {self.schrodinger_env +"/bin/activate"} && '
 
     def featurize(
@@ -30,28 +32,26 @@ class Combind(CombindContext):
         file_name : str,
             Name of the output file.
         """
-        if docking_filepath is None or not os.path.exists(
-            os.path.join(self.work_dir, docking_filepath)
-        ):
-            logger.error("Docking file is not found.")
-            # find files with _pv.maegz extension in the work_dir using glob
-            files = glob.glob(os.path.join(self.work_dir, "*_pv.maegz"))
-            if len(files) == 0 or len(files) > 1:
-                logger.error(
-                    "No files or Multiple docking files found in the work_dir."
-                )
-                raise OSError(
-                    "No files or Multiple docking files found in the work_dir."
-                )
-            docking_file = os.path.join(self.work_dir, str(files[0]))
-        else:
-            docking_file = os.path.join(self.work_dir, docking_filepath)
+        if docking_filepath is None:
+            if not os.path.exists(os.path.join(self.work_dir, docking_filepath)):
+                logger.error("Docking file is not found.")
+                # find files with _pv.maegz extension in the work_dir using glob
+                files = glob.glob(os.path.join(self.work_dir, "*_pv.maegz"))
+                if len(files) == 0 or len(files) > 1:
+                    logger.error(
+                        "No files or Multiple docking files found in the work_dir."
+                    )
+                    raise OSError(
+                        "No files or Multiple docking files found in the work_dir."
+                    )
+            else:
+                docking_file = os.path.join(self.work_dir, docking_filepath)
         command1 = [
             self.activate,
             self.command + "/combind",
             "featurize",
             os.path.join(self.work_dir, f"{file_name}_features"),
-            docking_file,
+            docking_filepath,
         ]
         command = " ".join(command1)
         try:

@@ -183,13 +183,16 @@ def prep_structure(
         ) and not os.path.exists(os.path.join(input_dir, ids.lower() + ".cif")):
             logger.warning(f"{ids} not found in the directory. Downloading it now")
             get_coordinates(ids, input_dir)
+        # check if the pdb_file has an extention and if so find the file in the input dir
+        if "." not in pdb_file:
+            pdb_file = glob.glob(os.path.join(input_dir, ids.lower() + ".*"))[0]
         prot = Protein(os.path.join(input_dir, pdb_file))
-        prot.load(file_path=pdb_file)
+        logger.debug(prot.file_path)
         if "_lig" not in pdb_file and not os.path.exists(
             os.path.join(input_dir, pdb_file.replace(".pdb", "_lig.pdb"))
         ):
             if is_xray_structure(prot.file_path):
-                logger.info(f"Prepping {pdb_file}")
+                logger.info(f"Separating {pdb_file}")
                 protein, ligand = separate_protein_ligand(prot.file_path)
                 write_mda_universe(protein, os.path.join(input_dir, pdb_file))
                 # NOTE:I can have this named with the lig name should i do it?
@@ -243,8 +246,11 @@ def prep_structure(
             ):
                 os.remove(file)
             continue
-    with open(os.path.join(output_dir, "failed.txt"), "w", encoding="utf-8") as file:
-        file.write("\n".join(failed))
+    if len(failed) > 0:
+        with open(
+            os.path.join(output_dir, "failed.txt"), "w", encoding="utf-8"
+        ) as file:
+            file.write("\n".join(failed))
 
 
 @profile
@@ -343,8 +349,11 @@ def dock_ligand(
             failed.append(prep_lig.file_name)
             # remove any files in the output directory With the same name
             continue
-    with open(os.path.join(output_dir, "failed.txt"), "w", encoding="utf-8") as file:
-        file.write("\n".join(failed))
+    if len(failed) > 0:
+        with open(
+            os.path.join(output_dir, "failed.txt"), "w", encoding="utf-8"
+        ) as file:
+            file.write("\n".join(failed))
 
 
 def combind_pose_selction(
@@ -391,12 +400,16 @@ def combind_pose_selction(
             schrodinger=context.schrodinger,
             schrodinger_env=context.schrodinger_env,
         )
-        print(docking_file.file_name)
-        combind.featurize(docking_file.file_path, docking_file.file_name)
-        exit()
+        print(docking_file.file_path)
+        print(context.work_dir)
+        combind.featurize(
+            docking_file.file_path, docking_file.file_name.split("_pv")[0]
+        )
         combind.select_pose(
-            docking_file.file_name,
-            os.path.join(context.work_dir, docking_file.file_name),
+            file_name=docking_file.file_name.split("_pv")[0],
+            features_dir=os.path.join(
+                context.work_dir, docking_file.file_name.split("_pv")[0] + "_features"
+            ),
         )
 
 
@@ -413,14 +426,12 @@ if __name__ == "__main__":
     pdb_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.pdb"))
     print(len(pdb_files))
     cif_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.cif"))
-    """
     prep_structure(
         RAW_INPUT_DIR,
         PREPPED_DIR,
-        pdb_id=pdb_files,
+        pdb_id="4arb",
         limit=5,
     )
-    """
-    # dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=None, limit=5)
-    # lp.print_stats()
+
+    dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=None, limit=5)
     combind_pose_selction(DOCKED_DIR, COMBIND_DIR, pdb=None, limit=10)
