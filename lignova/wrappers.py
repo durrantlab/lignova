@@ -4,7 +4,7 @@ from typing import TextIO, Union
 import glob
 import os
 
-from line_profiler import LineProfiler, profile
+from line_profiler import profile
 from loguru import logger
 
 from lignova.docking import Glide
@@ -402,15 +402,68 @@ def combind_pose_selction(
         )
         print(docking_file.file_path)
         print(context.work_dir)
-        combind.featurize(
-            docking_file.file_path, docking_file.file_name.split("_pv")[0]
-        )
-        combind.select_pose(
-            file_name=docking_file.file_name.split("_pv")[0],
-            features_dir=os.path.join(
+        if not os.path.exists(
+            os.path.join(
                 context.work_dir, docking_file.file_name.split("_pv")[0] + "_features"
-            ),
-        )
+            )
+        ):
+            combind.featurize(
+                docking_file.file_path, docking_file.file_name.split("_pv")[0]
+            )
+            # check if there are files other than docking_file in the input directory if so delete them
+            files = glob.glob(
+                os.path.join(input_dir, docking_file.file_name.split("_")[0] + "*")
+            )
+            if len(files) > 2:
+                for i in files:
+                    if i != docking_file.file_path and i != os.path.join(
+                        input_dir, docking_file.file_name.split("_")[0] + ".csv"
+                    ):
+                        os.remove(i)
+            os.remove(
+                os.path.join(
+                    context.work_dir,
+                    docking_file.file_name.split("_pv")[0] + "_features.log",
+                )
+            )
+        if not os.path.exists(
+            os.path.join(
+                context.work_dir, docking_file.file_name.split("_pv")[0] + "_screen.npy"
+            )
+        ):
+            combind.compute_combind_score(
+                features_dir=os.path.join(
+                    context.work_dir,
+                    docking_file.file_name.split("_pv")[0] + "_features",
+                ),
+                filename=docking_file.file_name.split("_pv")[0],
+            )
+        if not os.path.exists(
+            os.path.join(
+                context.work_dir,
+                docking_file.file_name.split("_pv")[0] + "_combind_sorted.maegz",
+            )
+        ):
+            combind.apply_combind_score(
+                docking_filepath=docking_file.file_path,
+                combind_score_file=os.path.join(
+                    context.work_dir,
+                    docking_file.file_name.split("_pv")[0] + "_screen.npy",
+                ),
+                output_filename=docking_file.file_name.split("_pv")[0],
+            )
+            os.remove(
+                os.path.join(
+                    context.work_dir,
+                    docking_file.file_name.split("_pv")[0] + "_combind_sort.log",
+                )
+            )
+            os.remove(
+                os.path.join(
+                    context.work_dir,
+                    docking_file.file_name.split("_pv")[0] + "_combind.maegz",
+                )
+            )
 
 
 if __name__ == "__main__":
@@ -426,12 +479,13 @@ if __name__ == "__main__":
     pdb_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.pdb"))
     print(len(pdb_files))
     cif_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.cif"))
+    """
     prep_structure(
         RAW_INPUT_DIR,
         PREPPED_DIR,
         pdb_id="4arb",
         limit=5,
     )
-
     dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=None, limit=5)
-    combind_pose_selction(DOCKED_DIR, COMBIND_DIR, pdb=None, limit=10)
+    """
+    combind_pose_selction(DOCKED_DIR, COMBIND_DIR, pdb=None, limit=50)

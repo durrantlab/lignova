@@ -104,7 +104,7 @@ class CombindContext:
     @staticmethod
     def get_current() -> "CombindContext":
         r"""Get or create a singleton context."""
-
+        # pylint: disable-next=global-statement
         global _default_combind_context
 
         if _default_combind_context is None:

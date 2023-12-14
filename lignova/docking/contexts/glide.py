@@ -33,9 +33,11 @@ DEFUALT_MINIMIZE_ADJ_H = "True"
 DEFAULT_LIG_EPIK = "True"
 
 
+# pylint: disable-next=too-many-instance-attributes
 class GlideContext:
     r"""Singleton for Glide docking configuration."""
 
+    # pylint: disable-next=too-many-arguments,too-many-locals
     def __init__(
         self,
         command: Union[str, None],
@@ -99,6 +101,7 @@ class GlideContext:
     def get_current() -> "GlideContext":
         r"""Get or create a singleton context."""
 
+        # pylint: disable-next=global-statement
         global _default_glide_context
 
         if _default_glide_context is None:
