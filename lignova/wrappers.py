@@ -317,6 +317,7 @@ def dock_ligand(
             os.path.join(
                 context.write_dir, prep_prot.file_id.replace("grid", "lig_docking.csv")
             )
+            or prep_lig.file_name in failed
         ):
             logger.info(f"{prep_lig.file_name} already docked")
             continue
@@ -477,15 +478,13 @@ if __name__ == "__main__":
     COMBIND_DIR = "./combind"
     # get_coordinates(RAW_FILE, RAW_INPUT_DIR, limit=10000)
     pdb_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.pdb"))
-    print(len(pdb_files))
+    logger.info(f"{len(pdb_files)} were found in the input directory")
     cif_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.cif"))
-    """
     prep_structure(
         RAW_INPUT_DIR,
         PREPPED_DIR,
-        pdb_id="4arb",
-        limit=5,
+        pdb_id=pdb_files,
+        limit=500,
     )
-    dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=None, limit=5)
-    """
-    combind_pose_selction(DOCKED_DIR, COMBIND_DIR, pdb=None, limit=50)
+    dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=None, limit=500)
+    combind_pose_selction(DOCKED_DIR, COMBIND_DIR, pdb=None, limit=500)

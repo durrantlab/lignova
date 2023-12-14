@@ -626,5 +626,9 @@ docs/source/autoapi
 timer.dat
 psi.*.clean
 
+prepped/
+combind/
+docked/
+*-001/
 tests/tmp/*
 !tests/tmp/.gitkeep
