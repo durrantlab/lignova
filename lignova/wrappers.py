@@ -194,6 +194,12 @@ def prep_structure(
             if is_xray_structure(prot.file_path):
                 logger.info(f"Separating {pdb_file}")
                 protein, ligand = separate_protein_ligand(prot.file_path)
+                if len(ligand.atoms) == 0:
+                    logger.warning(f"No ligand found in {prot.file_name}")
+                    os.remove(pdb_file)
+                    # add the pdb file to the failed list
+                    failed.append(prot.file_name)
+                    continue
                 write_mda_universe(protein, os.path.join(input_dir, pdb_file))
                 # NOTE:I can have this named with the lig name should i do it?
                 write_mda_universe(
@@ -216,7 +222,6 @@ def prep_structure(
             continue
         raw_prot = Protein(os.path.join(input_dir, pdb_file))
         lig_file = os.path.join(input_dir, raw_prot.file_id + "_lig.pdb")
-        print(lig_file)
         raw_lig = Ligand(file_path=lig_file)
         glide.convert_to_mae(raw_lig, context)
         lig_mae = Ligand(os.path.join(context.write_dir, raw_lig.file_id + ".mae"))
@@ -288,7 +293,6 @@ def dock_ligand(
         if isinstance(pdb, str):
             pdb = [pdb]
     else:
-        print(input_dir)
         pdb = glob.glob(os.path.join(input_dir, "*_grid.zip"))
         logger.info(f"Found {len(pdb)} docking files")
         if len(pdb) == 0:
@@ -395,14 +399,13 @@ def combind_pose_selction(
     pdb = pdb[:limit]
     for pdb_file in pdb:
         docking_file = DockedLigand(pdb_file)
+        logger.info(f"Working on {docking_file.file_name}")
         combind = Combind(
             command=context.command,
             work_dir=context.work_dir,
             schrodinger=context.schrodinger,
             schrodinger_env=context.schrodinger_env,
         )
-        print(docking_file.file_path)
-        print(context.work_dir)
         if not os.path.exists(
             os.path.join(
                 context.work_dir, docking_file.file_name.split("_pv")[0] + "_features"
@@ -487,4 +490,4 @@ if __name__ == "__main__":
         limit=500,
     )
     dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=None, limit=500)
-    combind_pose_selction(DOCKED_DIR, COMBIND_DIR, pdb=None, limit=500)
+    # combind_pose_selction(DOCKED_DIR, COMBIND_DIR, pdb=None, limit=5)

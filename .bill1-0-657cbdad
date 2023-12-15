@@ -1,0 +1,49 @@
+filesize: 2202
+JobId: bill1-0-657cbdad
+Name: generate_glide_grids_run
+Program: Generate Grids
+Processors: 1
+OrigLaunchHost: bill1
+OrigLaunchDir: /home/mma121/PubChem_small/try_schrodinger/lignova
+Host: bill1
+User: mma121
+Dir: /home/mma121/PubChem_small/try_schrodinger/lignova
+HostsFile: /home/schrodinger/2023-1/schrodinger.hosts
+HostEntry: localhost
+Commandline: /home/schrodinger/2023-1/utilities/generate_glide_grids -rec_file ./prepped/1e19_protein_prepared.mae -lig_asl ligand -inner_box 10 -verbose -forcefield OPLS_2005 -WAIT
+MmshareExec: /home/schrodinger/2023-1/mmshare-v6.1/bin/Linux-x86_64
+JobHost: bill1
+JobUser: mma121
+JobDir: :tmpdir:
+TmpDir: /scratch
+JobDB: /home/mma121/.schrodinger/.jobdb2
+JobMmshareExec: /home/schrodinger/2023-1/mmshare-v6.1/bin/Linux-x86_64
+JobPort: 33877
+JobPid: 678649
+Status: started
+LastStatus: launched
+Summary: The job directory has been created on bill1.
+Command: BASE64 KCAiL2hvbWUvc2Nocm9kaW5nZXIvMjAyMy0xL3J1biIgImdlbmVyYXRlX2dsaWRlX2dyaWRzLnB5IiAtcmVjX2ZpbGUgIi4vcHJlcHBlZC8xZTE5X3Byb3RlaW5fcHJlcGFyZWQubWFlIiAtbGlnX2FzbCBsaWdhbmQgLWlubmVyX2JveCAxMCAtdmVyYm9zZSAtZm9yY2VmaWVsZCBPUExTXzIwMDUgKSA+ICJnZW5lcmF0ZV9nbGlkZV9ncmlkc19ydW4ubG9nIiAyPiYx
+Home: /home/mma121
+Timezone: -0500
+LaunchTime: 2023-12-15-15:57:17
+StatusTime: 2023-12-15-15:57:17
+LogInterval: 60
+SaveJobDir: 0
+TmpLaunchDir: 0
+AutoCleanup: 0
+InputFiles[1]:	prepped/1e19_protein_prepared.mae
+LogFiles[1]:	generate_glide_grids_run.log
+Envs[1]:	FLEXLM_TIMEOUT=3000000
+Envs[2]:	HOME_MMSHARE_EXEC=/home/schrodinger/2023-1/mmshare-v6.1/bin/Linux-x86_64
+Envs[3]:	MMSHARE_EXEC=/home/schrodinger/2023-1/mmshare-v6.1/bin/Linux-x86_64
+Envs[4]:	SCHRODINGER=/home/schrodinger/2023-1
+Envs[5]:	SCHRODINGER_APP_EXEC=MMSHARE_EXEC
+Envs[6]:	SCHRODINGER_COMMANDLINE="/home/schrodinger/2023-1/utilities/generate_glide_grids -rec_file ./prepped/1e19_protein_prepared.mae -lig_asl ligand -inner_box 10 -verbose -forcefield OPLS_2005 -WAIT"
+Envs[7]:	SCHRODINGER_EXEC=/home/schrodinger/2023-1/internal/bin
+Envs[8]:	SCHRODINGER_FEATURE_FLAGS=
+Envs[9]:	SCHRODINGER_JOBID=bill1-0-657cbdad
+Envs[10]:	SCHRODINGER_PERL_FEATURE_FLAGS_ENABLED=
+Envs[11]:	SCHRODINGER_PRODUCT=mmshare
+Envs[12]:	SCHRODINGER_TPP=
+Envs[13]:	SCHRODINGER_UMASK=2

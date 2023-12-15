@@ -262,7 +262,6 @@ class Combind(CombindContext):
                 if sort:
                     command = [
                         self.schrodinger + "/utilities/glide_sort",
-                        "-best_by_title",
                         "-use_prop_d",
                         "r_i_combind_score",
                         "-o",
