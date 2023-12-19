@@ -416,12 +416,12 @@ def combind_pose_selction(
             )
             # check if there are files other than docking_file in the input directory if so delete them
             files = glob.glob(
-                os.path.join(input_dir, docking_file.file_name.split("_")[0] + "*")
+                os.path.join(input_dir, docking_file.file_name.split("_pv")[0] + "*")
             )
             if len(files) > 2:
                 for i in files:
                     if i != docking_file.file_path and i != os.path.join(
-                        input_dir, docking_file.file_name.split("_")[0] + ".csv"
+                        input_dir, docking_file.file_name.split("_pv")[0] + ".csv"
                     ):
                         os.remove(i)
             os.remove(
@@ -468,6 +468,19 @@ def combind_pose_selction(
                     docking_file.file_name.split("_pv")[0] + "_combind.maegz",
                 )
             )
+        if not os.path.exists(
+            os.path.join(
+                context.work_dir,
+                docking_file.file_name.split("_pv")[0] + "_combind.csv",
+            )
+        ):
+            combind.extract_data_csv(
+                docking_file=os.path.join(
+                    context.work_dir,
+                    docking_file.file_name.split("_pv")[0] + "_combind_sorted.maegz",
+                ),
+                filename=docking_file.file_name.split("_pv")[0] + "_combind",
+            )
 
 
 if __name__ == "__main__":
@@ -483,11 +496,13 @@ if __name__ == "__main__":
     pdb_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.pdb"))
     logger.info(f"{len(pdb_files)} were found in the input directory")
     cif_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.cif"))
+    """
     prep_structure(
         RAW_INPUT_DIR,
         PREPPED_DIR,
         pdb_id=pdb_files,
         limit=500,
     )
-    dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=None, limit=500)
-    # combind_pose_selction(DOCKED_DIR, COMBIND_DIR, pdb=None, limit=5)
+    """
+    # dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=None, limit=3)
+    combind_pose_selction(DOCKED_DIR, COMBIND_DIR, pdb=None, limit=5)

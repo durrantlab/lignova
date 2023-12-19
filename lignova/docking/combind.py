@@ -5,6 +5,7 @@ import glob
 import os
 import subprocess
 
+import pandas as pd
 from loguru import logger
 
 from .contexts.combind import CombindContext
@@ -301,3 +302,57 @@ class Combind(CombindContext):
         except Exception as e:
             logger.error(f"Combind score application failed.\n {str(e)}")
             raise e
+
+    def extract_data_csv(
+        self, docking_file: Union[str, TextIO], filename: str, filter: bool = True
+    ):
+        r"""To extract the scores from schrodinger docking file including
+        combind if run after apply_combind_score function.
+        Parameters
+        ----------
+        docking_file : str, file-like object
+            Path to the docking file from GLIDE.
+        filename : str, file-like object
+            name of the output file.
+        filter : bool, optional, default=True
+            Filter the docking file to include only scores.
+        """
+        # check if the docking file exists
+        if not os.path.exists(docking_file):
+            raise FileNotFoundError(f"{docking_file} does not exist.")
+        command = [
+            self.schrodinger + "/utilities/proplister",
+            "-a",
+            "-c",
+            docking_file,
+            "-o",
+            os.path.join(self.work_dir, f"{filename}.csv"),
+        ]
+        process = subprocess.Popen(
+            command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        stdout, stderr = process.communicate()
+        if process.returncode == 0:
+            logger.info("Data extraction completed.")
+            if filter:
+                # read the csv file and filter the scores
+                data = pd.read_csv(os.path.join(self.work_dir, f"{filename}.csv"))
+                data = data[
+                    [
+                        "s_m_title",
+                        "i_i_glide_posenum",
+                        "r_i_docking_score",
+                        "r_i_combind_score",
+                        "r_i_glide_emodel",
+                        "r_i_glide_energy",
+                        "r_i_glide_gscore",
+                        "r_i_glide_ligand_efficiency",
+                    ]
+                ]
+                # save it with the same name
+                data.to_csv(os.path.join(self.work_dir, f"{filename}.csv"), index=False)
+                logger.info("Data filteration completed.")
+        else:
+            error_message = "Failed to extract the data" + f"\n{stderr.decode()}."
+            logger.critical(error_message)
+            raise NotImplementedError(error_message)
