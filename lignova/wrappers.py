@@ -225,12 +225,12 @@ def prep_structure(
         raw_lig = Ligand(file_path=lig_file)
         glide.convert_to_mae(raw_lig, context)
         lig_mae = Ligand(os.path.join(context.write_dir, raw_lig.file_id + ".mae"))
-        glide.PrepLigand(lig_mae, context)
         glide.convert_to_mae(raw_prot, context)
         prot_mae = Protein(
             file_path=os.path.join(context.write_dir, raw_prot.file_id + ".mae")
         )
         try:
+            glide.PrepLigand(lig_mae, context)
             glide.PrepProtein(prot_mae, context)
             os.remove(os.path.join(context.write_dir, raw_prot.file_id + "_grid.log"))
             os.remove(os.path.join(context.write_dir, prot_mae.file_name))
@@ -414,7 +414,6 @@ def combind_pose_selction(
             combind.featurize(
                 docking_file.file_path, docking_file.file_name.split("_pv")[0]
             )
-            # check if there are files other than docking_file in the input directory if so delete them
             files = glob.glob(
                 os.path.join(input_dir, docking_file.file_name.split("_pv")[0] + "*")
             )
@@ -496,13 +495,11 @@ if __name__ == "__main__":
     pdb_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.pdb"))
     logger.info(f"{len(pdb_files)} were found in the input directory")
     cif_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.cif"))
-    """
     prep_structure(
         RAW_INPUT_DIR,
         PREPPED_DIR,
         pdb_id=pdb_files,
         limit=500,
     )
-    """
-    # dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=None, limit=3)
-    combind_pose_selction(DOCKED_DIR, COMBIND_DIR, pdb=None, limit=5)
+    dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=None, limit=500)
+    combind_pose_selction(DOCKED_DIR, COMBIND_DIR, pdb=None, limit=500)
