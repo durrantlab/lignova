@@ -172,6 +172,17 @@ class Glide(Docking):
                 stdout, stderr = process.communicate()
                 if process.returncode == 0:
                     logger.info(f"Ligand preparation completed for {ligand.file_id}")
+                    # check if the prepared ligand file exists
+                    if not os.path.exists(
+                        os.path.join(
+                            context.write_dir, f"{ligand.file_id}_prepared.mae"
+                        )
+                    ):
+                        logger.error(f"Ligand preparation failed for {ligand.file_id}")
+                        logger.error(f"Error Output:\n{stderr}")
+                        raise subprocess.CalledProcessError(
+                            process.returncode, " ".join(command)
+                        )
                     prep = PreparedLigand(
                         file_path=os.path.join(
                             context.write_dir, f"{ligand.file_id}_prepared.mae"

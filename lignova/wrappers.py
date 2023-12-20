@@ -244,11 +244,13 @@ def prep_structure(
         except Exception:
             logger.warning(f"Could not prepare {prot.file_name}")
             # save the pdb file in a folder called failed
+            logger.debug(f"Removing {prot.file_name} from the directory")
             failed.append(prot.file_name)
             # remove any files in the output directory With the same name
             for file in glob.glob(
                 os.path.join(output_dir, prot.file_name.replace(".pdb", "*"))
             ):
+                logger.debug(f"Removing {file}")
                 os.remove(file)
             continue
     if len(failed) > 0:
@@ -498,8 +500,10 @@ if __name__ == "__main__":
     prep_structure(
         RAW_INPUT_DIR,
         PREPPED_DIR,
-        pdb_id=pdb_files,
+        pdb_id="6a4f",
         limit=500,
     )
+    """
     dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=None, limit=500)
     combind_pose_selction(DOCKED_DIR, COMBIND_DIR, pdb=None, limit=500)
+"""
