@@ -22,30 +22,21 @@ def is_xray_structure(pdb_file):
     bool
         True if the PDB file was generated from X-ray data, False otherwise.
     """
-    with open(pdb_file, "r") as f:
-        lines = f.readlines()
+    with open(pdb_file, "r") as file:
+        lines = file.readlines()
     ext = os.path.splitext(pdb_file)[-1].lower()
     if ext == ".pdb":
         expdta_line = [line for line in lines if line.startswith("EXPDTA")]
         if expdta_line:
-            if "X-RAY" in expdta_line[0]:
-                return True
-            else:
-                return False
+            return "X-RAY" in expdta_line[0]
         else:
             remark_200_line = [line for line in lines if line.startswith("REMARK 200")]
-            if remark_200_line:
-                return True
-            else:
-                return False
+            return bool(remark_200_line)
     elif ext == ".cif":
         # find the _exptl.method line
         exptl_line = [line for line in lines if line.startswith("_exptl.method")]
         if exptl_line:
-            if "X-RAY" in exptl_line[0]:
-                return True
-            else:
-                return False
+            return "X-RAY" in exptl_line[0]
 
 
 def separate_protein_ligand(pdb: Union[str, TextIO]) -> tuple["Protein", "Ligand"]:

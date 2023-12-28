@@ -399,6 +399,13 @@ def combind_pose_selction(
             raise FileNotFoundError(f"No docking files found in {input_dir}")
     limit = min(limit, len(pdb))
     pdb = pdb[:limit]
+    # check if the failed file exists and if so, read it into failed_list
+    failed_list = []
+    if os.path.exists(os.path.join(output_dir, "failed.txt")):
+        with open(
+            os.path.join(output_dir, "failed.txt"), "r", encoding="utf-8"
+        ) as file:
+            failed_list = file.read().splitlines()
     for pdb_file in pdb:
         docking_file = DockedLigand(pdb_file)
         logger.info(f"Working on {docking_file.file_name}")
@@ -408,14 +415,117 @@ def combind_pose_selction(
             schrodinger=context.schrodinger,
             schrodinger_env=context.schrodinger_env,
         )
-        if not os.path.exists(
-            os.path.join(
-                context.work_dir, docking_file.file_name.split("_pv")[0] + "_features"
+        try:
+            if (
+                not os.path.exists(
+                    os.path.join(
+                        context.work_dir,
+                        docking_file.file_name.split("_pv")[0] + "_features",
+                    )
+                )
+                and docking_file.file_name not in failed_list
+            ):
+                combind.featurize(
+                    docking_file.file_path, docking_file.file_name.split("_pv")[0]
+                )
+                files = glob.glob(
+                    os.path.join(
+                        input_dir, docking_file.file_name.split("_pv")[0] + "*"
+                    )
+                )
+                if len(files) > 2:
+                    for i in files:
+                        if i != docking_file.file_path and i != os.path.join(
+                            input_dir, docking_file.file_name.split("_pv")[0] + ".csv"
+                        ):
+                            os.remove(i)
+                os.remove(
+                    os.path.join(
+                        context.work_dir,
+                        docking_file.file_name.split("_pv")[0] + "_features.log",
+                    )
+                )
+            if (
+                not os.path.exists(
+                    os.path.join(
+                        context.work_dir,
+                        docking_file.file_name.split("_pv")[0] + "_screen.npy",
+                    )
+                )
+                and docking_file.file_name not in failed_list
+            ):
+                combind.compute_combind_score(
+                    features_dir=os.path.join(
+                        context.work_dir,
+                        docking_file.file_name.split("_pv")[0] + "_features",
+                    ),
+                    filename=docking_file.file_name.split("_pv")[0],
+                )
+            if (
+                not os.path.exists(
+                    os.path.join(
+                        context.work_dir,
+                        docking_file.file_name.split("_pv")[0]
+                        + "_combind_sorted.maegz",
+                    )
+                )
+                and docking_file.file_name not in failed_list
+            ):
+                combind.apply_combind_score(
+                    docking_filepath=docking_file.file_path,
+                    combind_score_file=os.path.join(
+                        context.work_dir,
+                        docking_file.file_name.split("_pv")[0] + "_screen.npy",
+                    ),
+                    output_filename=docking_file.file_name.split("_pv")[0],
+                )
+                os.remove(
+                    os.path.join(
+                        context.work_dir,
+                        docking_file.file_name.split("_pv")[0] + "_combind_sort.log",
+                    )
+                )
+                os.remove(
+                    os.path.join(
+                        context.work_dir,
+                        docking_file.file_name.split("_pv")[0] + "_combind.maegz",
+                    )
+                )
+            if (
+                not os.path.exists(
+                    os.path.join(
+                        context.work_dir,
+                        docking_file.file_name.split("_pv")[0] + "_combind.csv",
+                    )
+                )
+                and docking_file.file_name not in failed_list
+            ):
+                combind.extract_data_csv(
+                    docking_file=os.path.join(
+                        context.work_dir,
+                        docking_file.file_name.split("_pv")[0]
+                        + "_combind_sorted.maegz",
+                    ),
+                    filename=docking_file.file_name.split("_pv")[0] + "_combind",
+                )
+        except Exception as e:
+            failed_list.append(docking_file.file_name)
+            logger.error(f"Failed to process {docking_file.file_name}: {str(e)}")
+            # Delete files related to the failed docking file
+            files = glob.glob(
+                os.path.join(
+                    context.work_dir, docking_file.file_name.split("_pv")[0] + "*"
+                )
             )
-        ):
-            combind.featurize(
-                docking_file.file_path, docking_file.file_name.split("_pv")[0]
-            )
+            for file in files:
+                if not file.endswith(".log"):
+                    # if it is a directory, delete it and its contents
+                    if os.path.isdir(file):
+                        for f in glob.glob(os.path.join(file, "*")):
+                            os.remove(f)
+                        os.rmdir(file)
+                    else:
+                        os.remove(file)
             files = glob.glob(
                 os.path.join(input_dir, docking_file.file_name.split("_pv")[0] + "*")
             )
@@ -425,63 +535,10 @@ def combind_pose_selction(
                         input_dir, docking_file.file_name.split("_pv")[0] + ".csv"
                     ):
                         os.remove(i)
-            os.remove(
-                os.path.join(
-                    context.work_dir,
-                    docking_file.file_name.split("_pv")[0] + "_features.log",
-                )
-            )
-        if not os.path.exists(
-            os.path.join(
-                context.work_dir, docking_file.file_name.split("_pv")[0] + "_screen.npy"
-            )
-        ):
-            combind.compute_combind_score(
-                features_dir=os.path.join(
-                    context.work_dir,
-                    docking_file.file_name.split("_pv")[0] + "_features",
-                ),
-                filename=docking_file.file_name.split("_pv")[0],
-            )
-        if not os.path.exists(
-            os.path.join(
-                context.work_dir,
-                docking_file.file_name.split("_pv")[0] + "_combind_sorted.maegz",
-            )
-        ):
-            combind.apply_combind_score(
-                docking_filepath=docking_file.file_path,
-                combind_score_file=os.path.join(
-                    context.work_dir,
-                    docking_file.file_name.split("_pv")[0] + "_screen.npy",
-                ),
-                output_filename=docking_file.file_name.split("_pv")[0],
-            )
-            os.remove(
-                os.path.join(
-                    context.work_dir,
-                    docking_file.file_name.split("_pv")[0] + "_combind_sort.log",
-                )
-            )
-            os.remove(
-                os.path.join(
-                    context.work_dir,
-                    docking_file.file_name.split("_pv")[0] + "_combind.maegz",
-                )
-            )
-        if not os.path.exists(
-            os.path.join(
-                context.work_dir,
-                docking_file.file_name.split("_pv")[0] + "_combind.csv",
-            )
-        ):
-            combind.extract_data_csv(
-                docking_file=os.path.join(
-                    context.work_dir,
-                    docking_file.file_name.split("_pv")[0] + "_combind_sorted.maegz",
-                ),
-                filename=docking_file.file_name.split("_pv")[0] + "_combind",
-            )
+    failed_list = list(set(failed_list))
+    # Write failed list to a file
+    with open(os.path.join(output_dir, "failed.txt"), "w") as file:
+        file.write("\n".join(failed_list))
 
 
 if __name__ == "__main__":
@@ -493,6 +550,7 @@ if __name__ == "__main__":
     PREPPED_DIR = "./prepped"
     DOCKED_DIR = "./docked"
     COMBIND_DIR = "./combind"
+    """
     # get_coordinates(RAW_FILE, RAW_INPUT_DIR, limit=10000)
     pdb_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.pdb"))
     logger.info(f"{len(pdb_files)} were found in the input directory")
@@ -500,10 +558,11 @@ if __name__ == "__main__":
     prep_structure(
         RAW_INPUT_DIR,
         PREPPED_DIR,
-        pdb_id="6a4f",
+        pdb_id=pdb_files,
         limit=500,
     )
-    """
     dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=None, limit=500)
-    combind_pose_selction(DOCKED_DIR, COMBIND_DIR, pdb=None, limit=500)
-"""
+    """
+    combind_pose_selction(
+        DOCKED_DIR, COMBIND_DIR, pdb="./docked/4n8i_lig_docking_pv.maegz", limit=500
+    )
