@@ -306,6 +306,21 @@ def dock_ligand(
     limit = min(limit, len(pdb))
     pdb = pdb[:limit]
     for pdb_file in pdb:
+        # check if the pdb_file has an extention and if so add to it _grid.zip and find the file in the input dir
+        if "." not in pdb_file:
+            pdb_file = glob.glob(
+                os.path.join(input_dir, pdb_file.lower() + "_grid.zip")
+            )[0]
+            # if not found, and not in the failed.txt file in the input dir,then run the prep_structure function after logging a warning
+            while not os.path.exists(pdb_file) and pdb_file not in os.path.join(
+                input_dir, "failed.txt"
+            ):
+                logger.warning(
+                    f"{pdb_file} not found in the directory. Prepping it now"
+                )
+                prep_structure(
+                    input_dir, output_dir, pdb_id=pdb_file.split("_grid.zip")[0]
+                )
         logger.info(f"Docking {pdb_file}")
         prep_prot = Protein(pdb_file)
         prep_lig = Ligand(
@@ -407,6 +422,20 @@ def combind_pose_selction(
         ) as file:
             failed_list = file.read().splitlines()
     for pdb_file in pdb:
+        if "." not in pdb_file:
+            pdb_file = glob.glob(
+                os.path.join(input_dir, pdb_file.lower() + "_lig_docking_pv.maegz")
+            )[0]
+            # if not found, and not in the failed.txt file in the input dir,then run the dock_ligand function after logging a warning
+            while not os.path.exists(pdb_file) and pdb_file not in os.path.join(
+                input_dir, "failed.txt"
+            ):
+                logger.warning(
+                    f"{pdb_file} not found in the directory. Prepping it now"
+                )
+                dock_ligand(
+                    input_dir, output_dir, pdb_id=pdb_file.split("_docking_pv.maegz")[0]
+                )
         docking_file = DockedLigand(pdb_file)
         logger.info(f"Working on {docking_file.file_name}")
         combind = Combind(
@@ -555,14 +584,13 @@ if __name__ == "__main__":
     pdb_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.pdb"))
     logger.info(f"{len(pdb_files)} were found in the input directory")
     cif_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.cif"))
+    """
+    pdb_ids = ["2B7A", "2W1I", "2XA4", "3A4O", "3ZBF", "4UXL", "7Z5W", "5XY1"]
     prep_structure(
         RAW_INPUT_DIR,
         PREPPED_DIR,
-        pdb_id=pdb_files,
-        limit=500,
+        pdb_id=pdb_ids,
+        limit=10,
     )
-    dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=None, limit=500)
-    """
-    combind_pose_selction(
-        DOCKED_DIR, COMBIND_DIR, pdb="./docked/4n8i_lig_docking_pv.maegz", limit=500
-    )
+    dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=pdb_ids, limit=10)
+    combind_pose_selction(DOCKED_DIR, COMBIND_DIR, pdb=pdb_ids, limit=10)
