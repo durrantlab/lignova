@@ -570,6 +570,41 @@ def combind_pose_selction(
         file.write("\n".join(failed_list))
 
 
+def parser(
+    input_dir: str, output_filename: str, pdb: Union[str, list, None], limit: int
+):
+    """
+    Parse the docking files
+    Parameters
+    ----------
+    input_dir : str
+        The directory containing the docked files
+    output_dir : str
+        The file to save the parsed files
+    pdb : Optional[str,list]
+        The pdb file to parse. If None, all the pdb files in the input directory will be parsed
+    limit : int, optional
+        The number of files to parse, by default 50
+    """
+    # check if the input directory exists and if not raise an error
+    if not os.path.exists(input_dir):
+        raise FileNotFoundError(f"{input_dir} does not exist")
+    # check if pdb is not none and if it is not a list, raise an error
+    if pdb is not None:
+        if isinstance(pdb, str):
+            pdb = [pdb]
+    # find all the docking files in the input directory
+    else:
+        pdb = glob.glob(os.path.join(input_dir, "*.maegz"))
+        logger.info(f"Found {len(pdb)} docking files")
+        if len(pdb) == 0:
+            raise FileNotFoundError(f"No docking files found in {input_dir}")
+    limit = min(limit, len(pdb))
+    pdb = pdb[:limit]
+
+    pass
+
+
 if __name__ == "__main__":
     RAW_FILE = "/home/mma121/PubChem_small/try_schrodinger/clusters.csv"
     FILTERED_FILE = (
