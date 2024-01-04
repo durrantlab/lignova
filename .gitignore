@@ -632,3 +632,4 @@ docked/
 *-001/
 tests/tmp/*
 !tests/tmp/.gitkeep
+parsed/

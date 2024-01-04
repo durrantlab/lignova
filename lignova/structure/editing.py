@@ -80,6 +80,40 @@ def filter_hetatoms(mda_univ: mda.Universe) -> mda.Universe:
     return mda_univ.select_atoms("record_type HETATM")
 
 
+def find_common_atoms(mda_univ1: mda.Universe, mda_univ2: mda.Universe) -> Iterable:
+    r"""Find common atoms between two MDAnalysis universes.
+
+    Parameters
+    ----------
+    u1
+        MDAnalysis universe to process.
+    u2
+        MDAnalysis universe to process.
+
+    """
+    # Get the atom names for each ligand
+    ref_atom_names = [atom.name for atom in mda_univ1.atoms]
+    dock_atom_names = [atom.name for atom in mda_univ2.atoms]
+
+    # Find the common atoms
+    common_atoms = list(set(ref_atom_names) & set(dock_atom_names))
+    return common_atoms
+
+
+def select_common_atoms(mda_univ: mda.Universe, common_atoms: Iterable) -> mda.Universe:
+    r"""Select common atoms.
+
+    Parameters
+    ----------
+    u
+        MDAnalysis universe to process.
+    common_atoms
+        Names of atoms to select.
+    """
+    selection = " or ".join([f"name {atom}" for atom in common_atoms])
+    return mda_univ.select_atoms(selection)
+
+
 def write_mda_universe(mda_univ: mda.Universe, file_path: str) -> TextIO:
     r"""Write MDAnalysis universe to file.
 

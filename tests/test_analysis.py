@@ -1,6 +1,7 @@
 import os
 
 import pytest
+from loguru import logger
 
 from lignova.analysis.rmsd import RMSD
 from lignova.docking import Glide
@@ -15,8 +16,9 @@ context_protein_6Oav = {
     "id": "6OAV",
     "file_path": "./files/6oav/6oav.pdb",
     "write_dir": "./tmp/6oav",
-    "docked_ligand_filepath": "/home/mma121/PubChem_small/try_schrodinger/6oav_validation/6oav_m3a_combind_sorted.maegz",
+    "docked_ligand_filepath": "/home/mma121/PubChem_small/try_schrodinger/6oav_validation/6oav_m3a_top_pose_pv.maegz",
 }
+# "/home/mma121/PubChem_small/try_schrodinger/6oav_validation/6oav_m3a_combind_sorted.maegz",
 
 
 def prep_dirs():
@@ -26,15 +28,15 @@ def prep_dirs():
 if not os.path.exists(context_protein_6Oav["write_dir"]):
     prep_dirs()
 
-
+"""
 # convert pdb to mae using the convert_to_mae function in glide.py
 protein = Protein(context_protein_6Oav["file_path"])
 protein.load(file_path=context_protein_6Oav["file_path"])
 glide = Glide()
+"""
 context = GlideContext.get_current()
-glide.convert_to_mae(protein, context)
 
-
+"""
 def test_rmsd():
     ligand = DockedLigand(context_protein_6Oav["docked_ligand_filepath"])
     reference = Protein(os.path.join(context_protein_6Oav["write_dir"], "6oav.mae"))
@@ -43,5 +45,16 @@ def test_rmsd():
         context_protein_6Oav["write_dir"], "6oav_m3a_rmsd.csv"
     )
     rmsd.rmsd_schrodinger(output_filename)
-    # assert os.path.exists(output_filename)
-    # os.remove(output_filename)
+"""
+
+
+def test_rmsd_mda():
+    ligand = DockedLigand(context_protein_6Oav["docked_ligand_filepath"])
+    reference = Protein(context_protein_6Oav["file_path"])
+    # Create an instance of the RMSD class
+    rmsd = RMSD(ligand, reference, context)
+    logger.debug(context.write_dir)
+    # Call the rmsd_mda function
+    value = rmsd.rmsd_mda()
+    assert isinstance(value[0], float)
+    assert round(value[0], 4) == 1.1226

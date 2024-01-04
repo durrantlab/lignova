@@ -1,15 +1,28 @@
 r"""Implementation for RMSD analysis."""
+# pylint: disable=R0801
 from typing import Iterable, TextIO, Union
 
+import csv
+import os
 import subprocess
 
 import MDAnalysis as mda
+import numpy as np
 from loguru import logger
-from MDAnalysis.analysis import rms
+from MDAnalysis.analysis import align
+from MDAnalysis.analysis.base import AnalysisFromFunction
+from MDAnalysis.analysis.rms import rmsd
+from MDAnalysis.coordinates.memory import MemoryReader
 
 from ..docking.contexts import GlideContext
+from ..docking.utils import convert_to_pdb, get_complexes
+from ..structure.editing import filter_hetatoms, find_common_atoms, select_common_atoms
 from ..structure.ligand import DockedLigand
 from ..structure.protein import Protein
+
+
+def copy_coords(ag):
+    return ag.positions.copy()
 
 
 class RMSD:
@@ -34,7 +47,7 @@ class RMSD:
         """
         self.ligand = ligand
         self.reference = reference
-        self.context = context.command
+        self.context = context
 
     def rmsd_schrodinger(
         self,
@@ -90,11 +103,72 @@ class RMSD:
             logger.error(f"An error occurred during rmsd calculation: {str(e)}")
             raise e
 
-    def rmsd_mda(self):
-        r"""Calculate RMSD between docked ligand and reference ligand using MDAnalysis."""
-        # Load docked ligand and reference PDB structures
-        docked = mda.Universe(self.ligand.file_path)
-        reference = mda.Universe(self.reference.file_path)
+    def rmsd_mda(self, selection: str = "not resname HOH") -> Iterable[float]:
+        r"""Calculate RMSD between docked ligand and reference ligand using MDAnalysis.
+        Parameters
+        ----------
+        selection : str
+            Atom selection language for RMSD calculations. Default is "record_type HETATM and not resname HOH".
 
-        # Select the atoms for RMSD calculation
-        selection = "protein and name CA"  # Modify this according to your needs
+        Returns
+        -------
+        List[float]
+            List of RMSD values for each frame in the trajectory.
+        """
+        # check if the ligand is pdb or maegz
+        logger.debug(self.ligand.file_ext)
+        logger.debug(self.reference.file_ext)
+        if self.ligand.file_ext != "pdb":
+            logger.debug(self.ligand.file_name)
+            get_complexes(self.ligand.file_path)
+            file_name = os.path.splitext(self.ligand.file_name)[0]
+            convert_to_pdb(
+                os.path.join(self.context.write_dir, file_name + "_complexes.maegz")
+            )
+            self.ligand = DockedLigand(
+                os.path.join(self.context.write_dir, file_name + "_complexes.pdb")
+            )
+        if self.reference.file_ext != "pdb":
+            get_complexes(self.reference.file_path)
+            convert_to_pdb(
+                os.path.join(
+                    self.context.write_dir,
+                    self.reference.file_name + "_complexes.maegz",
+                )
+            )
+            self.reference = Protein(
+                os.path.join(
+                    self.context.write_dir, self.reference.file_name + "_complexes.pdb"
+                )
+            )
+        docked_traj = mda.Universe(self.ligand.file_path, format="pdb")
+        reference = mda.Universe(self.reference.file_path, format="pdb")
+
+        # Align the trajectories based on the protein
+        protein1 = reference.select_atoms("name CA")
+        protein2 = docked_traj.select_atoms("name CA")
+        align.alignto(protein1, protein2)
+
+        # Select the ligands
+        ref_ligand = filter_hetatoms(reference).select_atoms(selection)
+        dock_ligand = filter_hetatoms(docked_traj).select_atoms(selection)
+
+        # Check if the length of the ligands is the same
+        if len(ref_ligand.atoms) != len(dock_ligand.atoms):
+            # Find the common atoms
+            common_atoms = find_common_atoms(ref_ligand, dock_ligand)
+            # Select the common atoms from each ligand
+            ref_ligand = select_common_atoms(ref_ligand, common_atoms)
+            dock_ligand = select_common_atoms(dock_ligand, common_atoms)
+
+        # Calculate the RMSD between the ligands
+        rmsd_values = []
+        if len(docked_traj.trajectory) > 1:
+            for ts in docked_traj.trajectory:
+                rmsd_value = rmsd(dock_ligand.positions, ref_ligand.positions)
+                rmsd_values.append(rmsd_value)
+        else:
+            rmsd_value = rmsd(dock_ligand.positions, ref_ligand.positions)
+            rmsd_values.append(rmsd_value)
+        logger.debug(rmsd_values)
+        return rmsd_values

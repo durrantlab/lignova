@@ -7,6 +7,7 @@ import os
 from line_profiler import profile
 from loguru import logger
 
+from lignova.analysis.rmsd import RMSD
 from lignova.docking import Glide
 from lignova.docking.combind import Combind
 from lignova.docking.contexts import GlideContext
@@ -571,7 +572,11 @@ def combind_pose_selction(
 
 
 def parser(
-    input_dir: str, output_filename: str, pdb: Union[str, list, None], limit: int
+    input_dir: str,
+    output_dir: str,
+    pdb: Union[str, list, None],
+    reference_dir: str,
+    limit: int,
 ):
     """
     Parse the docking files
@@ -583,12 +588,20 @@ def parser(
         The file to save the parsed files
     pdb : Optional[str,list]
         The pdb file to parse. If None, all the pdb files in the input directory will be parsed
+    reference_dir : str
+        The directory containing the reference files
     limit : int, optional
         The number of files to parse, by default 50
     """
+    context = GlideContext.get_current()
+    context.write_dir = output_dir
+    context.set_current(context)
     # check if the input directory exists and if not raise an error
     if not os.path.exists(input_dir):
         raise FileNotFoundError(f"{input_dir} does not exist")
+    # check if the output directory exists and create it if it does not
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
     # check if pdb is not none and if it is not a list, raise an error
     if pdb is not None:
         if isinstance(pdb, str):
@@ -601,8 +614,26 @@ def parser(
             raise FileNotFoundError(f"No docking files found in {input_dir}")
     limit = min(limit, len(pdb))
     pdb = pdb[:limit]
-
-    pass
+    for docked_pdb_file in pdb:
+        # get the pdb_id from the file name
+        pdb_id = os.path.basename(docked_pdb_file).split("_")[0]
+        # get the reference file from the reference directory
+        reference_file = glob.glob(os.path.join(reference_dir, pdb_id + ".pdb"))[0]
+        # get the docking file
+        docking_file = DockedLigand(docked_pdb_file)
+        ref = Protein(reference_file)
+        try:
+            rmsd = RMSD(docking_file, ref, context)
+            val = rmsd.rmsd_mda()
+            logger.info(f"RMSD for {docking_file.file_name} is {val}")
+            # save the rmsd value with the pdb name to a file in the output directory as a csv file
+            with open(os.path.join(output_dir, pdb_id + ".csv"), "a") as file:
+                file.write("PDB_ID,RMSD\n")
+                file.write(f"{pdb_id},{val}")
+        except Exception as e:
+            logger.error(f"Could not calculate RMSD for {docking_file.file_name}")
+            logger.error(str(e))
+            continue
 
 
 if __name__ == "__main__":
@@ -619,7 +650,6 @@ if __name__ == "__main__":
     pdb_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.pdb"))
     logger.info(f"{len(pdb_files)} were found in the input directory")
     cif_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.cif"))
-    """
     pdb_ids = ["2B7A", "2W1I", "2XA4", "3A4O", "3ZBF", "4UXL", "7Z5W", "5XY1"]
     prep_structure(
         RAW_INPUT_DIR,
@@ -629,3 +659,11 @@ if __name__ == "__main__":
     )
     dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=pdb_ids, limit=10)
     combind_pose_selction(DOCKED_DIR, COMBIND_DIR, pdb=pdb_ids, limit=10)
+    """
+    parser(
+        COMBIND_DIR,
+        "./parsed",
+        pdb=None,
+        reference_dir=RAW_INPUT_DIR,
+        limit=400,
+    )
