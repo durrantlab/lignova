@@ -1,5 +1,5 @@
 r"""Implementation for different Schrodinger's suplementary functions."""
-from typing import Iterable, Union
+from typing import Iterable
 
 import glob
 import os
@@ -9,8 +9,6 @@ import subprocess
 from loguru import logger
 
 from ..docking.contexts import GlideContext
-from ..structure.ligand import DockedLigand
-from ..structure.protein import Protein
 
 
 def get_complexes(

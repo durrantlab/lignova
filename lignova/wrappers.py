@@ -3,7 +3,9 @@ from typing import TextIO, Union
 
 import glob
 import os
+import subprocess
 
+import pandas as pd
 from line_profiler import profile
 from loguru import logger
 
@@ -15,7 +17,7 @@ from lignova.docking.contexts.combind import CombindContext
 from lignova.structure.editing import write_mda_universe
 from lignova.structure.ligand import DockedLigand, Ligand
 from lignova.structure.protein import Protein
-from lignova.structure.utils import is_xray_structure, separate_protein_ligand
+from lignova.structure.utils import is_xray_structure
 
 
 @profile
@@ -615,6 +617,7 @@ def parser(
     limit = min(limit, len(pdb))
     pdb = pdb[:limit]
     for docked_pdb_file in pdb:
+        logger.info(f"Working on {docked_pdb_file}")
         # get the pdb_id from the file name
         pdb_id = os.path.basename(docked_pdb_file).split("_")[0]
         # get the reference file from the reference directory
@@ -624,16 +627,107 @@ def parser(
         ref = Protein(reference_file)
         try:
             rmsd = RMSD(docking_file, ref, context)
-            val = rmsd.rmsd_mda()
+            val = rmsd.rmsd_mda(
+                ref_lig=os.path.join(reference_dir, pdb_id + "_lig.pdb")
+            )
             logger.info(f"RMSD for {docking_file.file_name} is {val}")
             # save the rmsd value with the pdb name to a file in the output directory as a csv file
             with open(os.path.join(output_dir, pdb_id + ".csv"), "a") as file:
                 file.write("PDB_ID,RMSD\n")
                 file.write(f"{pdb_id},{val}")
+            # remove the .maegz and .pdb files from the output directory using glob
+            for file in glob.glob(os.path.join(output_dir, "*.maegz")) and glob.glob(
+                os.path.join(output_dir, pdb_id + "*.pdb")
+            ):
+                os.remove(file)
         except Exception as e:
             logger.error(f"Could not calculate RMSD for {docking_file.file_name}")
             logger.error(str(e))
             continue
+
+
+def calculate_rmsd(
+    dock_ligand_dir: str,
+    reference_dir: str,
+    csv_file_name: str,
+    number: Union[str, int] = 3,
+):
+    """
+    Calculate the rmsd between the docked ligand and the reference ligand using rmsd_schrodinger
+    Parameters
+    ----------
+    dock_ligand_dir : str
+        The directory containing the docked ligand files
+    reference_dir : str
+        The directory containing the reference ligand files
+    number : Union[str,int]
+        The number of ligand to calculate the rmsd for, by default 3
+    csv_file_name : str
+        The name of the csv file to save the rmsd values
+    """
+    done = []
+    # check if the dock_ligand_dir exists
+    if not os.path.exists(dock_ligand_dir):
+        raise FileNotFoundError(f"{dock_ligand_dir} does not exist")
+    # check if the reference_dir exists
+    if not os.path.exists(reference_dir):
+        raise FileNotFoundError(f"{reference_dir} does not exist")
+    # check if the csv_file_name exists in the dock_ligand_dir
+    if os.path.exists(os.path.join(dock_ligand_dir, csv_file_name)):
+        logger.info(f"{csv_file_name} already exists in {dock_ligand_dir}")
+        # read the csv file using pandas
+        rmsd_df = pd.read_csv(os.path.join(dock_ligand_dir, csv_file_name))
+        # get the 2nd column of the csv file
+        column = rmsd_df.iloc[:, 1]
+        done.extend(list(set(column)))
+    logger.info(done)
+    logger.info(f"Found {len(done)} PDB IDs already done")
+    # make a pandas dataframe to save the rmsd values with the column names "Index,Title,Mode,RMSD,Max dist.,Max dist atom index pair,ASL
+    rmsd_df = pd.DataFrame(
+        columns=[
+            "Index",
+            "Title",
+            "Mode",
+            "RMSD",
+            "Max dist.",
+            "Max dist atom index pair",
+            "ASL",
+        ]
+    )
+    # get all the docked ligand files in the dock_ligand_dir
+    docked_ligands = glob.glob(os.path.join(dock_ligand_dir, "*.maegz"))
+    # loop over the docked ligand files
+    for docked_ligand in docked_ligands:
+        logger.info(f"Working on {docked_ligand}")
+        # get the pdb_id from the file name
+        pdb_id = os.path.basename(docked_ligand).split("_")[0]
+        if pdb_id.upper() in done:
+            logger.info(f"{pdb_id} already done")
+            continue
+        # get the reference ligand file from the reference_dir
+        # check if the reference ligand file exists and if not continue
+        if not os.path.exists(
+            os.path.join(reference_dir, pdb_id + "_protein_prepared.mae")
+        ):
+            logger.warning(f"{pdb_id} not found in the reference directory")
+            continue
+        reference_ligand = glob.glob(
+            os.path.join(reference_dir, pdb_id + "*prepared.mae")
+        )[0]
+        docked_ligand = DockedLigand(docked_ligand)
+        reference_ligand = Ligand(reference_ligand)
+        context = GlideContext.get_current()
+        context.write_dir = dock_ligand_dir
+        context.set_current(context)
+        rmsd = RMSD(docked_ligand, reference_ligand, context=context)
+        logger.info(f"Calculating RMSD for {docked_ligand.file_name}")
+        rmsd.rmsd_schrodinger("rmsd.csv")
+        # load the rmsd.csv file using pandas and get the first 3 rows excluding the header
+        new_rmsd_df = pd.read_csv("rmsd.csv")
+        new_rmsd_df = new_rmsd_df.iloc[1 : number + 1]
+        rmsd_df = pd.concat([rmsd_df, new_rmsd_df], ignore_index=True)
+    # save the rmsd_df to a csv file in the dock_ligand_dir with the name csv_file_name and the columns names as the header
+    rmsd_df.to_csv(os.path.join(dock_ligand_dir, csv_file_name), index=False)
 
 
 if __name__ == "__main__":
@@ -660,6 +754,17 @@ if __name__ == "__main__":
     dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=pdb_ids, limit=10)
     combind_pose_selction(DOCKED_DIR, COMBIND_DIR, pdb=pdb_ids, limit=10)
     """
+    files = glob.glob("./combind/*.maegz")
+    # iterate over this files list and split the names using _lig keeping the first part in one line
+    pdb_ids = []
+    for file in files:
+        file_name = file.split("_lig")[0]
+        file_name = os.path.basename(file_name)
+        pdb_ids.append(file_name)
+    logger.info(f"{len(pdb_ids)} were found in the input directory")
+    print(pdb_ids)
+    prep_prot(RAW_INPUT_DIR, "./parsed", pdb_ids)
+    """
     parser(
         COMBIND_DIR,
         "./parsed",
@@ -667,3 +772,5 @@ if __name__ == "__main__":
         reference_dir=RAW_INPUT_DIR,
         limit=400,
     )
+    """
+    calculate_rmsd(COMBIND_DIR, "./parsed", "all_rmsd.csv", number=3)

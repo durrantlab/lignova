@@ -10,19 +10,13 @@ import MDAnalysis as mda
 import numpy as np
 from loguru import logger
 from MDAnalysis.analysis import align
-from MDAnalysis.analysis.base import AnalysisFromFunction
 from MDAnalysis.analysis.rms import rmsd
-from MDAnalysis.coordinates.memory import MemoryReader
 
 from ..docking.contexts import GlideContext
 from ..docking.utils import convert_to_pdb, get_complexes
 from ..structure.editing import filter_hetatoms, find_common_atoms, select_common_atoms
 from ..structure.ligand import DockedLigand
 from ..structure.protein import Protein
-
-
-def copy_coords(ag):
-    return ag.positions.copy()
 
 
 class RMSD:
@@ -54,7 +48,7 @@ class RMSD:
         output_filename: Union[str, TextIO],
         cuttoff: Union[int, float, None] = None,
         asl: str = "ligand",
-        align: bool = True,
+        align: bool = False,
         neutral_sccafold: bool = False,
     ):
         r"""Calculate RMSD between docked ligand and reference ligand using Schrodinger.
@@ -71,7 +65,7 @@ class RMSD:
         neutral_sccafold : bool
             Neutralize the ligand. Default is False.
         """
-        command = [self.context + "/run", "rmsd.py", "-a", asl, "-verbose"]
+        command = [self.context.command + "/run", "rmsd.py", "-a", asl]
         if neutral_sccafold:
             command.append("-use_neutral_scaffold")
         if cuttoff is not None:
@@ -82,6 +76,7 @@ class RMSD:
         command.extend(
             ["-c", output_filename, self.reference.file_path, self.ligand.file_path]
         )
+
         try:
             process = subprocess.Popen(
                 command,
@@ -108,7 +103,8 @@ class RMSD:
         Parameters
         ----------
         selection : str
-            Atom selection language for RMSD calculations. Default is "record_type HETATM and not resname HOH".
+            Atom selection language for RMSD calculations.
+            Default is "record_type HETATM and not resname HOH".
 
         Returns
         -------
@@ -155,6 +151,9 @@ class RMSD:
 
         # Check if the length of the ligands is the same
         if len(ref_ligand.atoms) != len(dock_ligand.atoms):
+            logger.warning(
+                f"Number of atoms in the reference ligand ({len(ref_ligand.atoms)}) and docked ligand ({len(dock_ligand.atoms)}) are not the same."
+            )
             # Find the common atoms
             common_atoms = find_common_atoms(ref_ligand, dock_ligand)
             # Select the common atoms from each ligand
@@ -164,7 +163,7 @@ class RMSD:
         # Calculate the RMSD between the ligands
         rmsd_values = []
         if len(docked_traj.trajectory) > 1:
-            for ts in docked_traj.trajectory:
+            for traj in docked_traj.trajectory:
                 rmsd_value = rmsd(dock_ligand.positions, ref_ligand.positions)
                 rmsd_values.append(rmsd_value)
         else:
