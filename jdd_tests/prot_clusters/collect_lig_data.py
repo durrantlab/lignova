@@ -37,81 +37,8 @@ def _get_ligand_data_from_pdb(pdbid):
             data.
     """
 
-    # pdbid = "2hu4"
-    
     pdbid = pdbid.upper()
-    # query = '''{
-    #     entry(entry_id:"''' + pdbid + '''"){
-    #         entry {
-    #             id
-    #         }
-    #         rcsb_associated_holdings {
-    #             rcsb_repository_holdings_current_entry_container_identifiers {
-    #                 assembly_ids
-    #             }
-    #             rcsb_repository_holdings_current {
-    #                 repository_content_types
-    #             }
-    #         }
-    #         rcsb_entry_container_identifiers {
-    #             emdb_ids
-    #         }
-    #         pdbx_database_status {
-    #             pdb_format_compatible
-    #         }
-    #         exptl {
-    #             method
-    #         }
-    #         nonpolymer_entities {
-    #             rcsb_nonpolymer_entity_container_identifiers {
-    #                 nonpolymer_comp_id
-    #                 rcsb_id
-    #             }
-    #             nonpolymer_comp {
-    #             chem_comp {
-    #                 name
-    #                 id
-    #             }
-    #             }
-    #             rcsb_nonpolymer_entity_annotation {
-    #                 type
-    #             }
-    #             nonpolymer_entity_instances {
-    #                 rcsb_nonpolymer_entity_instance_container_identifiers {
-    #                     auth_seq_id
-    #                     auth_asym_id
-    #                     asym_id
-    #                     entity_id
-    #                     entry_id
-    #                 }
-    #                 rcsb_nonpolymer_instance_validation_score {
-    #                     RSCC
-    #                     RSR
-    #                     alt_id
-    #                     completeness
-    #                     intermolecular_clashes
-    #                     is_best_instance
-    #                     mogul_angle_outliers
-    #                     mogul_angles_RMSZ
-    #                     mogul_bond_outliers
-    #                     mogul_bonds_RMSZ
-    #                     ranking_model_fit
-    #                     ranking_model_geometry
-    #                     score_model_fit
-    #                     score_model_geometry
-    #                     stereo_outliers
-    #                     average_occupancy
-    #                     type
-    #                     is_subject_of_investigation
-    #                     is_subject_of_investigation_provenance
-    #                 }
-    #                 rcsb_target_neighbors {
-    #                     target_entity_id
-    #                 }
-    #             }
-    #         }
-    #     }
-    # }'''
+
     query = '''{
   entry(entry_id:"''' + pdbid + '''"){
     rcsb_id
@@ -190,12 +117,8 @@ def _get_ligand_data_from_pdb(pdbid):
     for ligand in ligands:
         ligand_id = ligand["nonpolymer_comp"]["chem_comp"]["id"]
         if ligand["nonpolymer_entity_instances"] is None:
-            # print("WHY IS THIS NONE! NEED TO CHECK!!!")
-            # import pdb; pdb.set_trace()
             data_to_return.append(None)
             continue
-        # else:
-        #     print(ligand_data["nonpolymer_entity_instances"][0]["rcsb_nonpolymer_entity_instance_container_identifiers"])
         
         ligand_instances = ligand["nonpolymer_entity_instances"]
 
@@ -227,11 +150,6 @@ def _get_ligand_data_from_pdb(pdbid):
                     "pdbid": pdbid, "ligand_id": ligand_id, "auth_asym_id_of_neighbor": auth_asym_id_of_neighbor, 
                     "asym_id_of_neighbor": asym_id_of_neighbor, "entity_id_of_neighbor": entity_id_of_neighbor
                 })
-
-            # chain_data = ligand_instance["rcsb_nonpolymer_entity_instance_container_identifiers"]
-            # data_to_return.append([pdbid, ligand_id, chain_data["auth_asym_id"], chain_data["asym_id"], chain_data["entity_id"], chain_data])
-            # chain_data_str = chain_data["auth_asym_id"] + "_" + chain_data["asym_id"] + "_" + chain_data["entity_id"]
-            # print(ligand_id, chain_data_str)
 
     return data_to_return
 
@@ -305,12 +223,9 @@ def _get_lig_smiles_and_name(uniq_ligs_to_keep, use_cache="n"):
             # Let's just use "".
             fail_cnt += 1
             smiles = ""
-            # continue
 
         if resp["data"]["chem_comp"]["pdbx_chem_comp_identifier"] is None:
             name = resp["data"]["chem_comp"]["chem_comp"]["name"]
-            # print("WHY IS 2THIS NONE! NEED TO CHECK!!!")
-            # continue
         else:
             name = resp["data"]["chem_comp"]["pdbx_chem_comp_identifier"][0]["identifier"]
 
@@ -383,10 +298,6 @@ def _get_ligs_per_chain(lig_data_resps):
     lig_id_counts = {}
 
     for resp in tqdm(lig_data_resps):
-        # Surpirisingly, some chain ids are > 1 character long. See 1VVJ
-        # if len(chain_id) > 1:
-        #     import pdb; pdb.set_trace()
-
         lig_id = resp["ligand_id"]
         pdbid = resp["pdbid"]
         entity_id = resp["entity_id_of_neighbor"]
@@ -453,15 +364,13 @@ def collect_all_lig_data(uniq_pdbids):
 
         if len(failed_to_get_lig_data) > 0:
             print("Failed to get ligand data for some pdbids.")
-            # print(failed_to_get_lig_data)
             print(100 * len(failed_to_get_lig_data) / len(uniq_pdbids), "% of pdbids failed to get ligand data.")
-            # import pdb; pdb.set_trace()
         
         lig_data_resps_failed = len([x for x in lig_data_resps if x is None])
         if lig_data_resps_failed > 0:
             print("Failed to get ligand data for some ligands.")
             print(100 * lig_data_resps_failed / len(lig_data_resps), "ligands failed to get data.")
-            # import pdb; pdb.set_trace()
+
         lig_data_resps = [x for x in lig_data_resps if x is not None]
 
         # Save the data to a cache.

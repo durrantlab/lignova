@@ -26,10 +26,12 @@ def main():
     # Collect all ligand data for a list of pdbids.
     entity_id_to_pdbid_chain, pdbid_chain_to_ligs, pdbid_intid_to_ligs = collect_all_lig_data(uniq_pdbids)
 
+    # Filter the clusters to include only those entries with acceptable ligands.
     filtered_clusters_with_ligs = keep_only_chains_with_ligs(filtered_clusters, pdbid_intid_to_ligs)
 
     # Now switch from the entity_id to the pdbid_chain (auth). Multiple chains
-    # map to the same entity_id. Let's just pick the first one.
+    # map to the same entity_id, so some redundancy in this list that should
+    # perhaps be further filtered.
     enhanced_clusters = []
     for cluster in filtered_clusters_with_ligs:
         enhanced_cluster = []
