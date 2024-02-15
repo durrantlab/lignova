@@ -628,3 +628,8 @@ psi.*.clean
 
 tests/tmp/*
 !tests/tmp/.gitkeep
+
+jdd_tests/cluster*.txt
+jdd_tests/ligand*.pk
+jdd_tests/cache
+jdd_tests/__pycache__
