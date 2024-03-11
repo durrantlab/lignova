@@ -312,12 +312,14 @@ def dock_ligand(
     limit = min(limit, len(pdb))
     pdb = pdb[:limit]
     for pdb_file in pdb:
-        # check if the pdb_file has an extention and if so add to it _grid.zip and find the file in the input dir
+        # check if the pdb_file has an extention and if so add to it
+        #  _grid.zip and find the file in the input dir
         if "." not in pdb_file:
             pdb_file = glob.glob(
                 os.path.join(input_dir, pdb_file.lower() + "_grid.zip")
             )[0]
-            # if not found, and not in the failed.txt file in the input dir,then run the prep_structure function after logging a warning
+            # if not found, and not in the failed.txt file in the input dir,
+            # then run the prep_structure function after logging a warning
             while not os.path.exists(pdb_file) and pdb_file not in os.path.join(
                 input_dir, "failed.txt"
             ):
@@ -432,7 +434,8 @@ def combind_pose_selction(
             pdb_file = glob.glob(
                 os.path.join(input_dir, pdb_file.lower() + "_lig_docking_pv.maegz")
             )[0]
-            # if not found, and not in the failed.txt file in the input dir,then run the dock_ligand function after logging a warning
+            # if not found, and not in the failed.txt file in the input dir,
+            # then run the dock_ligand function after logging a warning
             while not os.path.exists(pdb_file) and pdb_file not in os.path.join(
                 input_dir, "failed.txt"
             ):
@@ -685,7 +688,7 @@ def calculate_rmsd(
         done.extend(list(set(column)))
     logger.info(done)
     logger.info(f"Found {len(done)} PDB IDs already done")
-    # make a pandas dataframe to save the rmsd values with the column names "Index,Title,Mode,RMSD,Max dist.,Max dist atom index pair,ASL
+    # make a pandas dataframe to save the rmsd values
     rmsd_df = pd.DataFrame(
         columns=[
             "Index",
