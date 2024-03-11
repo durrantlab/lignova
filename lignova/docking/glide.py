@@ -215,7 +215,6 @@ class Glide(Docking):
             "-fillsidechains" if context.fillsidechains else "",
             "-disulfides" if context.disulfides else "",
             "-rehtreat" if context.rehtreat else "",
-            "-samplewater" if context.samplewater else "",
             "-minimize_adj_h" if context.minimize_adj_h else "",
             "-epik_pH",
             context.epik_ph,
@@ -229,6 +228,8 @@ class Glide(Docking):
             "-watdist",
             context.prot_watdist,
         ]
+        if context.samplewater:
+            command.extend(["-samplewater"])
         logger.info(f"Preparing protein for PDB ID {protein.file_id}")
         try:
             process = subprocess.Popen(

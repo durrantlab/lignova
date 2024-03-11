@@ -1,10 +1,13 @@
 r" Implemtnation for a wrapper to use lignova for validation"
 from typing import TextIO, Union
 
+import ast
 import glob
 import os
 import subprocess
+import time
 
+import numpy as np
 import pandas as pd
 from line_profiler import profile
 from loguru import logger
@@ -17,7 +20,7 @@ from lignova.docking.contexts.combind import CombindContext
 from lignova.structure.editing import write_mda_universe
 from lignova.structure.ligand import DockedLigand, Ligand
 from lignova.structure.protein import Protein
-from lignova.structure.utils import is_xray_structure
+from lignova.structure.utils import is_xray_structure, separate_protein_ligand
 
 
 @profile
@@ -164,6 +167,8 @@ def prep_structure(
         failed = list(set(failed).union(set(file_line)))
     context = GlideContext.get_current()
     context.write_dir = output_dir
+    context.samplewater = False
+    context.prot_watdist = "0"
     context.set_current(context)
     if not os.path.exists(input_dir):
         raise FileNotFoundError("Input directory not found")
@@ -196,7 +201,10 @@ def prep_structure(
         ):
             if is_xray_structure(prot.file_path):
                 logger.info(f"Separating {pdb_file}")
-                protein, ligand = separate_protein_ligand(prot.file_path)
+                protein, ligand = separate_protein_ligand(
+                    prot.file_path,
+                    reference="/home/mma121/PubChem_small/try_schrodinger/valid.csv",
+                )
                 if len(ligand.atoms) == 0:
                     logger.warning(f"No ligand found in {prot.file_name}")
                     os.remove(pdb_file)
@@ -217,13 +225,14 @@ def prep_structure(
             len(
                 glob.glob(os.path.join(output_dir, prot.file_name.replace(".pdb", "*")))
             )
-            == 2
+            == 3
             or "_lig" in pdb_file
             or prot.file_name in failed
         ):
             logger.info(f"{prot.file_name} already prepped")
             continue
         raw_prot = Protein(os.path.join(input_dir, pdb_file))
+        # use check ligand on raw_prot
         lig_file = os.path.join(input_dir, raw_prot.file_id + "_lig.pdb")
         raw_lig = Ligand(file_path=lig_file)
         glide.convert_to_mae(raw_lig, context)
@@ -238,12 +247,6 @@ def prep_structure(
             os.remove(os.path.join(context.write_dir, raw_prot.file_id + "_grid.log"))
             os.remove(os.path.join(context.write_dir, prot_mae.file_name))
             os.remove(os.path.join(context.write_dir, raw_prot.file_id + "_lig.mae"))
-            os.remove(
-                os.path.join(
-                    context.write_dir,
-                    raw_prot.file_id + "_protein_prepared.mae",
-                )
-            )
         except Exception:
             logger.warning(f"Could not prepare {prot.file_name}")
             # save the pdb file in a folder called failed
@@ -739,20 +742,38 @@ if __name__ == "__main__":
     PREPPED_DIR = "./prepped"
     DOCKED_DIR = "./docked"
     COMBIND_DIR = "./combind"
-    """
     # get_coordinates(RAW_FILE, RAW_INPUT_DIR, limit=10000)
-    pdb_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.pdb"))
+    # get the names of the files in the docked directory
+    files = glob.glob(os.path.join("water/" + DOCKED_DIR, "*.maegz"))
+    # remove the _lig_docking_pv.maegz from the file names
+    pdb_ids = []
+    for file in files:
+        file_name = file.split("_lig")[0]
+        file_name = os.path.basename(file_name)
+        pdb_ids.append(file_name)
+    logger.info(f"{len(pdb_ids)} were found in the input directory")
+    # find the pdb_ids in the valid.csv file
+    valid_df = pd.read_csv("../valid.csv")
+    valid = valid_df["PDB"].str.lower()
+    valid = valid.to_list()
+    found_pdb = [x for x in valid if x in pdb_ids]
+    logger.info(f"{len(found_pdb)} were found in the valid.csv file")
+    # use the valid list to get the columns from the csv file
+    # valid_lig = valid_df[valid_df["PDB"].str.lower().isin(found_pdb)]
+    # add .pdb and /RAW_INPUT_DIR to the found_pdb list
+    raw_files = [x + ".pdb" for x in found_pdb]
+    all_pdb_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.pdb"))
+    # find the intersection between the raw_files and all_pdb_files
+    pdb_files = [x for x in all_pdb_files if os.path.basename(x) in raw_files]
     logger.info(f"{len(pdb_files)} were found in the input directory")
     cif_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.cif"))
-    pdb_ids = ["2B7A", "2W1I", "2XA4", "3A4O", "3ZBF", "4UXL", "7Z5W", "5XY1"]
     prep_structure(
         RAW_INPUT_DIR,
         PREPPED_DIR,
-        pdb_id=pdb_ids,
-        limit=10,
+        pdb_id=found_pdb,
     )
-    dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=pdb_ids, limit=10)
-    combind_pose_selction(DOCKED_DIR, COMBIND_DIR, pdb=pdb_ids, limit=10)
+    dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=found_pdb, limit=400)
+    combind_pose_selction(DOCKED_DIR, COMBIND_DIR, pdb=found_pdb, limit=400)
     """
     files = glob.glob("./combind/*.maegz")
     # iterate over this files list and split the names using _lig keeping the first part in one line
@@ -764,7 +785,6 @@ if __name__ == "__main__":
     logger.info(f"{len(pdb_ids)} were found in the input directory")
     print(pdb_ids)
     prep_prot(RAW_INPUT_DIR, "./parsed", pdb_ids)
-    """
     parser(
         COMBIND_DIR,
         "./parsed",
@@ -772,5 +792,5 @@ if __name__ == "__main__":
         reference_dir=RAW_INPUT_DIR,
         limit=400,
     )
-    """
     calculate_rmsd(COMBIND_DIR, "./parsed", "all_rmsd.csv", number=3)
+    """

@@ -3,6 +3,7 @@ from typing import TextIO, Union
 
 import os
 
+import pandas as pd
 from loguru import logger
 
 from .editing import filter_hetatoms, get_mda_universe, remove_residues, select_chains
@@ -39,7 +40,9 @@ def is_xray_structure(pdb_file):
             return "X-RAY" in exptl_line[0]
 
 
-def separate_protein_ligand(pdb: Union[str, TextIO]) -> tuple["Protein", "Ligand"]:
+def separate_protein_ligand(
+    pdb: Union[str, TextIO], reference: Union[str, TextIO] = None
+) -> tuple["Protein", "Ligand"]:
     r"""Separate protein and ligand from a PDB file.
     Parameters
     ----------
@@ -54,6 +57,16 @@ def separate_protein_ligand(pdb: Union[str, TextIO]) -> tuple["Protein", "Ligand
     """
     pdb_obj = get_mda_universe(pdb)
     selection = select_chains(pdb_obj)
+    if reference is not None:
+        while check_ligand(pdb, reference) == False:
+            logger.warning("The ligand is not the same as the reference file.")
+            # get the chains from the reference file
+            reference = pd.read_csv(reference)
+            reference_chain = reference["CHAIN"].values[0]
+            reference_chain = reference_chain.split(",")
+            if len(reference_chain) > 1:
+                reference_chain = reference_chain[0]
+            selection = select_chains(pdb_obj, chains=reference_chain)
     hetatm = filter_hetatoms(selection)
     ligand = remove_residues(hetatm, residues=["HOH"])
     if len(ligand.atoms) == 0 or len(hetatm.atoms) == 0:
@@ -68,3 +81,35 @@ def separate_protein_ligand(pdb: Union[str, TextIO]) -> tuple["Protein", "Ligand
         return selection_2.atoms, ligand
 
     return selection.atoms, ligand
+
+
+def check_ligand(pdb: Union[str, TextIO], reference: Union[str, TextIO]) -> bool:
+    r"""Get ligand from a PDB file.
+    Parameters
+    ----------
+    pdb : str or file-like
+        Path to the PDB file or file-like object.
+    reference : str or file-like
+        Path to the csv file or file-like object.
+    Returns
+    -------
+    bool
+        True if the ligand is the same in the two PDB files, False otherwise.
+    """
+    # get the filename from the path
+
+    pdb_obj = get_mda_universe(pdb)
+    # get the chains id from the mdanalysis universe
+    chains = list(set(pdb_obj.segments.segids))
+    # get the ligand from the
+    ligands = filter_hetatoms(pdb_obj)
+    lignad_id = ligands.resnames.all()
+    reference = pd.read_csv(reference)
+    # find the pdb in the reference file first column
+    reference = reference[reference["PDB"] == os.path.basename(pdb).upper()]
+    reference_ligand = reference["LIGAND"].values[0]
+    reference_chain = reference["CHAIN"].values[0]
+    if lignad_id in reference_ligand and chains in reference_chain:
+        return True
+    else:
+        return False
