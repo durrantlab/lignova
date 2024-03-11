@@ -1,0 +1,1 @@
+https://cdn.rcsb.org/resources/sequence/clusters/clusters-by-entity-90.txt
