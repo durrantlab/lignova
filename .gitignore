@@ -625,7 +625,11 @@ docs/source/autoapi
 # psi4
 timer.dat
 psi.*.clean
-
+parsed/
+jdd_tests/cluster*.txt
+jdd_tests/ligand*.pk
+jdd_tests/cache
+jdd_tests/__pycache__
 prepped/
 combind/
 docked/
