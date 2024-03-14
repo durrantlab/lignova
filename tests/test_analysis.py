@@ -7,6 +7,7 @@ from lignova.analysis.rmsd import RMSD
 from lignova.analysis.utils import interconvert_mae_sdf
 from lignova.docking import Glide
 from lignova.docking.contexts import GlideContext
+from lignova.docking.utils import get_complexes
 from lignova.structure.ligand import DockedLigand
 from lignova.structure.protein import Protein
 
@@ -25,6 +26,9 @@ context_protein_6Oav = {
 def prep_dirs():
     os.makedirs(context_protein_6Oav["write_dir"])
 
+
+# get the complex for the docking file
+# get_complexes(context_protein_6Oav["docked_ligand_filepath"])
 
 if not os.path.exists(context_protein_6Oav["write_dir"]):
     prep_dirs()
@@ -73,3 +77,23 @@ def test_rmsd_mda():
     value = rmsd.rmsd_mda()
     assert isinstance(value[0], float)
     assert round(value[0], 4) == 1.1226
+
+
+"""
+
+def test_rmsd_obabel():
+    ligand = DockedLigand(os.path.join(
+            context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv_complexes.sdf"))
+    
+    reference = DockedLigand(os.path.join(
+            context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv_complex.sdf"))
+    # Create an instance of the RMSD class
+    rmsd = RMSD(ligand, reference, context)
+    # Call the rmsd_obabel function
+    output_filename = os.path.join(
+        context_protein_6Oav["write_dir"], "6oav_m3a_rmsd_obabel.csv"
+    )
+    values=rmsd.rmsd_obabel(output_filename=output_filename)
+    print(values)
+
+"""

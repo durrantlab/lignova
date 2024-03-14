@@ -15,7 +15,7 @@ def get_complexes(
     input_file: str,
     context: str = GlideContext.get_current(),
 ):
-    r"""Convert docking file to complexes format.
+    r"""Convert docking file to complexes format and saving in write_dir.
     Parameters
     ----------
     input_file : str
@@ -23,13 +23,14 @@ def get_complexes(
     context : str
         Glide context. Default is GlideContext.get_current().
     """
+    filename = os.path.basename(input_file)
     command = [
         context.command + "/run",
         "pv_convert.py",
         "-mode",
         "merge",
         "-o",
-        os.path.splitext(input_file)[0],
+        os.path.splitext(filename)[0],
         input_file,
     ]
     try:

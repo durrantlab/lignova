@@ -172,7 +172,7 @@ class RMSD:
 
     def rmsd_obabel(
         self,
-        firstonly: bool = True,
+        firstonly: bool = False,
         csv: bool = True,
         minimize: bool = False,
         output_filename: Union[str, TextIO, None] = None,
@@ -192,12 +192,12 @@ class RMSD:
             Output file name if csv is true. Default is None.
         """
 
-        command = ["obrms", "-f", "-x"]
+        command = ["obrms", "-x"]
         if firstonly:
             command.append("-f")
         if minimize:
-            command.append("-m")
-        command.append(self.reference.file_path, self.ligand.file_path)
+            command.extend("-m")
+        command.extend([self.reference.file_path, self.ligand.file_path])
         try:
             process = subprocess.Popen(
                 command,
@@ -219,7 +219,7 @@ class RMSD:
             raise e
 
         # Parse the RMSD from the output
-        rmsd = float(result.stdout.strip())
+        rmsd = stdout.strip()
 
         # If an output filename is provided, write the RMSD to the file
         if csv:
