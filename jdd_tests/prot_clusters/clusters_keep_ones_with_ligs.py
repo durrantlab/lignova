@@ -1,5 +1,6 @@
 from tqdm import tqdm
 
+
 def keep_only_cluster_members_with_ligs(clusters, wt_pdbs_with_ligs):
     """
     Keep only cluster members that are wt proteins and have ligands.

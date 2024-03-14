@@ -2,12 +2,10 @@ r"""Implementation for RMSD analysis."""
 # pylint: disable=R0801
 from typing import Iterable, TextIO, Union
 
-import csv
 import os
 import subprocess
 
 import MDAnalysis as mda
-import numpy as np
 from loguru import logger
 from MDAnalysis.analysis import align
 from MDAnalysis.analysis.rms import rmsd
@@ -171,3 +169,63 @@ class RMSD:
             rmsd_values.append(rmsd_value)
         logger.debug(rmsd_values)
         return rmsd_values
+
+    def rmsd_obabel(
+        self,
+        firstonly: bool = True,
+        csv: bool = True,
+        minimize: bool = False,
+        output_filename: Union[str, TextIO, None] = None,
+    ):
+        """Calculate RMSD between reference and target file using OpenBabel,
+        taking into account the symmetry of the molecules.
+
+        Parameters
+        ----------
+        firstonly : bool
+            Only calculate the RMSD for the first structure in the reference file. Default is True.
+        csv : bool
+            Write the RMSD to a CSV file. Default is True.
+        minimize : bool
+            Compute minimum RMSD. Default is False.
+        output_filename : Union[str, TextIO,None]
+            Output file name if csv is true. Default is None.
+        """
+
+        command = ["obrms", "-f", "-x"]
+        if firstonly:
+            command.append("-f")
+        if minimize:
+            command.append("-m")
+        command.append(self.reference.file_path, self.ligand.file_path)
+        try:
+            process = subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+            )
+            stdout, stderr = process.communicate()
+            if process.returncode == 0:
+                logger.info(f"RMSD calculation completed for {self.ligand.file_id}")
+            else:
+                logger.error(f"RMSD calculation failed for {self.ligand.file_id}")
+                logger.error(f"Error Output:\n{stderr}")
+                raise subprocess.CalledProcessError(
+                    process.returncode, " ".join(command)
+                )
+        except Exception as e:
+            logger.error(f"An error occurred during rmsd calculation: {str(e)}")
+            raise e
+
+        # Parse the RMSD from the output
+        rmsd = float(result.stdout.strip())
+
+        # If an output filename is provided, write the RMSD to the file
+        if csv:
+            if output_filename is not None:
+                with open(output_filename, "w") as file:
+                    file.write(f"RMSD: {rmsd}\n")
+            else:
+                raise ValueError("Output filename is required if csv is True")
+        return rmsd

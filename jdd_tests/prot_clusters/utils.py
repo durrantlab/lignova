@@ -1,9 +1,11 @@
-import os
 import hashlib
-import requests
 import json
+import os
 import urllib.parse
 from datetime import date
+
+import requests
+
 
 def request_with_cache(url, use_date=False):
     """
@@ -20,10 +22,10 @@ def request_with_cache(url, use_date=False):
 
     if not os.path.exists("cache"):
         os.mkdir("cache")
-    
+
     # Hash the url
     m = hashlib.md5()
-    url_hash = m.update(url.encode('utf-8'))
+    url_hash = m.update(url.encode("utf-8"))
     url_hash = m.hexdigest()
 
     filename = "./cache/" + url_hash
@@ -32,23 +34,24 @@ def request_with_cache(url, use_date=False):
         today = date.today()
         date_string = today.strftime("%m-%d-%Y")
         filename += "." + date_string
-    
+
     filename += ".txt"
 
     if os.path.exists(filename):
         # print("Using cached file: " + filename)
-        with open(filename, 'r') as f:
+        with open(filename, "r") as f:
             return f.read()
-    
+
     # print("Downloading file: " + url[:100])
 
     r = requests.get(url, allow_redirects=True)
-    content = r.content.decode('utf-8')
+    content = r.content.decode("utf-8")
 
-    with open(filename, 'w') as f:
+    with open(filename, "w") as f:
         f.write(content)
 
     return content
+
 
 def make_url(url, params):
     """
@@ -74,4 +77,3 @@ def make_url(url, params):
     params = urllib.parse.quote(params)
 
     return url + params
-

@@ -4,6 +4,7 @@ import pytest
 from loguru import logger
 
 from lignova.analysis.rmsd import RMSD
+from lignova.analysis.utils import interconvert_mae_sdf
 from lignova.docking import Glide
 from lignova.docking.contexts import GlideContext
 from lignova.structure.ligand import DockedLigand
@@ -46,6 +47,20 @@ def test_rmsd():
     )
     rmsd.rmsd_schrodinger(output_filename)
 """
+
+
+def test_interconvert_mae_sdf():
+    # Call the interconvert_mae_sdf function
+    interconvert_mae_sdf(
+        test_file=context_protein_6Oav["docked_ligand_filepath"],
+        output_filename=os.path.join(
+            context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv.sdf"
+        ),
+        context=context,
+    )
+    assert os.path.exists(
+        os.path.join(context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv.sdf")
+    )
 
 
 def test_rmsd_mda():
