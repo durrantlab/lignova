@@ -1175,39 +1175,39 @@ package:
   category: main
   optional: false
 - name: filelock
-  version: 3.13.1
+  version: 3.13.2
   manager: conda
   platform: linux-64
   dependencies:
     python: '>=3.7'
-  url: https://conda.anaconda.org/conda-forge/noarch/filelock-3.13.1-pyhd8ed1ab_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/filelock-3.13.2-pyhd8ed1ab_0.conda
   hash:
-    md5: 0c1729b74a8152fde6a38ba0a2ab9f45
-    sha256: 4d742d91412d1f163e5399d2b50c5d479694ebcd309127abb549ca3977f89d2b
+    md5: 5b5b39c2cd4d0de98215395ca918f3f4
+    sha256: 6d3ff7c3a977768ddd1c77e9ba92ad1c86d2882553b303814b0de290b89402d4
   category: main
   optional: false
 - name: filelock
-  version: 3.13.1
+  version: 3.13.2
   manager: conda
   platform: osx-64
   dependencies:
     python: '>=3.7'
-  url: https://conda.anaconda.org/conda-forge/noarch/filelock-3.13.1-pyhd8ed1ab_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/filelock-3.13.2-pyhd8ed1ab_0.conda
   hash:
-    md5: 0c1729b74a8152fde6a38ba0a2ab9f45
-    sha256: 4d742d91412d1f163e5399d2b50c5d479694ebcd309127abb549ca3977f89d2b
+    md5: 5b5b39c2cd4d0de98215395ca918f3f4
+    sha256: 6d3ff7c3a977768ddd1c77e9ba92ad1c86d2882553b303814b0de290b89402d4
   category: main
   optional: false
 - name: filelock
-  version: 3.13.1
+  version: 3.13.2
   manager: conda
   platform: win-64
   dependencies:
     python: '>=3.7'
-  url: https://conda.anaconda.org/conda-forge/noarch/filelock-3.13.1-pyhd8ed1ab_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/filelock-3.13.2-pyhd8ed1ab_0.conda
   hash:
-    md5: 0c1729b74a8152fde6a38ba0a2ab9f45
-    sha256: 4d742d91412d1f163e5399d2b50c5d479694ebcd309127abb549ca3977f89d2b
+    md5: 5b5b39c2cd4d0de98215395ca918f3f4
+    sha256: 6d3ff7c3a977768ddd1c77e9ba92ad1c86d2882553b303814b0de290b89402d4
   category: main
   optional: false
 - name: font-ttf-dejavu-sans-mono
