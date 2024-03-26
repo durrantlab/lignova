@@ -191,7 +191,7 @@ class RMSD:
         output_filename : Union[str, TextIO,None]
             Output file name if csv is true. Default is None.
         """
-
+        # TODO: see shell= true? to pipe everything to the shell
         command = ["obrms", "-x"]
         if firstonly:
             command.append("-f")
@@ -204,10 +204,13 @@ class RMSD:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 universal_newlines=True,
+                shell=True,
             )
             stdout, stderr = process.communicate()
             if process.returncode == 0:
                 logger.info(f"RMSD calculation completed for {self.ligand.file_id}")
+                logger.info(f"Output:\n{stdout}")
+                logger.debug(f"Error Output:\n{stderr}")
             else:
                 logger.error(f"RMSD calculation failed for {self.ligand.file_id}")
                 logger.error(f"Error Output:\n{stderr}")

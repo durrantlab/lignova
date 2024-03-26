@@ -83,3 +83,37 @@ def interconvert_mae_sdf(
     except Exception as e:
         logger.error(f"An error occurred during rmsd calculation: {str(e)}")
         raise e
+
+
+def obabel_convert(test_file: Union[str, TextIO], output_filename: str):
+    """Convert ligand(s) from MAE format to SDF format using obabel.
+
+    Parameters
+    ----------
+    test_file : Union[str, TextIO]
+        Test file name or file object.
+    output_filename : str
+        Output file name.
+    """
+
+    # Construct the command
+    command = ["obabel", test_file, "-O", output_filename]
+
+    try:
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+        )
+        stdout, stderr = process.communicate()
+        if process.returncode == 0:
+            logger.info("File format conversion completed")
+            logger.info(f"Output:\n{stdout}")
+        else:
+            logger.error("File format conversion failed ")
+            logger.error(f"Error Output:\n{stderr}")
+            raise subprocess.CalledProcessError(process.returncode, " ".join(command))
+    except Exception as e:
+        logger.error(f"An error occurred during file format conversion: {str(e)}")
+        raise e

@@ -4,7 +4,7 @@ import pytest
 from loguru import logger
 
 from lignova.analysis.rmsd import RMSD
-from lignova.analysis.utils import interconvert_mae_sdf
+from lignova.analysis.utils import interconvert_mae_sdf, obabel_convert
 from lignova.docking import Glide
 from lignova.docking.contexts import GlideContext
 from lignova.docking.utils import get_complexes
@@ -79,21 +79,57 @@ def test_rmsd_mda():
     assert round(value[0], 4) == 1.1226
 
 
-"""
+def test_obabel_convert():
+    obabel_convert(
+        test_file=os.path.join(
+            context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv_complexes.pdb"
+        ),
+        output_filename=os.path.join(
+            context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv_obabel.sdf"
+        ),
+    )
+    assert os.path.exists(
+        os.path.join(
+            context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv_obabel.sdf"
+        )
+    )
+
 
 def test_rmsd_obabel():
-    ligand = DockedLigand(os.path.join(
-            context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv_complexes.sdf"))
-    
-    reference = DockedLigand(os.path.join(
-            context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv_complex.sdf"))
+    ligand = DockedLigand(
+        os.path.join(context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv.sdf")
+    )
+
+    reference = DockedLigand(
+        os.path.join(context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv.sdf")
+    )
     # Create an instance of the RMSD class
     rmsd = RMSD(ligand, reference, context)
     # Call the rmsd_obabel function
     output_filename = os.path.join(
         context_protein_6Oav["write_dir"], "6oav_m3a_rmsd_obabel.csv"
     )
-    values=rmsd.rmsd_obabel(output_filename=output_filename)
+    values = rmsd.rmsd_obabel(output_filename=output_filename)
     print(values)
 
-"""
+
+def test_rmsd_obabel2():
+    ligand = DockedLigand(
+        os.path.join(
+            context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv_obabel.sdf"
+        )
+    )
+
+    reference = DockedLigand(
+        os.path.join(
+            context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv_obabel.sdf"
+        )
+    )
+    # Create an instance of the RMSD class
+    rmsd = RMSD(ligand, reference, context)
+    # Call the rmsd_obabel function
+    output_filename = os.path.join(
+        context_protein_6Oav["write_dir"], "6oav_m3a_rmsd_obabel2.csv"
+    )
+    values = rmsd.rmsd_obabel(output_filename=output_filename)
+    print(values)
