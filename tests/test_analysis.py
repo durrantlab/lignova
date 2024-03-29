@@ -101,11 +101,15 @@ def test_obabel_convert():
 
 def test_rmsd_obabel():
     ligand = DockedLigand(
-        os.path.join(context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv.sdf")
+        os.path.join(
+            context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv_complexes.pdb"
+        )
     )
 
     reference = DockedLigand(
-        os.path.join(context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv.sdf")
+        os.path.join(
+            context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv_complexes.pdb"
+        )
     )
     # Create an instance of the RMSD class
     rmsd = RMSD(ligand, reference, context)
@@ -114,29 +118,6 @@ def test_rmsd_obabel():
         context_protein_6Oav["write_dir"], "6oav_m3a_rmsd_obabel"
     )
     values = rmsd.rmsd_obabel(output_filename=output_filename)
-    assert os.path.exists(output_filename + ".txt")
-
-
-def test_rmsd_obabel2():
-    ligand = DockedLigand(
-        os.path.join(
-            context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv_obabel.sdf"
-        )
-    )
-
-    reference = DockedLigand(
-        os.path.join(
-            context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv_obabel.sdf"
-        )
-    )
-    # Create an instance of the RMSD class
-    rmsd = RMSD(ligand, reference, context)
-    # Call the rmsd_obabel function
-    output_filename = os.path.join(
-        context_protein_6Oav["write_dir"], "6oav_m3a_rmsd_obabel2"
-    )
-    values = rmsd.rmsd_obabel(output_filename=output_filename)
-    print(values)
     assert os.path.exists(output_filename + ".txt")
 
 
@@ -158,5 +139,4 @@ def test_obabel_parser():
     res = rmsd.rmsd_obabel(output_filename=output_filename)
     values = obabel_result_parser(res)
     print(values)
-    # assert isinstance(values, float)
     assert values == 0.0
