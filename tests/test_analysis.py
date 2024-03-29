@@ -4,7 +4,11 @@ import pytest
 from loguru import logger
 
 from lignova.analysis.rmsd import RMSD
-from lignova.analysis.utils import interconvert_mae_sdf, obabel_convert
+from lignova.analysis.utils import (
+    interconvert_mae_sdf,
+    obabel_convert,
+    obabel_result_parser,
+)
 from lignova.docking import Glide
 from lignova.docking.contexts import GlideContext
 from lignova.docking.utils import get_complexes
@@ -47,7 +51,7 @@ def test_rmsd():
     reference = Protein(os.path.join(context_protein_6Oav["write_dir"], "6oav.mae"))
     rmsd = RMSD(ligand, reference, context)
     output_filename = os.path.join(
-        context_protein_6Oav["write_dir"], "6oav_m3a_rmsd.csv"
+        context_protein_6Oav["write_dir"], "6oav_m3a_rmsd"
     )
     rmsd.rmsd_schrodinger(output_filename)
 """
@@ -107,10 +111,10 @@ def test_rmsd_obabel():
     rmsd = RMSD(ligand, reference, context)
     # Call the rmsd_obabel function
     output_filename = os.path.join(
-        context_protein_6Oav["write_dir"], "6oav_m3a_rmsd_obabel.csv"
+        context_protein_6Oav["write_dir"], "6oav_m3a_rmsd_obabel"
     )
     values = rmsd.rmsd_obabel(output_filename=output_filename)
-    print(values)
+    assert os.path.exists(output_filename + ".txt")
 
 
 def test_rmsd_obabel2():
@@ -129,7 +133,30 @@ def test_rmsd_obabel2():
     rmsd = RMSD(ligand, reference, context)
     # Call the rmsd_obabel function
     output_filename = os.path.join(
-        context_protein_6Oav["write_dir"], "6oav_m3a_rmsd_obabel2.csv"
+        context_protein_6Oav["write_dir"], "6oav_m3a_rmsd_obabel2"
     )
     values = rmsd.rmsd_obabel(output_filename=output_filename)
     print(values)
+    assert os.path.exists(output_filename + ".txt")
+
+
+def test_obabel_parser():
+    ligand = DockedLigand(
+        os.path.join(
+            context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv_obabel.sdf"
+        )
+    )
+    reference = DockedLigand(
+        os.path.join(
+            context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv_obabel.sdf"
+        )
+    )
+    output_filename = os.path.join(
+        context_protein_6Oav["write_dir"], "6oav_m3a_rmsd_obabel"
+    )
+    rmsd = RMSD(ligand, reference, context)
+    res = rmsd.rmsd_obabel(output_filename=output_filename)
+    values = obabel_result_parser(res)
+    print(values)
+    # assert isinstance(values, float)
+    assert values == 0.0

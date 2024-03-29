@@ -173,7 +173,7 @@ class RMSD:
     def rmsd_obabel(
         self,
         firstonly: bool = False,
-        csv: bool = True,
+        save: bool = True,
         minimize: bool = False,
         output_filename: Union[str, TextIO, None] = None,
     ):
@@ -184,19 +184,18 @@ class RMSD:
         ----------
         firstonly : bool
             Only calculate the RMSD for the first structure in the reference file. Default is True.
-        csv : bool
-            Write the RMSD to a CSV file. Default is True.
+        save : bool
+            Write the RMSD to a txt file. Default is True.
         minimize : bool
             Compute minimum RMSD. Default is False.
         output_filename : Union[str, TextIO,None]
             Output file name if csv is true. Default is None.
         """
-        # TODO: see shell= true? to pipe everything to the shell
         command = ["obrms", "-x"]
         if firstonly:
             command.append("-f")
         if minimize:
-            command.extend("-m")
+            command.append("-m")
         command.extend([self.reference.file_path, self.ligand.file_path])
         try:
             process = subprocess.Popen(
@@ -204,7 +203,6 @@ class RMSD:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 universal_newlines=True,
-                shell=True,
             )
             stdout, stderr = process.communicate()
             if process.returncode == 0:
@@ -217,17 +215,17 @@ class RMSD:
                 raise subprocess.CalledProcessError(
                     process.returncode, " ".join(command)
                 )
-        except Exception as e:
-            logger.error(f"An error occurred during rmsd calculation: {str(e)}")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"An error occurred during RMSD calculation: {str(e)}")
             raise e
 
         # Parse the RMSD from the output
         rmsd = stdout.strip()
 
         # If an output filename is provided, write the RMSD to the file
-        if csv:
+        if save:
             if output_filename is not None:
-                with open(output_filename, "w") as file:
+                with open(output_filename + ".txt", "w") as file:
                     file.write(f"RMSD: {rmsd}\n")
             else:
                 raise ValueError("Output filename is required if csv is True")

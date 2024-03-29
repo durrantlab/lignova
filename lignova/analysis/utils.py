@@ -117,3 +117,40 @@ def obabel_convert(test_file: Union[str, TextIO], output_filename: str):
     except Exception as e:
         logger.error(f"An error occurred during file format conversion: {str(e)}")
         raise e
+
+
+def obabel_result_parser(output):
+    """
+    Parses the output from the obabel command and returns the minimum value found.
+
+    Parameters
+    ----------
+    output : str
+        The output from the obabel command.
+    Returns
+    -------
+    float
+        The minimum value found in the output. If no valid value is found, returns None.
+    """
+    # Split the output into lines
+    lines = output.strip().split("\n")
+
+    # Initialize a variable to store the minimum value
+    min_value = float("inf")  # Initialize to positive infinity
+
+    # Iterate through each line and extract the numeric values
+    for line in lines:
+        parts = line.split(",")
+        for part in parts:
+            part = part.strip()
+            if part != "inf":
+                try:
+                    value = float(part)
+                    min_value = min(min_value, value)
+                except ValueError:
+                    pass  # Ignore parts that cannot be converted to float
+    # Check if any valid minimum value was found
+    if min_value == float("inf"):
+        return None
+    else:
+        return min_value
