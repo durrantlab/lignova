@@ -9,6 +9,7 @@ import time
 
 import numpy as np
 import pandas as pd
+from docking.utils import manipulate_complexes
 from line_profiler import profile
 from loguru import logger
 
@@ -559,8 +560,8 @@ def combind_pose_selction(
                 if not file.endswith(".log"):
                     # if it is a directory, delete it and its contents
                     if os.path.isdir(file):
-                        for f in glob.glob(os.path.join(file, "*")):
-                            os.remove(f)
+                        for subfile in glob.glob(os.path.join(file, "*")):
+                            os.remove(subfile)
                         os.rmdir(file)
                     else:
                         os.remove(file)
@@ -587,7 +588,7 @@ def parser(
     limit: int,
 ):
     """
-    Parse the docking files
+    Parse the docking files to calculate the rmsd using mdanalysis
     Parameters
     ----------
     input_dir : str
@@ -718,8 +719,95 @@ def calculate_rmsd(
             logger.warning(f"{pdb_id} not found in the reference directory")
             continue
         reference_ligand = glob.glob(
-            os.path.join(reference_dir, pdb_id + "*prepared.mae")
+            os.path.join(reference_dir, pdb_id + "*_protein_prepared.mae")
         )[0]
+        docked_ligand = DockedLigand(docked_ligand)
+        reference_ligand = Ligand(reference_ligand)
+        context = GlideContext.get_current()
+        context.write_dir = dock_ligand_dir
+        context.set_current(context)
+        rmsd = RMSD(docked_ligand, reference_ligand, context=context)
+        logger.info(f"Calculating RMSD for {docked_ligand.file_name}")
+        rmsd.rmsd_schrodinger("rmsd.csv")
+        # load the rmsd.csv file using pandas and get the first 3 rows excluding the header
+        new_rmsd_df = pd.read_csv("rmsd.csv")
+        new_rmsd_df = new_rmsd_df.iloc[1 : number + 1]
+        rmsd_df = pd.concat([rmsd_df, new_rmsd_df], ignore_index=True)
+    # save the rmsd_df to a csv file in the dock_ligand_dir with the name csv_file_name and the columns names as the header
+    rmsd_df.to_csv(os.path.join(dock_ligand_dir, csv_file_name), index=False)
+
+
+def calc_rmsd_obabel(
+    dock_ligand_dir: str,
+    reference_dir: str,
+    csv_file_name: str,
+    number: Union[str, int] = 3,
+):
+    """
+    Calculate the rmsd between the docked ligand and the reference ligand using rmsd_obabel
+    Parameters
+    ----------
+    dock_ligand_dir : str
+        The directory containing the docked ligand files
+    reference_dir : str
+        The directory containing the reference ligand files
+    number : Union[str,int]
+        The number of ligand to calculate the rmsd for, by default 3
+    csv_file_name : str
+        The name of the csv file to save the rmsd values
+    """
+    done = []
+    # check if the dock_ligand_dir exists
+    if not os.path.exists(dock_ligand_dir):
+        raise FileNotFoundError(f"{dock_ligand_dir} does not exist")
+    # check if the reference_dir exists
+    if not os.path.exists(reference_dir):
+        raise FileNotFoundError(f"{reference_dir} does not exist")
+    # check if the csv_file_name exists in the dock_ligand_dir
+    if os.path.exists(os.path.join(dock_ligand_dir, csv_file_name)):
+        logger.info(f"{csv_file_name} already exists in {dock_ligand_dir}")
+        # read the csv file using pandas
+        rmsd_df = pd.read_csv(os.path.join(dock_ligand_dir, csv_file_name))
+        # get the 2nd column of the csv file
+        column = rmsd_df.iloc[:, 1]
+        done.extend(list(set(column)))
+    else:
+        logger.info(f"{csv_file_name} does not exist in {dock_ligand_dir}")
+        # make the csv file
+        with open(os.path.join(dock_ligand_dir, csv_file_name), "w") as file:
+            file.write("file,conformer,RMSD\n")
+    logger.info(done)
+    logger.info(f"Found {len(done)} PDB IDs already done")
+    # make a pandas dataframe to save the rmsd values
+    rmsd_df = pd.DataFrame(
+        columns=[
+            "file",
+            "conformer",
+            "RMSD",
+        ]
+    )
+    # get all the docked ligand files in the dock_ligand_dir
+    docked_ligands = glob.glob(os.path.join(dock_ligand_dir, "*.maegz"))
+    # loop over the docked ligand files
+    for full_docked_ligand in docked_ligands:
+        logger.info(f"Working on {docked_ligand}")
+        # get the pdb_id from the file name
+        pdb_id = os.path.basename(docked_ligand).split("_")[0]
+        if pdb_id.upper() in done:
+            logger.info(f"{pdb_id} already done")
+            continue
+        # get the reference ligand file from the reference_dir
+        # check if the reference ligand file exists and if not continue
+        if not os.path.exists(
+            os.path.join(reference_dir, pdb_id + "_protein_prepared.mae")
+        ):
+            logger.warning(f"{pdb_id} not found in the reference directory")
+            continue
+        full_reference_ligand = glob.glob(
+            os.path.join(reference_dir, pdb_id + "*_protein_prepared.mae")
+        )[0]
+        # run manipulate to get the ligand file
+
         docked_ligand = DockedLigand(docked_ligand)
         reference_ligand = Ligand(reference_ligand)
         context = GlideContext.get_current()

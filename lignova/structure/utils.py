@@ -23,7 +23,7 @@ def is_xray_structure(pdb_file):
     bool
         True if the PDB file was generated from X-ray data, False otherwise.
     """
-    with open(pdb_file, "r") as file:
+    with open(pdb_file, "r", encoding="utf-8") as file:
         lines = file.readlines()
     ext = os.path.splitext(pdb_file)[-1].lower()
     if ext == ".pdb":
@@ -58,7 +58,7 @@ def separate_protein_ligand(
     pdb_obj = get_mda_universe(pdb)
     selection = select_chains(pdb_obj)
     if reference is not None:
-        while check_ligand(pdb, reference) == False:
+        while check_ligand(pdb, reference) is False:
             logger.warning("The ligand is not the same as the reference file.")
             # get the chains from the reference file
             reference = pd.read_csv(reference)

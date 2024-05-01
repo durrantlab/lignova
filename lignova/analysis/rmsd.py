@@ -11,7 +11,7 @@ from MDAnalysis.analysis import align
 from MDAnalysis.analysis.rms import rmsd
 
 from ..docking.contexts import GlideContext
-from ..docking.utils import convert_to_pdb, get_complexes
+from ..docking.utils import convert_to_pdb, manipulate_complexes
 from ..structure.editing import filter_hetatoms, find_common_atoms, select_common_atoms
 from ..structure.ligand import DockedLigand
 from ..structure.protein import Protein
@@ -114,7 +114,13 @@ class RMSD:
         logger.debug(self.reference.file_ext)
         if self.ligand.file_ext != "pdb":
             logger.debug(self.ligand.file_name)
-            get_complexes(self.ligand.file_path)
+            manipulate_complexes(
+                self.ligand.file_path,
+                context=self.context,
+                mode="merge",
+                outfile_name=os.path.splitext(self.ligand.file_name)[0]
+                + "_complexes.maegz",
+            )
             file_name = os.path.splitext(self.ligand.file_name)[0]
             convert_to_pdb(
                 os.path.join(self.context.write_dir, file_name + "_complexes.maegz")
@@ -123,7 +129,13 @@ class RMSD:
                 os.path.join(self.context.write_dir, file_name + "_complexes.pdb")
             )
         if self.reference.file_ext != "pdb":
-            get_complexes(self.reference.file_path)
+            manipulate_complexes(
+                self.reference.file_path,
+                context=self.context,
+                mode="merge",
+                outfile_name=os.path.splitext(self.reference.file_name)[0]
+                + "_complexes.maegz",
+            )
             convert_to_pdb(
                 os.path.join(
                     self.context.write_dir,
@@ -173,7 +185,7 @@ class RMSD:
     def rmsd_obabel(
         self,
         firstonly: bool = False,
-        save: bool = True,
+        save: bool = False,
         minimize: bool = False,
         output_filename: Union[str, TextIO, None] = None,
     ):
@@ -185,7 +197,7 @@ class RMSD:
         firstonly : bool
             Only calculate the RMSD for the first structure in the reference file. Default is True.
         save : bool
-            Write the RMSD to a txt file. Default is True.
+            Write the RMSD to a txt file. Default is False.
         minimize : bool
             Compute minimum RMSD. Default is False.
         output_filename : Union[str, TextIO,None]

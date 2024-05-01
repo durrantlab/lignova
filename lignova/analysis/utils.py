@@ -121,7 +121,7 @@ def obabel_convert(test_file: Union[str, TextIO], output_filename: str):
 
 def obabel_result_parser(output):
     """
-    Parses the output from the obabel command and returns the minimum value found.
+    Parses the output from the obabel command and returns the minimum value found per line.
 
     Parameters
     ----------
@@ -129,18 +129,19 @@ def obabel_result_parser(output):
         The output from the obabel command.
     Returns
     -------
-    float
-        The minimum value found in the output. If no valid value is found, returns None.
+    dict
+        A dictionary where the keys are arbitrary numbers (1, 2, 3, ...) and the values are the minimum values found per line.
     """
     # Split the output into lines
     lines = output.strip().split("\n")
 
-    # Initialize a variable to store the minimum value
-    min_value = float("inf")  # Initialize to positive infinity
+    # Initialize a dictionary to store the minimum values per line
+    min_values = {}
 
     # Iterate through each line and extract the numeric values
-    for line in lines:
+    for i, line in enumerate(lines, start=1):
         parts = line.split(",")
+        min_value = float("inf")  # Initialize to positive infinity
         for part in parts:
             part = part.strip()
             if part != "inf":
@@ -149,8 +150,7 @@ def obabel_result_parser(output):
                     min_value = min(min_value, value)
                 except ValueError:
                     pass  # Ignore parts that cannot be converted to float
-    # Check if any valid minimum value was found
-    if min_value == float("inf"):
-        return None
-    else:
-        return min_value
+        # Store the minimum value for the current line in the dictionary
+        min_values[i] = min_value
+
+    return min_values
