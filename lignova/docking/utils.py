@@ -128,10 +128,11 @@ def manipulate_complexes(
         raise e
 
 
+# TODO:MAKE THIS UNIVERSAL FOR ALL FORMATS LATER
 def convert_to_pdb(
     input_file: str,
     context: str = GlideContext.get_current(),
-    n_structures: list = [1, 2],
+    n_structures: list = list(range(1, 4)),
 ):
     r"""Convert docking file to pdb format.
     Parameters
@@ -142,7 +143,7 @@ def convert_to_pdb(
     context : str
         Glide context. Default is GlideContext.get_current().
     n_structures : int
-        Number of structures to convert. Default is 1 ,2.
+        Number of structures to convert. Default is the first 3 structures.
     """
     command = [
         context.command + "/utilities/structconvert",

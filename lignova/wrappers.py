@@ -1,15 +1,11 @@
 r" Implemtnation for a wrapper to use lignova for validation"
 from typing import TextIO, Union
 
-import ast
 import glob
 import os
-import subprocess
-import time
+import shutil
 
-import numpy as np
 import pandas as pd
-from docking.utils import manipulate_complexes
 from line_profiler import profile
 from loguru import logger
 
@@ -18,6 +14,7 @@ from lignova.docking import Glide
 from lignova.docking.combind import Combind
 from lignova.docking.contexts import GlideContext
 from lignova.docking.contexts.combind import CombindContext
+from lignova.docking.utils import convert_to_pdb, manipulate_complexes
 from lignova.structure.editing import write_mda_universe
 from lignova.structure.ligand import DockedLigand, Ligand
 from lignova.structure.protein import Protein
@@ -733,7 +730,8 @@ def calculate_rmsd(
         new_rmsd_df = pd.read_csv("rmsd.csv")
         new_rmsd_df = new_rmsd_df.iloc[1 : number + 1]
         rmsd_df = pd.concat([rmsd_df, new_rmsd_df], ignore_index=True)
-    # save the rmsd_df to a csv file in the dock_ligand_dir with the name csv_file_name and the columns names as the header
+    # save the rmsd_df to a csv file in the dock_ligand_dir with
+    # the name csv_file_name and the columns names as the header
     rmsd_df.to_csv(os.path.join(dock_ligand_dir, csv_file_name), index=False)
 
 
@@ -775,21 +773,20 @@ def calc_rmsd_obabel(
         logger.info(f"{csv_file_name} does not exist in {dock_ligand_dir}")
         # make the csv file
         with open(os.path.join(dock_ligand_dir, csv_file_name), "w") as file:
-            file.write("file,conformer,RMSD\n")
+            file.write("file,RMSD\n")
     logger.info(done)
     logger.info(f"Found {len(done)} PDB IDs already done")
     # make a pandas dataframe to save the rmsd values
     rmsd_df = pd.DataFrame(
         columns=[
             "file",
-            "conformer",
             "RMSD",
         ]
     )
     # get all the docked ligand files in the dock_ligand_dir
     docked_ligands = glob.glob(os.path.join(dock_ligand_dir, "*.maegz"))
     # loop over the docked ligand files
-    for full_docked_ligand in docked_ligands:
+    for docked_ligand in docked_ligands:
         logger.info(f"Working on {docked_ligand}")
         # get the pdb_id from the file name
         pdb_id = os.path.basename(docked_ligand).split("_")[0]
@@ -807,20 +804,90 @@ def calc_rmsd_obabel(
             os.path.join(reference_dir, pdb_id + "*_protein_prepared.mae")
         )[0]
         # run manipulate to get the ligand file
-
         docked_ligand = DockedLigand(docked_ligand)
-        reference_ligand = Ligand(reference_ligand)
         context = GlideContext.get_current()
         context.write_dir = dock_ligand_dir
         context.set_current(context)
-        rmsd = RMSD(docked_ligand, reference_ligand, context=context)
+        if not os.path.exists(
+            os.path.join(context.write_dir, docked_ligand.file_id + "_split_lig.pdb")
+        ):
+            logger.info(f"Splitting {docked_ligand.file_name}")
+            manipulate_complexes(
+                docked_ligand.file_path,
+                context=context,
+                mode="merge",
+                outfile_name=docked_ligand.file_id + "_merge.maegz",
+            )
+            manipulate_complexes(
+                os.path.join(context.write_dir, docked_ligand.file_id + "_merge.maegz"),
+                context=context,
+                mode="split_ligand",
+                outfile_name=docked_ligand.file_id + "_split_lig.maegz",
+            )
+            convert_to_pdb(
+                os.path.join(
+                    context.write_dir, docked_ligand.file_id + "_split_lig.maegz"
+                ),
+                context=context,
+            )
+        logger.debug(f"Reference ligand: {full_reference_ligand}")
+        reference_ligand = Ligand(full_reference_ligand)
+        logger.debug(reference_ligand.file_id)
+        if not os.path.exists(
+            os.path.join(context.write_dir, reference_ligand.file_id + "_lig.pdb")
+        ):
+            logger.info(f"Splitting {reference_ligand.file_name}")
+            # convert mae to pdb using convert_to_pdb
+            # TODO:FIX THIS
+            convert_to_pdb(full_reference_ligand, context=context)
+            protein, ligand = separate_protein_ligand(
+                os.path.join(context.write_dir, reference_ligand.file_id + ".pdb"),
+                remove_water=False,
+            )
+            print(ligand)
+            write_mda_universe(
+                ligand,
+                os.path.join(context.write_dir, reference_ligand.file_id + "_lig.pdb"),
+            )
+            exit()
+            """
+            manipulate_complexes(
+                full_reference_ligand,
+                context=context.get_current(),
+                mode="merge",
+                outfile_name=reference_ligand.file_id+"_merge.maegz",
+            )
+            manipulate_complexes(
+                full_reference_ligand,
+                context=context.get_current(),
+                mode="split_ligand",
+                outfile_name=reference_ligand.file_id+"_split_lig.maegz",
+            )
+            convert_to_pdb(os.path.join(context.write_dir,reference_ligand.file_id+ "_split_lig.maegz"),context=context)
+            """
+        dock_lig_pdb = os.path.join(
+            context.write_dir, docked_ligand.file_id + "_split_lig.pdb"
+        )
+        ref_lig_pdb = os.path.join(context.write_dir, reference_ligand.file_id + ".pdb")
+        rmsd = RMSD(dock_lig_pdb, ref_lig_pdb, context=context)
         logger.info(f"Calculating RMSD for {docked_ligand.file_name}")
-        rmsd.rmsd_schrodinger("rmsd.csv")
-        # load the rmsd.csv file using pandas and get the first 3 rows excluding the header
-        new_rmsd_df = pd.read_csv("rmsd.csv")
-        new_rmsd_df = new_rmsd_df.iloc[1 : number + 1]
-        rmsd_df = pd.concat([rmsd_df, new_rmsd_df], ignore_index=True)
-    # save the rmsd_df to a csv file in the dock_ligand_dir with the name csv_file_name and the columns names as the header
+        res = rmsd.rmsd_obabel(save=False)
+        values = obabel_result_parser(res)
+        # load the values dictionary to a dataframe
+        current_rmsd_df = pd.DataFrame.from_dict(
+            values, columns=[f"{docked_ligand.file_id}_{i}" for i in range(1, 5)]
+        )
+        # load the rmsd.csv file using pandas and append the current_rmsd_df to it excluding the header
+        rmsd_df = pd.concat([rmsd_df, current_rmsd_df], ignore_index=True)
+        # clean up the directory
+        for file in (
+            glob.glob(os.path.join(context.write_dir, "*_split_lig.pdb"))
+            and glob.glob(os.path.join(context.write_dir, "*_split_lig.maegz"))
+            and glob.glob(os.path.join(context.write_dir, "*_merge.maegz"))
+        ):
+            os.remove(file)
+    # save the rmsd_df to a csv file in the dock_ligand_dir with the name csv_file_name
+    # and the columns names as the header
     rmsd_df.to_csv(os.path.join(dock_ligand_dir, csv_file_name), index=False)
 
 
@@ -833,6 +900,7 @@ if __name__ == "__main__":
     PREPPED_DIR = "./prepped"
     DOCKED_DIR = "./docked"
     COMBIND_DIR = "./combind"
+    """
     # get_coordinates(RAW_FILE, RAW_INPUT_DIR, limit=10000)
     # get the names of the files in the docked directory
     files = glob.glob(os.path.join("water/" + DOCKED_DIR, "*.maegz"))
@@ -866,7 +934,15 @@ if __name__ == "__main__":
     dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=found_pdb, limit=400)
     combind_pose_selction(DOCKED_DIR, COMBIND_DIR, pdb=found_pdb, limit=400)
     """
-    files = glob.glob("./combind/*.maegz")
+    files = glob.glob(COMBIND_DIR + "/*.maegz")
+    print(files)
+    if not os.path.exists("./parsed_docked"):
+        os.mkdir("./parsed_docked")
+    # copy files in the combind directory to the parsed directory
+    for file in files:
+        print(os.path.basename(file))
+        if not os.path.exists(os.path.join("./parsed_docked", os.path.basename(file))):
+            shutil.copy(file, "./parsed_docked")
     # iterate over this files list and split the names using _lig keeping the first part in one line
     pdb_ids = []
     for file in files:
@@ -874,8 +950,17 @@ if __name__ == "__main__":
         file_name = os.path.basename(file_name)
         pdb_ids.append(file_name)
     logger.info(f"{len(pdb_ids)} were found in the input directory")
-    print(pdb_ids)
-    prep_prot(RAW_INPUT_DIR, "./parsed", pdb_ids)
+    reference_file = glob.glob(os.path.join(PREPPED_DIR, "*_protein_prepared.mae"))
+    # make a reference directory called ./parsed and copy the reference files to it
+    if not os.path.exists("./parsed"):
+        os.mkdir("./parsed")
+    for ref in reference_file:
+        if not os.path.exists(os.path.join("./parsed", ref)):
+            shutil.copy(ref, "./parsed")
+
+    calc_rmsd_obabel("./parsed_docked", "./parsed", "rmsd.csv")
+    # prep_prot(RAW_INPUT_DIR, "./parsed", pdb_ids)
+    """
     parser(
         COMBIND_DIR,
         "./parsed",
@@ -883,5 +968,4 @@ if __name__ == "__main__":
         reference_dir=RAW_INPUT_DIR,
         limit=400,
     )
-    calculate_rmsd(COMBIND_DIR, "./parsed", "all_rmsd.csv", number=3)
     """

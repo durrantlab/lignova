@@ -633,6 +633,7 @@ jdd_tests/__pycache__
 prepped/
 combind/
 docked/
+parsed_docked/
 *-001/
 tests/tmp/*
 !tests/tmp/.gitkeep

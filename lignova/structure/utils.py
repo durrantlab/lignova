@@ -41,13 +41,19 @@ def is_xray_structure(pdb_file):
 
 
 def separate_protein_ligand(
-    pdb: Union[str, TextIO], reference: Union[str, TextIO] = None
+    pdb: Union[str, TextIO],
+    reference: Union[str, TextIO] = None,
+    remove_water: Union[bool, None] = True,
 ) -> tuple["Protein", "Ligand"]:
     r"""Separate protein and ligand from a PDB file.
     Parameters
     ----------
     pdb : str or file-like
         Path to the PDB file or file-like object.
+    reference : str or file-like
+        Path to the Reference file or file-like object.
+    remove_water : bool
+        Remove water molecules from the ligand structure. Default is True.
     Returns
     -------
     Protein
@@ -68,7 +74,12 @@ def separate_protein_ligand(
                 reference_chain = reference_chain[0]
             selection = select_chains(pdb_obj, chains=reference_chain)
     hetatm = filter_hetatoms(selection)
-    ligand = remove_residues(hetatm, residues=["HOH"])
+    if remove_water:
+        ligand = remove_residues(hetatm, residues=["HOH"])
+    else:
+        ligand = hetatm
+        logger.warning("Water molecules are not removed from the ligand structure.")
+        logger.debug(ligand.resnames.all())
     if len(ligand.atoms) == 0 or len(hetatm.atoms) == 0:
         logger.warning("No ligand found in the selected chains.Trying another method.")
         hetatm = filter_hetatoms(pdb_obj)
