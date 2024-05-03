@@ -58,6 +58,27 @@ def remove_residues(
     return mda_univ.select_atoms(selection)
 
 
+def select_residues(
+    mda_univ: mda.Universe, residues: Union[str, Iterable[str]]
+) -> mda.Universe:
+    r"""Select residues from structure.
+
+    Parameters
+    ----------
+    u
+        MDAnalysis universe to process.
+    residues
+        Names of residues to select.
+    """
+    print(isinstance(residues, list))
+    print(residues)
+    if isinstance(residues, str):
+        residues = list(residues)
+    selection = " or ".join([f"record_type HETATM and resname {r}" for r in residues])
+    logger.info("MDAnalysis selection: {}", selection)
+    return mda_univ.select_atoms(selection)
+
+
 def remove_hetatoms(mda_univ: mda.Universe) -> mda.Universe:
     r"""Remove hetero atoms.
 

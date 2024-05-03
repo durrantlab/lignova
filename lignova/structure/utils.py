@@ -1,12 +1,19 @@
 r""" Utility functions for structure module. """
 from typing import TextIO, Union
 
+import ast
 import os
 
 import pandas as pd
 from loguru import logger
 
-from .editing import filter_hetatoms, get_mda_universe, remove_residues, select_chains
+from .editing import (
+    filter_hetatoms,
+    get_mda_universe,
+    remove_residues,
+    select_chains,
+    select_residues,
+)
 
 
 def is_xray_structure(pdb_file):
@@ -68,11 +75,22 @@ def separate_protein_ligand(
             logger.warning("The ligand is not the same as the reference file.")
             # get the chains from the reference file
             reference = pd.read_csv(reference)
-            reference_chain = reference["CHAIN"].values[0]
-            reference_chain = reference_chain.split(",")
+            print(os.path.basename(pdb).split("_")[0].upper())
+            reference = reference[
+                reference["PDB"] == os.path.basename(pdb).split("_")[0].upper()
+            ]
+            print(reference)
+            reference_chain = reference["CHAIN"].values
+            print(reference_chain)
+            reference_ligand = list(reference["LIGAND"].values)
+            print(reference_ligand[0])
             if len(reference_chain) > 1:
                 reference_chain = reference_chain[0]
             selection = select_chains(pdb_obj, chains=reference_chain)
+            ligand = select_residues(
+                selection, residues=ast.literal_eval(reference_ligand[0])
+            )
+            return selection.atoms, ligand
     hetatm = filter_hetatoms(selection)
     if remove_water:
         ligand = remove_residues(hetatm, residues=["HOH"])
@@ -118,9 +136,12 @@ def check_ligand(pdb: Union[str, TextIO], reference: Union[str, TextIO]) -> bool
     reference = pd.read_csv(reference)
     # find the pdb in the reference file first column
     reference = reference[reference["PDB"] == os.path.basename(pdb).upper()]
-    reference_ligand = reference["LIGAND"].values[0]
-    reference_chain = reference["CHAIN"].values[0]
-    if lignad_id in reference_ligand and chains in reference_chain:
+    reference_ligand = reference["LIGAND"].values
+    reference_chain = reference["CHAIN"].values
+    # check that all values in ligand_id are in reference_ligand and chains in reference_chain
+    if all(i in reference_ligand for i in lignad_id) and all(
+        i in reference_chain for i in chains
+    ):
         return True
     else:
         return False

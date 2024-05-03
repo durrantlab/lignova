@@ -10,6 +10,7 @@ from line_profiler import profile
 from loguru import logger
 
 from lignova.analysis.rmsd import RMSD
+from lignova.analysis.utils import obabel_result_parser
 from lignova.docking import Glide
 from lignova.docking.combind import Combind
 from lignova.docking.contexts import GlideContext
@@ -838,18 +839,17 @@ def calc_rmsd_obabel(
         ):
             logger.info(f"Splitting {reference_ligand.file_name}")
             # convert mae to pdb using convert_to_pdb
-            # TODO:FIX THIS
             convert_to_pdb(full_reference_ligand, context=context)
             protein, ligand = separate_protein_ligand(
                 os.path.join(context.write_dir, reference_ligand.file_id + ".pdb"),
                 remove_water=False,
+                reference="/home/mma121/PubChem_small/try_schrodinger/valid.csv",
             )
             print(ligand)
             write_mda_universe(
                 ligand,
                 os.path.join(context.write_dir, reference_ligand.file_id + "_lig.pdb"),
             )
-            exit()
             """
             manipulate_complexes(
                 full_reference_ligand,
@@ -865,18 +865,27 @@ def calc_rmsd_obabel(
             )
             convert_to_pdb(os.path.join(context.write_dir,reference_ligand.file_id+ "_split_lig.maegz"),context=context)
             """
-        dock_lig_pdb = os.path.join(
-            context.write_dir, docked_ligand.file_id + "_split_lig.pdb"
+        dock_lig_pdb = DockedLigand(
+            os.path.join(context.write_dir, docked_ligand.file_id + "_split_lig.pdb")
         )
-        ref_lig_pdb = os.path.join(context.write_dir, reference_ligand.file_id + ".pdb")
+        ref_lig_pdb = DockedLigand(
+            os.path.join(context.write_dir, reference_ligand.file_id + ".pdb")
+        )
         rmsd = RMSD(dock_lig_pdb, ref_lig_pdb, context=context)
         logger.info(f"Calculating RMSD for {docked_ligand.file_name}")
+        # TODO:FIX THIS I.E WHY DOES THE RMSD ONLY GIVES 1ST VALUE
         res = rmsd.rmsd_obabel(save=False)
         values = obabel_result_parser(res)
+        print(values)
         # load the values dictionary to a dataframe
-        current_rmsd_df = pd.DataFrame.from_dict(
-            values, columns=[f"{docked_ligand.file_id}_{i}" for i in range(1, 5)]
-        )
+        current_rmsd_df = pd.DataFrame(values.items(), columns=["Index", "Value"])
+        print(current_rmsd_df)
+        # Set the index explicitly
+        current_rmsd_df.set_index("Index", inplace=True)
+        # rename the index to the file name
+        current_rmsd_df.index = [f"{docked_ligand.file_id}_{i}" for i in range(1, 4)]
+        print(current_rmsd_df)
+        exit()
         # load the rmsd.csv file using pandas and append the current_rmsd_df to it excluding the header
         rmsd_df = pd.concat([rmsd_df, current_rmsd_df], ignore_index=True)
         # clean up the directory
@@ -886,9 +895,158 @@ def calc_rmsd_obabel(
             and glob.glob(os.path.join(context.write_dir, "*_merge.maegz"))
         ):
             os.remove(file)
-    # save the rmsd_df to a csv file in the dock_ligand_dir with the name csv_file_name
-    # and the columns names as the header
-    rmsd_df.to_csv(os.path.join(dock_ligand_dir, csv_file_name), index=False)
+        # save the rmsd_df to a csv file in the dock_ligand_dir with the name csv_file_name
+        # and the columns names as the header
+        rmsd_df.to_csv(os.path.join(dock_ligand_dir, csv_file_name), index=False)
+
+
+def calc_rmsd_spyrmsd(
+    dock_ligand_dir: str,
+    reference_dir: str,
+    csv_file_name: str,
+    number: Union[str, int] = 3,
+):
+    """
+    Calculate the rmsd between the docked ligand and the reference ligand using rmsd_obabel
+    Parameters
+    ----------
+    dock_ligand_dir : str
+        The directory containing the docked ligand files
+    reference_dir : str
+        The directory containing the reference ligand files
+    number : Union[str,int]
+        The number of ligand to calculate the rmsd for, by default 3
+    csv_file_name : str
+        The name of the csv file to save the rmsd values
+    """
+    done = []
+    # check if the dock_ligand_dir exists
+    if not os.path.exists(dock_ligand_dir):
+        raise FileNotFoundError(f"{dock_ligand_dir} does not exist")
+    # check if the reference_dir exists
+    if not os.path.exists(reference_dir):
+        raise FileNotFoundError(f"{reference_dir} does not exist")
+    # check if the csv_file_name exists in the dock_ligand_dir
+    if os.path.exists(os.path.join(dock_ligand_dir, csv_file_name)):
+        logger.info(f"{csv_file_name} already exists in {dock_ligand_dir}")
+        # read the csv file using pandas
+        rmsd_df = pd.read_csv(os.path.join(dock_ligand_dir, csv_file_name))
+        # get the 2nd column of the csv file
+        column = rmsd_df.iloc[:, 1]
+        done.extend(list(set(column)))
+    else:
+        logger.info(f"{csv_file_name} does not exist in {dock_ligand_dir}")
+        # make the csv file
+        with open(os.path.join(dock_ligand_dir, csv_file_name), "w") as file:
+            file.write("file,RMSD\n")
+    logger.info(done)
+    logger.info(f"Found {len(done)} PDB IDs already done")
+    # make a pandas dataframe to save the rmsd values
+    rmsd_df = pd.DataFrame(
+        columns=[
+            "file",
+            "RMSD",
+        ]
+    )
+    # get all the docked ligand files in the dock_ligand_dir
+    docked_ligands = glob.glob(os.path.join(dock_ligand_dir, "*.maegz"))
+    # loop over the docked ligand files
+    for docked_ligand in docked_ligands:
+        logger.info(f"Working on {docked_ligand}")
+        # get the pdb_id from the file name
+        pdb_id = os.path.basename(docked_ligand).split("_")[0]
+        if pdb_id.upper() in done:
+            logger.info(f"{pdb_id} already done")
+            continue
+        # get the reference ligand file from the reference_dir
+        # check if the reference ligand file exists and if not continue
+        if not os.path.exists(
+            os.path.join(reference_dir, pdb_id + "_protein_prepared.mae")
+        ):
+            logger.warning(f"{pdb_id} not found in the reference directory")
+            continue
+        full_reference_ligand = glob.glob(
+            os.path.join(reference_dir, pdb_id + "*_protein_prepared.mae")
+        )[0]
+        # run manipulate to get the ligand file
+        docked_ligand = DockedLigand(docked_ligand)
+        context = GlideContext.get_current()
+        context.write_dir = dock_ligand_dir
+        context.set_current(context)
+        if not os.path.exists(
+            os.path.join(context.write_dir, docked_ligand.file_id + "_split_lig.pdb")
+        ):
+            logger.info(f"Splitting {docked_ligand.file_name}")
+            manipulate_complexes(
+                docked_ligand.file_path,
+                context=context,
+                mode="merge",
+                outfile_name=docked_ligand.file_id + "_merge.maegz",
+            )
+            manipulate_complexes(
+                os.path.join(context.write_dir, docked_ligand.file_id + "_merge.maegz"),
+                context=context,
+                mode="split_ligand",
+                outfile_name=docked_ligand.file_id + "_split_lig.maegz",
+            )
+            convert_to_pdb(
+                os.path.join(
+                    context.write_dir, docked_ligand.file_id + "_split_lig.maegz"
+                ),
+                context=context,
+            )
+        logger.debug(f"Reference ligand: {full_reference_ligand}")
+        reference_ligand = Ligand(full_reference_ligand)
+        logger.debug(reference_ligand.file_id)
+        if not os.path.exists(
+            os.path.join(context.write_dir, reference_ligand.file_id + "_lig.pdb")
+        ):
+            logger.info(f"Splitting {reference_ligand.file_name}")
+            # convert mae to pdb using convert_to_pdb
+            convert_to_pdb(full_reference_ligand, context=context)
+            protein, ligand = separate_protein_ligand(
+                os.path.join(context.write_dir, reference_ligand.file_id + ".pdb"),
+                remove_water=False,
+                reference="/home/mma121/PubChem_small/try_schrodinger/valid.csv",
+            )
+            print(ligand)
+            write_mda_universe(
+                ligand,
+                os.path.join(context.write_dir, reference_ligand.file_id + "_lig.pdb"),
+            )
+        dock_lig_pdb = DockedLigand(
+            os.path.join(context.write_dir, docked_ligand.file_id + "_split_lig.pdb")
+        )
+        ref_lig_pdb = DockedLigand(
+            os.path.join(context.write_dir, reference_ligand.file_id + "_lig.pdb")
+        )
+        rmsd = RMSD(dock_lig_pdb, ref_lig_pdb, context=context)
+        logger.info(f"Calculating RMSD for {docked_ligand.file_name}")
+        res = rmsd.symmetry_rmsd()
+        values = obabel_result_parser(res)
+        print(values)
+        # load the values dictionary to a dataframe
+        current_rmsd_df = pd.DataFrame(values.items(), columns=["Index", "Value"])
+        print(current_rmsd_df)
+        # Set the index explicitly
+        current_rmsd_df.set_index("Index", inplace=True)
+        # rename the index to the file name
+        current_rmsd_df.index = [f"{docked_ligand.file_id}_{i}" for i in range(1, 4)]
+        print(current_rmsd_df)
+        exit()
+        # load the rmsd.csv file using pandas and append the current_rmsd_df to it excluding the header
+        rmsd_df = pd.concat([rmsd_df, current_rmsd_df], ignore_index=True)
+        # clean up the directory
+        for file in (
+            glob.glob(os.path.join(context.write_dir, "*_split_lig.pdb"))
+            and glob.glob(os.path.join(context.write_dir, "*_split_lig.maegz"))
+            and glob.glob(os.path.join(context.write_dir, "*_merge.maegz"))
+        ):
+            os.remove(file)
+        # save the rmsd_df to a csv file in the dock_ligand_dir with the name csv_file_name
+        # and the columns names as the header
+        rmsd_df.to_csv(os.path.join(dock_ligand_dir, csv_file_name), index=False)
+        exit()
 
 
 if __name__ == "__main__":
@@ -958,7 +1116,7 @@ if __name__ == "__main__":
         if not os.path.exists(os.path.join("./parsed", ref)):
             shutil.copy(ref, "./parsed")
 
-    calc_rmsd_obabel("./parsed_docked", "./parsed", "rmsd.csv")
+    calc_rmsd_spyrmsd("./parsed_docked", "./parsed", "rmsd.csv")
     # prep_prot(RAW_INPUT_DIR, "./parsed", pdb_ids)
     """
     parser(

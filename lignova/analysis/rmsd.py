@@ -184,7 +184,7 @@ class RMSD:
 
     def rmsd_obabel(
         self,
-        firstonly: bool = False,
+        firstonly: bool = True,
         save: bool = False,
         minimize: bool = False,
         output_filename: Union[str, TextIO, None] = None,
@@ -241,4 +241,64 @@ class RMSD:
                     file.write(f"RMSD: {rmsd}\n")
             else:
                 raise ValueError("Output filename is required if csv is True")
+        return rmsd
+
+    def symmetry_rmsd(
+        self,
+        symmetry: bool = True,
+        hydrogens: bool = False,
+        superimpose: bool = False,
+        save: bool = False,
+        output_filename: Union[str, TextIO, None] = None,
+    ):
+        r"""Calculate RMSD between reference and target file using Spyrmsd,
+        taking into account the symmetry of the molecules.
+        Parameters
+        ----------
+        symmetry : bool
+            Use symmetry information. Default is True.
+        hydrogens : bool
+            Include hydrogens in the calculation. Default is False.
+        superimpose : bool
+            Superimpose the molecules. Default is False. (i.e perform in-place RMSD)
+        """
+        # python -m spyrmsd -m -n [self.reference.file_path, self.ligand.file_path
+        command = ["python", "-m", "spyrmsd"]
+        if not symmetry:
+            command.append("-s")
+        if hydrogens:
+            command.append("--h")
+        if superimpose:
+            command.append("-m")
+        command.extend([self.reference.file_path, self.ligand.file_path])
+        try:
+            process = subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+            )
+            stdout, stderr = process.communicate()
+            if process.returncode == 0:
+                logger.info(f"RMSD calculation completed for {self.ligand.file_id}")
+                logger.info(f"Output:\n{stdout}")
+            else:
+                logger.error(f"RMSD calculation failed for {self.ligand.file_id}")
+                logger.error(f"Error Output:\n{stderr}")
+                raise subprocess.CalledProcessError(
+                    process.returncode, " ".join(command)
+                )
+        except subprocess.CalledProcessError as e:
+            logger.error(f"An error occurred during RMSD calculation: {str(e)}")
+            raise e
+
+        # Parse the RMSD from the output
+        rmsd = stdout.strip()
+        # If an output filename is provided, write the RMSD to the file
+        if save:
+            if output_filename is not None:
+                with open(output_filename + ".txt", "w") as file:
+                    file.write(f"RMSD: {rmsd}\n")
+            else:
+                raise ValueError("Output filename is required if save is True")
         return rmsd
