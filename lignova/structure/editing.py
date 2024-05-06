@@ -73,7 +73,7 @@ def select_residues(
     print(isinstance(residues, list))
     print(residues)
     if isinstance(residues, str):
-        residues = list(residues)
+        residues = [residues]
     selection = " or ".join([f"record_type HETATM and resname {r}" for r in residues])
     logger.info("MDAnalysis selection: {}", selection)
     return mda_univ.select_atoms(selection)

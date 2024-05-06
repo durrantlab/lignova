@@ -21,6 +21,8 @@ from lignova.structure.ligand import DockedLigand, Ligand
 from lignova.structure.protein import Protein
 from lignova.structure.utils import is_xray_structure, separate_protein_ligand
 
+# TODO:BACKTRACK THE SEPARATE PROTEIN LIGAND FUNCTION CHANGE I.E REFERENCE CHANGE
+
 
 @profile
 def clean_cluster_files(file_path: str, delim: list = ["[", "]"]):
@@ -873,21 +875,17 @@ def calc_rmsd_obabel(
         )
         rmsd = RMSD(dock_lig_pdb, ref_lig_pdb, context=context)
         logger.info(f"Calculating RMSD for {docked_ligand.file_name}")
-        # TODO:FIX THIS I.E WHY DOES THE RMSD ONLY GIVES 1ST VALUE
         res = rmsd.rmsd_obabel(save=False)
         values = obabel_result_parser(res)
-        print(values)
         # load the values dictionary to a dataframe
         current_rmsd_df = pd.DataFrame(values.items(), columns=["Index", "Value"])
         print(current_rmsd_df)
         # Set the index explicitly
-        current_rmsd_df.set_index("Index", inplace=True)
+        current_rmsd_df.set_index("file", inplace=True)
         # rename the index to the file name
         current_rmsd_df.index = [f"{docked_ligand.file_id}_{i}" for i in range(1, 4)]
-        print(current_rmsd_df)
-        exit()
         # load the rmsd.csv file using pandas and append the current_rmsd_df to it excluding the header
-        rmsd_df = pd.concat([rmsd_df, current_rmsd_df], ignore_index=True)
+        rmsd_df = pd.concat([rmsd_df, current_rmsd_df])
         # clean up the directory
         for file in (
             glob.glob(os.path.join(context.write_dir, "*_split_lig.pdb"))
@@ -917,37 +915,50 @@ def calc_rmsd_spyrmsd(
     number : Union[str,int]
         The number of ligand to calculate the rmsd for, by default 3
     csv_file_name : str
-        The name of the csv file to save the rmsd values
+        The name of the csv file to save the rmsd values,it will be created if it does not exist in the dock_ligand_dir
     """
+    # TODO:CHECK 4H75 why fail AND maybe add fail conditions?
     done = []
+    failed = []
+    count = 0
+    context = GlideContext.get_current()
+    context.write_dir = dock_ligand_dir
+    context.set_current(context)
     # check if the dock_ligand_dir exists
     if not os.path.exists(dock_ligand_dir):
         raise FileNotFoundError(f"{dock_ligand_dir} does not exist")
     # check if the reference_dir exists
     if not os.path.exists(reference_dir):
         raise FileNotFoundError(f"{reference_dir} does not exist")
+    # check if the csv_file_name is a path
+    if "/" in csv_file_name:
+        csv_file_name = os.path.basename(csv_file_name)
+        # make the context write_dir the directory of the csv_file_name
+        context.write_dir = os.path.dirname(csv_file_name)
+        context.set_current(context)
+    # check if failed.txt exists in the dock_ligand_dir
+    if os.path.exists(os.path.join(dock_ligand_dir, "failed.txt")):
+        with open(os.path.join(dock_ligand_dir, "failed.txt"), "r") as file:
+            failed = file.read().splitlines()
+        done.extend([x.split("_")[0] for x in failed])
     # check if the csv_file_name exists in the dock_ligand_dir
-    if os.path.exists(os.path.join(dock_ligand_dir, csv_file_name)):
+    if os.path.exists(os.path.join(context.write_dir, csv_file_name)):
         logger.info(f"{csv_file_name} already exists in {dock_ligand_dir}")
         # read the csv file using pandas
-        rmsd_df = pd.read_csv(os.path.join(dock_ligand_dir, csv_file_name))
-        # get the 2nd column of the csv file
-        column = rmsd_df.iloc[:, 1]
-        done.extend(list(set(column)))
+        rmsd_df = pd.read_csv(os.path.join(context.write_dir, csv_file_name))
+        # get the 1st column of the csv file and add it to done
+        column = rmsd_df.iloc[:, 0]
+        # split the column by _ and get the first element
+        done.extend(list(set([i.split("_")[0] for i in list(set(column))])))
     else:
-        logger.info(f"{csv_file_name} does not exist in {dock_ligand_dir}")
-        # make the csv file
-        with open(os.path.join(dock_ligand_dir, csv_file_name), "w") as file:
+        logger.info(f"{csv_file_name} does not exist in {context.write_dir}")
+        # create an empty csv file with the name csv_file_name
+        with open(os.path.join(context.write_dir, csv_file_name), "w") as file:
             file.write("file,RMSD\n")
     logger.info(done)
     logger.info(f"Found {len(done)} PDB IDs already done")
-    # make a pandas dataframe to save the rmsd values
-    rmsd_df = pd.DataFrame(
-        columns=[
-            "file",
-            "RMSD",
-        ]
-    )
+    # read the csv file using pandas
+    rmsd_df = pd.read_csv(os.path.join(context.write_dir, csv_file_name))
     # get all the docked ligand files in the dock_ligand_dir
     docked_ligands = glob.glob(os.path.join(dock_ligand_dir, "*.maegz"))
     # loop over the docked ligand files
@@ -955,10 +966,10 @@ def calc_rmsd_spyrmsd(
         logger.info(f"Working on {docked_ligand}")
         # get the pdb_id from the file name
         pdb_id = os.path.basename(docked_ligand).split("_")[0]
-        if pdb_id.upper() in done:
+        if pdb_id in done:
             logger.info(f"{pdb_id} already done")
             continue
-        # get the reference ligand file from the reference_dir
+            # get the reference ligand file from the reference_dir
         # check if the reference ligand file exists and if not continue
         if not os.path.exists(
             os.path.join(reference_dir, pdb_id + "_protein_prepared.mae")
@@ -970,9 +981,6 @@ def calc_rmsd_spyrmsd(
         )[0]
         # run manipulate to get the ligand file
         docked_ligand = DockedLigand(docked_ligand)
-        context = GlideContext.get_current()
-        context.write_dir = dock_ligand_dir
-        context.set_current(context)
         if not os.path.exists(
             os.path.join(context.write_dir, docked_ligand.file_id + "_split_lig.pdb")
         ):
@@ -1007,13 +1015,22 @@ def calc_rmsd_spyrmsd(
             protein, ligand = separate_protein_ligand(
                 os.path.join(context.write_dir, reference_ligand.file_id + ".pdb"),
                 remove_water=False,
-                reference="/home/mma121/PubChem_small/try_schrodinger/valid.csv",
+                reference=os.path.join(
+                    context.write_dir, docked_ligand.file_id + "_split_lig.pdb"
+                ),
             )
             print(ligand)
-            write_mda_universe(
-                ligand,
-                os.path.join(context.write_dir, reference_ligand.file_id + "_lig.pdb"),
-            )
+            try:
+                write_mda_universe(
+                    ligand,
+                    os.path.join(
+                        context.write_dir, reference_ligand.file_id + "_lig.pdb"
+                    ),
+                )
+            except Exception as e:
+                logger.error(str(e))
+                failed.append(reference_ligand.file_id)
+                continue
         dock_lig_pdb = DockedLigand(
             os.path.join(context.write_dir, docked_ligand.file_id + "_split_lig.pdb")
         )
@@ -1022,31 +1039,41 @@ def calc_rmsd_spyrmsd(
         )
         rmsd = RMSD(dock_lig_pdb, ref_lig_pdb, context=context)
         logger.info(f"Calculating RMSD for {docked_ligand.file_name}")
-        res = rmsd.symmetry_rmsd()
-        values = obabel_result_parser(res)
-        print(values)
+        try:
+            res = rmsd.symmetry_rmsd()
+            values = obabel_result_parser(res)
+            print(values)
+        except Exception as e:
+            logger.error(str(e))
+            failed.append(reference_ligand.file_id)
+            continue
+        # load the values dictionary to a dataframe
+        current_rmsd_df = pd.DataFrame(values.items(), columns=["file", "RMSD"])
+        # Set the index explicitly
+        current_rmsd_df.set_index("file", inplace=True)
+        # rename the index to the file name
+        current_rmsd_df.index = [f"{docked_ligand.file_id}_{i}" for i in range(1, 4)]
+        # make the index the first column of the dataframe and name it file
+        current_rmsd_df.reset_index(inplace=True)
+        current_rmsd_df.rename(columns={"index": "file"}, inplace=True)
+        # load the rmsd.csv file using pandas and append the current_rmsd_df to it excluding the header
+        rmsd_df = pd.concat([rmsd_df, current_rmsd_df])
+        # clean up the directory
         # load the values dictionary to a dataframe
         current_rmsd_df = pd.DataFrame(values.items(), columns=["Index", "Value"])
         print(current_rmsd_df)
-        # Set the index explicitly
-        current_rmsd_df.set_index("Index", inplace=True)
-        # rename the index to the file name
-        current_rmsd_df.index = [f"{docked_ligand.file_id}_{i}" for i in range(1, 4)]
-        print(current_rmsd_df)
-        exit()
-        # load the rmsd.csv file using pandas and append the current_rmsd_df to it excluding the header
-        rmsd_df = pd.concat([rmsd_df, current_rmsd_df], ignore_index=True)
         # clean up the directory
         for file in (
-            glob.glob(os.path.join(context.write_dir, "*_split_lig.pdb"))
-            and glob.glob(os.path.join(context.write_dir, "*_split_lig.maegz"))
-            and glob.glob(os.path.join(context.write_dir, "*_merge.maegz"))
+            glob.glob(os.path.join(context.write_dir, "*.pdb"))
+            + glob.glob(os.path.join(context.write_dir, "*_split_lig.maegz"))
+            + glob.glob(os.path.join(context.write_dir, "*_merge.maegz"))
         ):
             os.remove(file)
-        # save the rmsd_df to a csv file in the dock_ligand_dir with the name csv_file_name
-        # and the columns names as the header
+        # save the rmsd_df to a csv file in the dock_ligand_dir with the name csv_file_name and the same columns
         rmsd_df.to_csv(os.path.join(dock_ligand_dir, csv_file_name), index=False)
-        exit()
+        # save the failed list to a file
+        with open(os.path.join(dock_ligand_dir, "failed.txt"), "w") as file:
+            file.write("\n".join(failed))
 
 
 if __name__ == "__main__":
@@ -1091,7 +1118,6 @@ if __name__ == "__main__":
     )
     dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=found_pdb, limit=400)
     combind_pose_selction(DOCKED_DIR, COMBIND_DIR, pdb=found_pdb, limit=400)
-    """
     files = glob.glob(COMBIND_DIR + "/*.maegz")
     print(files)
     if not os.path.exists("./parsed_docked"):
@@ -1115,7 +1141,7 @@ if __name__ == "__main__":
     for ref in reference_file:
         if not os.path.exists(os.path.join("./parsed", ref)):
             shutil.copy(ref, "./parsed")
-
+    """
     calc_rmsd_spyrmsd("./parsed_docked", "./parsed", "rmsd.csv")
     # prep_prot(RAW_INPUT_DIR, "./parsed", pdb_ids)
     """

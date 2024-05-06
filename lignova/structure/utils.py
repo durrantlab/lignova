@@ -71,9 +71,17 @@ def separate_protein_ligand(
     pdb_obj = get_mda_universe(pdb)
     selection = select_chains(pdb_obj)
     if reference is not None:
-        while check_ligand(pdb, reference) is False:
+        reference_obj = get_mda_universe(reference)
+        reference_chain = list(reference_obj.segments.segids)[0]
+        logger.debug(reference_chain)
+        reference_lig = filter_hetatoms(reference_obj)
+        reference_ligand = str(reference_lig.resnames.all())
+        logger.debug(reference_ligand)
+        if check_ligand(pdb, reference) is False:
             logger.warning("The ligand is not the same as the reference file.")
             # get the chains from the reference file
+            """
+            # select the chains from the pdb f
             reference = pd.read_csv(reference)
             print(os.path.basename(pdb).split("_")[0].upper())
             reference = reference[
@@ -82,15 +90,16 @@ def separate_protein_ligand(
             print(reference)
             reference_chain = reference["CHAIN"].values
             print(reference_chain)
-            reference_ligand = list(reference["LIGAND"].values)
+            reference_ligand = list(set(reference["LIGAND"].values))
             print(reference_ligand[0])
+            #ast.literal_eval(reference_ligand[0])
             if len(reference_chain) > 1:
                 reference_chain = reference_chain[0]
+            """
             selection = select_chains(pdb_obj, chains=reference_chain)
-            ligand = select_residues(
-                selection, residues=ast.literal_eval(reference_ligand[0])
-            )
-            return selection.atoms, ligand
+            ligand = select_residues(selection, residues=reference_ligand)
+        ligand = select_residues(pdb_obj, residues=reference_ligand)
+        return selection.atoms, ligand
     hetatm = filter_hetatoms(selection)
     if remove_water:
         ligand = remove_residues(hetatm, residues=["HOH"])
@@ -133,11 +142,17 @@ def check_ligand(pdb: Union[str, TextIO], reference: Union[str, TextIO]) -> bool
     # get the ligand from the
     ligands = filter_hetatoms(pdb_obj)
     lignad_id = ligands.resnames.all()
+    ref_obj = get_mda_universe(reference)
+    reference_chain = list(set(ref_obj.segments.segids))
+    reference_lig = filter_hetatoms(ref_obj)
+    reference_ligand = reference_lig.resnames.all()
+    """
     reference = pd.read_csv(reference)
     # find the pdb in the reference file first column
     reference = reference[reference["PDB"] == os.path.basename(pdb).upper()]
     reference_ligand = reference["LIGAND"].values
     reference_chain = reference["CHAIN"].values
+    """
     # check that all values in ligand_id are in reference_ligand and chains in reference_chain
     if all(i in reference_ligand for i in lignad_id) and all(
         i in reference_chain for i in chains

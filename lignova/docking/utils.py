@@ -99,7 +99,7 @@ def manipulate_complexes(
             if mode not in ["split_epv", "pv_to_epv", "epv_to_pv"]:
                 complexes_file = None
                 for file in os.listdir(os.path.dirname(input_file)):
-                    logger.debug(f"Checking file: {file}")
+                    # logger.debug(f"Checking file: {file}")
                     if (
                         file.startswith(filename)
                         and file.endswith(".maegz")
