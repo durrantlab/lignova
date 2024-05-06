@@ -73,10 +73,11 @@ def separate_protein_ligand(
     if reference is not None:
         reference_obj = get_mda_universe(reference)
         reference_chain = list(reference_obj.segments.segids)[0]
-        logger.debug(reference_chain)
-        reference_lig = filter_hetatoms(reference_obj)
-        reference_ligand = str(reference_lig.resnames.all())
-        logger.debug(reference_ligand)
+        logger.debug(f"The reference chain(s) : {reference_chain}")
+        reference_ligand = set((reference_obj.residues.resids))
+        # convert the set to a list of strings
+        reference_ligand = [str(i) for i in reference_ligand]
+        logger.debug(f"The reference resid(s) : {reference_ligand}")
         if check_ligand(pdb, reference) is False:
             logger.warning("The ligand is not the same as the reference file.")
             # get the chains from the reference file
@@ -140,12 +141,11 @@ def check_ligand(pdb: Union[str, TextIO], reference: Union[str, TextIO]) -> bool
     # get the chains id from the mdanalysis universe
     chains = list(set(pdb_obj.segments.segids))
     # get the ligand from the
-    ligands = filter_hetatoms(pdb_obj)
-    lignad_id = ligands.resnames.all()
+    ligand = filter_hetatoms(pdb_obj)
+    ligand_id = ligand.residues.resids
     ref_obj = get_mda_universe(reference)
     reference_chain = list(set(ref_obj.segments.segids))
-    reference_lig = filter_hetatoms(ref_obj)
-    reference_ligand = reference_lig.resnames.all()
+    reference_ligand = list(set(ref_obj.residues.resids))
     """
     reference = pd.read_csv(reference)
     # find the pdb in the reference file first column
@@ -154,7 +154,7 @@ def check_ligand(pdb: Union[str, TextIO], reference: Union[str, TextIO]) -> bool
     reference_chain = reference["CHAIN"].values
     """
     # check that all values in ligand_id are in reference_ligand and chains in reference_chain
-    if all(i in reference_ligand for i in lignad_id) and all(
+    if all(i in reference_ligand for i in ligand_id) and all(
         i in reference_chain for i in chains
     ):
         return True

@@ -265,7 +265,7 @@ class RMSD:
         # python -m spyrmsd -m -n [self.reference.file_path, self.ligand.file_path
         command = ["python", "-m", "spyrmsd"]
         if not symmetry:
-            command.append("-s")
+            command.append("-n")
         if hydrogens:
             command.append("--h")
         if superimpose:

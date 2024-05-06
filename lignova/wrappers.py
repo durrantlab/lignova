@@ -981,28 +981,37 @@ def calc_rmsd_spyrmsd(
         )[0]
         # run manipulate to get the ligand file
         docked_ligand = DockedLigand(docked_ligand)
-        if not os.path.exists(
-            os.path.join(context.write_dir, docked_ligand.file_id + "_split_lig.pdb")
-        ):
-            logger.info(f"Splitting {docked_ligand.file_name}")
-            manipulate_complexes(
-                docked_ligand.file_path,
-                context=context,
-                mode="merge",
-                outfile_name=docked_ligand.file_id + "_merge.maegz",
-            )
-            manipulate_complexes(
-                os.path.join(context.write_dir, docked_ligand.file_id + "_merge.maegz"),
-                context=context,
-                mode="split_ligand",
-                outfile_name=docked_ligand.file_id + "_split_lig.maegz",
-            )
-            convert_to_pdb(
+        try:
+            if not os.path.exists(
                 os.path.join(
-                    context.write_dir, docked_ligand.file_id + "_split_lig.maegz"
-                ),
-                context=context,
-            )
+                    context.write_dir, docked_ligand.file_id + "_split_lig.pdb"
+                )
+            ):
+                logger.info(f"Splitting {docked_ligand.file_name}")
+                manipulate_complexes(
+                    docked_ligand.file_path,
+                    context=context,
+                    mode="merge",
+                    outfile_name=docked_ligand.file_id + "_merge.maegz",
+                )
+                manipulate_complexes(
+                    os.path.join(
+                        context.write_dir, docked_ligand.file_id + "_merge.maegz"
+                    ),
+                    context=context,
+                    mode="split_ligand",
+                    outfile_name=docked_ligand.file_id + "_split_lig.maegz",
+                )
+                convert_to_pdb(
+                    os.path.join(
+                        context.write_dir, docked_ligand.file_id + "_split_lig.maegz"
+                    ),
+                    context=context,
+                )
+        except Exception as e:
+            logger.error(str(e))
+            failed.append(docked_ligand.file_id)
+            continue
         logger.debug(f"Reference ligand: {full_reference_ligand}")
         reference_ligand = Ligand(full_reference_ligand)
         logger.debug(reference_ligand.file_id)
