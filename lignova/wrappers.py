@@ -919,7 +919,7 @@ def calc_rmsd_spyrmsd(
     """
     # TODO:CHECK 4H75 why fail AND maybe add fail conditions?
     done = []
-    failed = []
+    # failed = []
     count = 0
     context = GlideContext.get_current()
     context.write_dir = dock_ligand_dir
@@ -936,11 +936,13 @@ def calc_rmsd_spyrmsd(
         # make the context write_dir the directory of the csv_file_name
         context.write_dir = os.path.dirname(csv_file_name)
         context.set_current(context)
+    """
     # check if failed.txt exists in the dock_ligand_dir
     if os.path.exists(os.path.join(dock_ligand_dir, "failed.txt")):
         with open(os.path.join(dock_ligand_dir, "failed.txt"), "r") as file:
             failed = file.read().splitlines()
         done.extend([x.split("_")[0] for x in failed])
+    """
     # check if the csv_file_name exists in the dock_ligand_dir
     if os.path.exists(os.path.join(context.write_dir, csv_file_name)):
         logger.info(f"{csv_file_name} already exists in {dock_ligand_dir}")
@@ -981,37 +983,35 @@ def calc_rmsd_spyrmsd(
         )[0]
         # run manipulate to get the ligand file
         docked_ligand = DockedLigand(docked_ligand)
-        try:
-            if not os.path.exists(
+        # try:
+        if not os.path.exists(
+            os.path.join(context.write_dir, docked_ligand.file_id + "_split_lig.pdb")
+        ):
+            logger.info(f"Splitting {docked_ligand.file_name}")
+            manipulate_complexes(
+                docked_ligand.file_path,
+                context=context,
+                mode="merge",
+                outfile_name=docked_ligand.file_id + "_merge.maegz",
+            )
+            manipulate_complexes(
+                os.path.join(context.write_dir, docked_ligand.file_id + "_merge.maegz"),
+                context=context,
+                mode="split_ligand",
+                outfile_name=docked_ligand.file_id + "_split_lig.maegz",
+            )
+            convert_to_pdb(
                 os.path.join(
-                    context.write_dir, docked_ligand.file_id + "_split_lig.pdb"
-                )
-            ):
-                logger.info(f"Splitting {docked_ligand.file_name}")
-                manipulate_complexes(
-                    docked_ligand.file_path,
-                    context=context,
-                    mode="merge",
-                    outfile_name=docked_ligand.file_id + "_merge.maegz",
-                )
-                manipulate_complexes(
-                    os.path.join(
-                        context.write_dir, docked_ligand.file_id + "_merge.maegz"
-                    ),
-                    context=context,
-                    mode="split_ligand",
-                    outfile_name=docked_ligand.file_id + "_split_lig.maegz",
-                )
-                convert_to_pdb(
-                    os.path.join(
-                        context.write_dir, docked_ligand.file_id + "_split_lig.maegz"
-                    ),
-                    context=context,
-                )
+                    context.write_dir, docked_ligand.file_id + "_split_lig.maegz"
+                ),
+                context=context,
+            )
+        """
         except Exception as e:
             logger.error(str(e))
             failed.append(docked_ligand.file_id)
             continue
+        """
         logger.debug(f"Reference ligand: {full_reference_ligand}")
         reference_ligand = Ligand(full_reference_ligand)
         logger.debug(reference_ligand.file_id)
@@ -1029,17 +1029,17 @@ def calc_rmsd_spyrmsd(
                 ),
             )
             print(ligand)
-            try:
-                write_mda_universe(
-                    ligand,
-                    os.path.join(
-                        context.write_dir, reference_ligand.file_id + "_lig.pdb"
-                    ),
-                )
+            # try:
+            write_mda_universe(
+                ligand,
+                os.path.join(context.write_dir, reference_ligand.file_id + "_lig.pdb"),
+            )
+            """
             except Exception as e:
                 logger.error(str(e))
                 failed.append(reference_ligand.file_id)
                 continue
+            """
         dock_lig_pdb = DockedLigand(
             os.path.join(context.write_dir, docked_ligand.file_id + "_split_lig.pdb")
         )
@@ -1048,14 +1048,17 @@ def calc_rmsd_spyrmsd(
         )
         rmsd = RMSD(dock_lig_pdb, ref_lig_pdb, context=context)
         logger.info(f"Calculating RMSD for {docked_ligand.file_name}")
-        try:
-            res = rmsd.symmetry_rmsd()
-            values = obabel_result_parser(res)
-            print(values)
+        # try:
+        res = rmsd.symmetry_rmsd()
+        values = obabel_result_parser(res)
+        print(values)
+
+        """
         except Exception as e:
             logger.error(str(e))
             failed.append(reference_ligand.file_id)
             continue
+        """
         # load the values dictionary to a dataframe
         current_rmsd_df = pd.DataFrame(values.items(), columns=["file", "RMSD"])
         # Set the index explicitly
@@ -1080,9 +1083,11 @@ def calc_rmsd_spyrmsd(
             os.remove(file)
         # save the rmsd_df to a csv file in the dock_ligand_dir with the name csv_file_name and the same columns
         rmsd_df.to_csv(os.path.join(dock_ligand_dir, csv_file_name), index=False)
+        """
         # save the failed list to a file
         with open(os.path.join(dock_ligand_dir, "failed.txt"), "w") as file:
             file.write("\n".join(failed))
+        """
 
 
 if __name__ == "__main__":

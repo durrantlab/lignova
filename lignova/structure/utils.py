@@ -4,16 +4,11 @@ from typing import TextIO, Union
 import ast
 import os
 
+import MDAnalysis as mda
 import pandas as pd
 from loguru import logger
 
-from .editing import (
-    filter_hetatoms,
-    get_mda_universe,
-    remove_residues,
-    select_chains,
-    select_residues,
-)
+from .editing import *
 
 
 def is_xray_structure(pdb_file):
@@ -78,6 +73,24 @@ def separate_protein_ligand(
         # convert the set to a list of strings
         reference_ligand = [str(i) for i in reference_ligand]
         logger.debug(f"The reference resid(s) : {reference_ligand}")
+        # check if the reference ligand more than one residue
+        if len(reference_ligand) > 1:
+            # get the resnames of the ligand
+            reference_rename = list(set(reference_obj.residues.resnames))
+            # remove resnames with less than 3 characters from the list in one line
+            reference_resname = [i for i in reference_rename if len(i) == 3]
+            # get the resids of the reference resname
+            logger.debug(f"The reference resname(s) : {reference_resname}")
+            # filter out that resname from the reference_obj
+            with mda.Writer("tmp.pdb", multiframe=True) as writer:
+                for ts in reference_obj.trajectory:
+                    # Select atoms belonging to the specified residue name in the current frame
+                    selection = " or ".join([f"resname {r}" for r in reference_resname])
+                    selected_atoms = reference_obj.select_atoms(selection)
+                    writer.write(selected_atoms)
+            # rename tmp.pdb to reference.pdb
+            os.rename("tmp.pdb", reference)
+            reference_ligand = reference_resname
         if check_ligand(pdb, reference) is False:
             logger.warning("The ligand is not the same as the reference file.")
             # get the chains from the reference file

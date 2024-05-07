@@ -68,15 +68,10 @@ def manipulate_complexes(
                 context.write_dir, filename + f"_{i}_" + outfile_name
             )
             i += 1
-    command = [
-        context.command + "/run",
-        "pv_convert.py",
-        "-mode",
-        mode,
-        "-o",
-        new_filename,
-        input_file,
-    ]
+    command = [context.command + "/run", "pv_convert.py", "-mode", mode]
+    if mode in ["split_pv", "split_epv", "split_ligand", "split_receptor"]:
+        command.extend(["-lig_last_mol"])
+    command.extend(["-o", new_filename, input_file])
     logger.debug(f"Running command: {' '.join(command)}")
     try:
         process = subprocess.Popen(
@@ -87,7 +82,6 @@ def manipulate_complexes(
         )
         stdout, stderr = process.communicate()
         logger.debug(f"Output:\n{stdout}")
-        print((all("skipping" in line.lower() for line in stdout.split("\n")[:-1])))
         # check if the filename has _pv or _epv and if so remove it
         if process.returncode == 0 and (
             (all("skipping" in line.lower() for line in stdout.split("\n")[:-1]))
@@ -164,9 +158,85 @@ def convert_to_pdb(
             universal_newlines=True,
         )
         stdout, stderr = process.communicate()
+        logger.debug(f"Output:\n{stdout}")
+        logger.debug(f"Error Output:\n{stderr}")
         if process.returncode == 0:
             logger.info(f"Converted {input_file} to pdb format")
             logger.info(f"Output:\n{stdout}")
+        elif (
+            "Each Structure is converted independently and written to separate files"
+            in stderr
+        ):
+            output_file_new = os.path.join(
+                context.write_dir,
+                f"{os.path.splitext(os.path.basename(input_file))[0]}-1.pdb",
+            )
+            logger.info(f"Converting files one by one: {output_file_new}")
+            if os.path.exists(output_file_new):
+                # loop through the number of structures and convert them one by one
+                for i in n_structures:
+                    if i == 1:
+                        continue
+                    command = [
+                        context.command + "/utilities/structconvert",
+                        "-use_component_dict",
+                        "-n",
+                        str(i),
+                        input_file,
+                        os.path.join(
+                            context.write_dir,
+                            f"{os.path.splitext(os.path.basename(input_file))[0]}-{i}.pdb",
+                        ),
+                    ]
+                    process = subprocess.Popen(
+                        command,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        universal_newlines=True,
+                    )
+                    stdout, stderr = process.communicate()
+                    logger.debug(f"Output:\n{stdout}")
+                    logger.debug(f"Error Output:\n{stderr}")
+                    if process.returncode == 0:
+                        logger.info(f"Converted {input_file} to pdb format")
+                        logger.info(f"Output:\n{stdout}")
+                    else:
+                        logger.error(f"Conversion failed for {input_file}")
+                        logger.error(f"Error Output:\n{stderr}")
+                        raise subprocess.CalledProcessError(
+                            process.returncode, " ".join(command)
+                        )
+            # TODO: FIX THE CONCATENATION OF THE FILES
+            command = [
+                "cat",
+                os.path.join(
+                    context.write_dir,
+                    f"{os.path.splitext(os.path.basename(input_file))[0]}-*.pdb",
+                ),
+                ">",
+                os.path.join(
+                    context.write_dir,
+                    f"{os.path.splitext(os.path.basename(input_file))[0]}.pdb",
+                ),
+            ]
+            process = subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+            )
+            stdout, stderr = process.communicate()
+            logger.debug(f"Output:\n{stdout}")
+            logger.debug(f"Error Output:\n{stderr}")
+            if process.returncode == 0:
+                logger.info(f"Converted {input_file} to pdb format")
+                logger.info(f"Output:\n{stdout}")
+            else:
+                logger.error(f"Conversion failed for {input_file}")
+                logger.error(f"Error Output:\n{stderr}")
+                raise subprocess.CalledProcessError(
+                    process.returncode, " ".join(command)
+                )
         else:
             logger.error(f"Conversion failed for {input_file}")
             logger.error(f"Error Output:\n{stderr}")
