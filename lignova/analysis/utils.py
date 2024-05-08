@@ -119,6 +119,7 @@ def obabel_convert(test_file: Union[str, TextIO], output_filename: str):
         raise e
 
 
+# TODO:FIX THIS SO IT DOENS'T LOOK FOR A MINIMUM VALUE MAYBE?
 def obabel_result_parser(output):
     """
     Parses the output from the obabel command and returns the minimum value found per line.

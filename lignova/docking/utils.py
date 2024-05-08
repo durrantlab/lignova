@@ -1,5 +1,5 @@
 r"""Implementation for different Schrodinger's suplementary functions."""
-from typing import Iterable, Union
+from typing import Union
 
 import os
 import subprocess
@@ -163,6 +163,7 @@ def convert_to_pdb(
         if process.returncode == 0:
             logger.info(f"Converted {input_file} to pdb format")
             logger.info(f"Output:\n{stdout}")
+            return False
         elif (
             "Each Structure is converted independently and written to separate files"
             in stderr
@@ -206,37 +207,7 @@ def convert_to_pdb(
                         raise subprocess.CalledProcessError(
                             process.returncode, " ".join(command)
                         )
-            # TODO: FIX THE CONCATENATION OF THE FILES
-            command = [
-                "cat",
-                os.path.join(
-                    context.write_dir,
-                    f"{os.path.splitext(os.path.basename(input_file))[0]}-*.pdb",
-                ),
-                ">",
-                os.path.join(
-                    context.write_dir,
-                    f"{os.path.splitext(os.path.basename(input_file))[0]}.pdb",
-                ),
-            ]
-            process = subprocess.Popen(
-                command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                universal_newlines=True,
-            )
-            stdout, stderr = process.communicate()
-            logger.debug(f"Output:\n{stdout}")
-            logger.debug(f"Error Output:\n{stderr}")
-            if process.returncode == 0:
-                logger.info(f"Converted {input_file} to pdb format")
-                logger.info(f"Output:\n{stdout}")
-            else:
-                logger.error(f"Conversion failed for {input_file}")
-                logger.error(f"Error Output:\n{stderr}")
-                raise subprocess.CalledProcessError(
-                    process.returncode, " ".join(command)
-                )
+                return True
         else:
             logger.error(f"Conversion failed for {input_file}")
             logger.error(f"Error Output:\n{stderr}")

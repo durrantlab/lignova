@@ -237,7 +237,7 @@ class RMSD:
         # If an output filename is provided, write the RMSD to the file
         if save:
             if output_filename is not None:
-                with open(output_filename + ".txt", "w") as file:
+                with open(output_filename + ".txt", "w", encoding="utf-8") as file:
                     file.write(f"RMSD: {rmsd}\n")
             else:
                 raise ValueError("Output filename is required if csv is True")
@@ -297,7 +297,7 @@ class RMSD:
         # If an output filename is provided, write the RMSD to the file
         if save:
             if output_filename is not None:
-                with open(output_filename + ".txt", "w") as file:
+                with open(output_filename + ".txt", "w", encoding="utf-8") as file:
                     file.write(f"RMSD: {rmsd}\n")
             else:
                 raise ValueError("Output filename is required if save is True")

@@ -174,7 +174,7 @@ def test_extract_data_csv():
     combind.extract_data_csv(
         docking_file=context_protein_6Oav["docking_results_path"],
         filename="6oav_m3a_filter",
-        filter=False,
+        filter_data=False,
     )
     assert os.path.exists(
         os.path.join(context_protein_6Oav["write_dir"], "6oav_m3a_filter.csv")

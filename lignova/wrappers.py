@@ -919,7 +919,7 @@ def calc_rmsd_spyrmsd(
     """
     # TODO:CHECK 4H75 why fail AND maybe add fail conditions?
     done = []
-    # failed = []
+    failed = []
     count = 0
     context = GlideContext.get_current()
     context.write_dir = dock_ligand_dir
@@ -936,13 +936,11 @@ def calc_rmsd_spyrmsd(
         # make the context write_dir the directory of the csv_file_name
         context.write_dir = os.path.dirname(csv_file_name)
         context.set_current(context)
-    """
     # check if failed.txt exists in the dock_ligand_dir
     if os.path.exists(os.path.join(dock_ligand_dir, "failed.txt")):
         with open(os.path.join(dock_ligand_dir, "failed.txt"), "r") as file:
             failed = file.read().splitlines()
         done.extend([x.split("_")[0] for x in failed])
-    """
     # check if the csv_file_name exists in the dock_ligand_dir
     if os.path.exists(os.path.join(context.write_dir, csv_file_name)):
         logger.info(f"{csv_file_name} already exists in {dock_ligand_dir}")
@@ -965,6 +963,7 @@ def calc_rmsd_spyrmsd(
     docked_ligands = glob.glob(os.path.join(dock_ligand_dir, "*.maegz"))
     # loop over the docked ligand files
     for docked_ligand in docked_ligands:
+        flag = 0
         logger.info(f"Working on {docked_ligand}")
         # get the pdb_id from the file name
         pdb_id = os.path.basename(docked_ligand).split("_")[0]
@@ -1000,12 +999,13 @@ def calc_rmsd_spyrmsd(
                 mode="split_ligand",
                 outfile_name=docked_ligand.file_id + "_split_lig.maegz",
             )
-            convert_to_pdb(
+            if convert_to_pdb(
                 os.path.join(
                     context.write_dir, docked_ligand.file_id + "_split_lig.maegz"
                 ),
                 context=context,
-            )
+            ):
+                flag = 1
         """
         except Exception as e:
             logger.error(str(e))
@@ -1021,15 +1021,25 @@ def calc_rmsd_spyrmsd(
             logger.info(f"Splitting {reference_ligand.file_name}")
             # convert mae to pdb using convert_to_pdb
             convert_to_pdb(full_reference_ligand, context=context)
-            protein, ligand = separate_protein_ligand(
-                os.path.join(context.write_dir, reference_ligand.file_id + ".pdb"),
-                remove_water=False,
-                reference=os.path.join(
-                    context.write_dir, docked_ligand.file_id + "_split_lig.pdb"
-                ),
-            )
-            print(ligand)
-            # try:
+            if flag == 1:
+                protein, ligand = separate_protein_ligand(
+                    os.path.join(context.write_dir, reference_ligand.file_id + ".pdb"),
+                    remove_water=False,
+                    reference=os.path.join(
+                        context.write_dir, docked_ligand.file_id + "_split_lig-1.pdb"
+                    ),
+                )
+            else:
+                logger.debug(
+                    os.path.join(context.write_dir, reference_ligand.file_id + ".pdb")
+                )
+                protein, ligand = separate_protein_ligand(
+                    os.path.join(context.write_dir, reference_ligand.file_id + ".pdb"),
+                    remove_water=False,
+                    reference=os.path.join(
+                        context.write_dir, docked_ligand.file_id + "_split_lig.pdb"
+                    ),
+                )
             write_mda_universe(
                 ligand,
                 os.path.join(context.write_dir, reference_ligand.file_id + "_lig.pdb"),
@@ -1040,18 +1050,39 @@ def calc_rmsd_spyrmsd(
                 failed.append(reference_ligand.file_id)
                 continue
             """
-        dock_lig_pdb = DockedLigand(
-            os.path.join(context.write_dir, docked_ligand.file_id + "_split_lig.pdb")
-        )
         ref_lig_pdb = DockedLigand(
             os.path.join(context.write_dir, reference_ligand.file_id + "_lig.pdb")
         )
-        rmsd = RMSD(dock_lig_pdb, ref_lig_pdb, context=context)
-        logger.info(f"Calculating RMSD for {docked_ligand.file_name}")
-        # try:
-        res = rmsd.symmetry_rmsd()
-        values = obabel_result_parser(res)
-        print(values)
+        try:
+            if flag == 1:
+                values = {}
+                for i in range(1, number + 1):
+                    dock_lig_pdb = DockedLigand(
+                        os.path.join(
+                            context.write_dir,
+                            docked_ligand.file_id + f"_split_lig-{str(i)}.pdb",
+                        )
+                    )
+                    rmsd = RMSD(dock_lig_pdb, ref_lig_pdb, context=context)
+                    logger.info(f"Calculating RMSD for {docked_ligand.file_name}")
+                    res = rmsd.symmetry_rmsd()
+                    values[i] = str(list(obabel_result_parser(res).values()))
+            else:
+                dock_lig_pdb = DockedLigand(
+                    os.path.join(
+                        context.write_dir, docked_ligand.file_id + "_split_lig.pdb"
+                    )
+                )
+                rmsd = RMSD(dock_lig_pdb, ref_lig_pdb, context=context)
+                logger.info(f"Calculating RMSD for {docked_ligand.file_name}")
+                res = rmsd.symmetry_rmsd()
+                values = obabel_result_parser(res)
+        except Exception as e:
+            logger.error(
+                f"Could not calculate RMSD for {docked_ligand.file_name} because {str(e)}"
+            )
+            failed.append(docked_ligand.file_id)
+            continue
 
         """
         except Exception as e:
@@ -1059,12 +1090,15 @@ def calc_rmsd_spyrmsd(
             failed.append(reference_ligand.file_id)
             continue
         """
+        print(values)
         # load the values dictionary to a dataframe
         current_rmsd_df = pd.DataFrame(values.items(), columns=["file", "RMSD"])
         # Set the index explicitly
         current_rmsd_df.set_index("file", inplace=True)
         # rename the index to the file name
-        current_rmsd_df.index = [f"{docked_ligand.file_id}_{i}" for i in range(1, 4)]
+        current_rmsd_df.index = [
+            f"{docked_ligand.file_id}_{i}" for i in range(len(values))
+        ]
         # make the index the first column of the dataframe and name it file
         current_rmsd_df.reset_index(inplace=True)
         current_rmsd_df.rename(columns={"index": "file"}, inplace=True)
@@ -1083,11 +1117,9 @@ def calc_rmsd_spyrmsd(
             os.remove(file)
         # save the rmsd_df to a csv file in the dock_ligand_dir with the name csv_file_name and the same columns
         rmsd_df.to_csv(os.path.join(dock_ligand_dir, csv_file_name), index=False)
-        """
         # save the failed list to a file
         with open(os.path.join(dock_ligand_dir, "failed.txt"), "w") as file:
             file.write("\n".join(failed))
-        """
 
 
 if __name__ == "__main__":

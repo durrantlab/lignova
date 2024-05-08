@@ -58,6 +58,43 @@ def remove_residues(
     return mda_univ.select_atoms(selection)
 
 
+def merge_universes(mda_univs: list) -> mda.Universe:
+    r"""Merge multiple MDAnalysis universes.
+
+    Parameters
+    ----------
+    u
+        list of MDAnalysis universes to merge.
+    """
+    if isinstance(mda_univs, list) and len(mda_univs) > 1:
+        merged = mda.Merge(*mda_univs.atoms)
+        return merged.atoms
+    else:
+        logger.warning("Only one MDAnalysis universe to merge")
+        return mda_univs.atoms
+
+    """
+    if isinstance(mda_univs,list) and len(mda_univs) > 1:
+        for i in mda_univs:
+            merged.load_new(i.atoms,format="pdb")
+        return merged.atoms
+    else:
+        logger.warning(f"Only one MDAnalysis universe to merge")
+        return mda_univs.atoms
+
+    #check if the universes are more than one
+    if isinstance(mda_univs,list) and len(mda_univs) > 1:
+        logger.info(f"Merging {len(mda_univs)} MDAnalysis universes")
+        mda_atoms = [univ.atoms for univ in mda_univs]
+        print(mda_atoms)
+    else:
+        logger.warning(f"Only one MDAnalysis universe to merge")
+        mda_atoms = mda_univs.atoms
+    mda_atoms = [univ.atoms for univ in mda_univs]
+    return mda.Merge(mda_atoms[0], mda_atoms[1], mda_atoms[2])
+    """
+
+
 def select_residues(
     mda_univ: mda.Universe, residues: Union[str, Iterable[str], int, Iterable[int]]
 ) -> mda.Universe:

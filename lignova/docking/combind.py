@@ -304,7 +304,7 @@ class Combind(CombindContext):
             raise e
 
     def extract_data_csv(
-        self, docking_file: Union[str, TextIO], filename: str, filter: bool = True
+        self, docking_file: Union[str, TextIO], filename: str, filter_data: bool = True
     ):
         r"""To extract the scores from schrodinger docking file including
         combind if run after apply_combind_score function.
@@ -314,8 +314,8 @@ class Combind(CombindContext):
             Path to the docking file from GLIDE.
         filename : str, file-like object
             name of the output file.
-        filter : bool, optional, default=True
-            Filter the docking file to include only scores.
+        filter_data : bool, optional, default=True
+            filter_data the docking file to include only scores.
         """
         # check if the docking file exists
         if not os.path.exists(docking_file):
@@ -334,8 +334,8 @@ class Combind(CombindContext):
         stdout, stderr = process.communicate()
         if process.returncode == 0:
             logger.info("Data extraction completed.")
-            if filter:
-                # read the csv file and filter the scores
+            if filter_data:
+                # read the csv file and filter_data the scores
                 data = pd.read_csv(os.path.join(self.work_dir, f"{filename}.csv"))
                 data = data[
                     [
@@ -351,7 +351,7 @@ class Combind(CombindContext):
                 ]
                 # save it with the same name
                 data.to_csv(os.path.join(self.work_dir, f"{filename}.csv"), index=False)
-                logger.info("Data filteration completed.")
+                logger.info("Data filter_dataation completed.")
         else:
             error_message = "Failed to extract the data" + f"\n{stderr.decode()}."
             logger.critical(error_message)
