@@ -917,7 +917,6 @@ def calc_rmsd_spyrmsd(
     csv_file_name : str
         The name of the csv file to save the rmsd values,it will be created if it does not exist in the dock_ligand_dir
     """
-    # TODO:CHECK 4H75 why fail AND maybe add fail conditions?
     done = []
     failed = []
     count = 0

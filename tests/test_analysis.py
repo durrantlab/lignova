@@ -32,6 +32,10 @@ def prep_dirs():
     os.makedirs(context_protein_6Oav["write_dir"])
 
 
+if not os.path.exists(context_protein_6Oav["write_dir"]):
+    prep_dirs()
+
+
 # get the complex for the docking file
 # manipulate_complexes(context_protein_6Oav["docked_ligand_filepath"])
 def test_manipulate_complexes():

@@ -66,33 +66,18 @@ def merge_universes(mda_univs: list) -> mda.Universe:
     u
         list of MDAnalysis universes to merge.
     """
+
     if isinstance(mda_univs, list) and len(mda_univs) > 1:
-        merged = mda.Merge(*mda_univs.atoms)
+        logger.info(f"Merging {len(mda_univs)} MDAnalysis universes")
+        merge_list = []
+        for i in mda_univs:
+            # get the atoms from each universe and merge them
+            merge_list.append(i.atoms)
+        merged = mda.Merge(*merge_list)
         return merged.atoms
     else:
         logger.warning("Only one MDAnalysis universe to merge")
         return mda_univs.atoms
-
-    """
-    if isinstance(mda_univs,list) and len(mda_univs) > 1:
-        for i in mda_univs:
-            merged.load_new(i.atoms,format="pdb")
-        return merged.atoms
-    else:
-        logger.warning(f"Only one MDAnalysis universe to merge")
-        return mda_univs.atoms
-
-    #check if the universes are more than one
-    if isinstance(mda_univs,list) and len(mda_univs) > 1:
-        logger.info(f"Merging {len(mda_univs)} MDAnalysis universes")
-        mda_atoms = [univ.atoms for univ in mda_univs]
-        print(mda_atoms)
-    else:
-        logger.warning(f"Only one MDAnalysis universe to merge")
-        mda_atoms = mda_univs.atoms
-    mda_atoms = [univ.atoms for univ in mda_univs]
-    return mda.Merge(mda_atoms[0], mda_atoms[1], mda_atoms[2])
-    """
 
 
 def select_residues(
@@ -131,15 +116,26 @@ def remove_hetatoms(mda_univ: mda.Universe) -> mda.Universe:
     return mda_univ.select_atoms("not record_type HETATM")
 
 
-def filter_hetatoms(mda_univ: mda.Universe) -> mda.Universe:
+def filter_hetatoms(
+    mda_univ: mda.Universe, keep_het_chain: Union[list, str, None] = None
+) -> mda.Universe:
     r"""Filter hetero atoms.
 
     Parameters
     ----------
     u
         MDAnalysis universe to process.
+    keep_het_chain
+        Chains to keep their HETATM and remove other HETATMs. Default is None.
     """
-    return mda_univ.select_atoms("record_type HETATM")
+    if keep_het_chain is None:
+        return mda_univ.select_atoms("record_type HETATM")
+    elif isinstance(keep_het_chain, str):
+        keep_het_chain = [keep_het_chain]
+    selection = " or ".join(
+        [f"segid {c} and record_type HETATM" for c in keep_het_chain]
+    )
+    return mda_univ.select_atoms(selection)
 
 
 def find_common_atoms(mda_univ1: mda.Universe, mda_univ2: mda.Universe) -> Iterable:

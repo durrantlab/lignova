@@ -6,7 +6,11 @@ import pytest
 from lignova.io import *
 from lignova.structure.editing import *
 from lignova.structure.protein import Protein
-from lignova.structure.utils import is_xray_structure, separate_protein_ligand
+from lignova.structure.utils import (
+    check_pdb_mutation,
+    is_xray_structure,
+    separate_protein_ligand,
+)
 
 # Ensures we execute from file directory (for relative paths).
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -20,6 +24,10 @@ context_protein_6Oav = {
 
 def prep_dirs():
     os.makedirs(context_protein_6Oav["write_dir"])
+
+
+if not os.path.exists(context_protein_6Oav["write_dir"]):
+    prep_dirs()
 
 
 def test_get_pdb_6oav():
@@ -97,3 +105,10 @@ def test_select_residues():
     protein_p = get_mda_universe(protein._pdb_file_path)
     protein_p = select_residues(protein_p, residues=["M3A"])
     assert protein_p.resnames.all() == "M3A"
+
+
+"""
+def test_check_pdb_mutation():
+    assert not check_pdb_mutation(context_protein_6Oav["id"])
+    assert check_pdb_mutation("3c5e")
+"""
