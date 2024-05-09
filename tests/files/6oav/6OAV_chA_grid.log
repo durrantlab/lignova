@@ -1,0 +1,14 @@
+Grid generation keywords:
+  JOBNAME generate-grids-gridgen
+  RECEP_FILE generate-grids-noligand.maegz
+  WRITEZIP True
+  GRID_CENTER [8.948297756756755, -7.599128864864865, -20.4139465945946]
+  INNERBOX 10
+  OUTERBOX 24.5733572623356
+  HBOND_CONSTRAINTS []
+  METAL_CONSTRAINTS []
+  RECEP_VSCALE 1.0
+  RECEP_CCUT 0.25
+  FORCEFIELD OPLS_2005
+Running Glide grid generation...
+Output grids file: generate-grids-gridgen.zip
