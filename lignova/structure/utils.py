@@ -1,7 +1,6 @@
 r""" Utility functions for structure module. """
 from typing import TextIO, Union
 
-import ast
 import os
 
 import MDAnalysis as mda
@@ -12,35 +11,44 @@ from loguru import logger
 from .editing import *
 
 
-def is_xray_structure(pdb_file):
+def is_xray_structure(pdb: Union[str, TextIO]) -> bool:
     """
     Check if the PDB file was generated from X-ray diffraction data.
 
     Parameters:
     -----------
-    pdb_file : str
-        Path to the PDB file.
-
+    pdb : str or file-like
+        Path to the PDB file. or file-like object. or just pdb id
     Returns:
     --------
     bool
-        True if the PDB file was generated from X-ray data, False otherwise.
+        True if the PDB was generated from X-ray data, False otherwise.
     """
-    with open(pdb_file, "r", encoding="utf-8") as file:
-        lines = file.readlines()
-    ext = os.path.splitext(pdb_file)[-1].lower()
-    if ext == ".pdb":
-        expdta_line = [line for line in lines if line.startswith("EXPDTA")]
-        if expdta_line:
-            return "X-RAY" in expdta_line[0]
+    # check if the pdb is a file or a pdb id
+    if os.path.isfile(pdb) and os.path.exists(pdb):
+        with open(pdb, "r", encoding="utf-8") as file:
+            lines = file.readlines()
+        ext = os.path.splitext(pdb)[-1].lower()
+        if ext == ".pdb":
+            expdta_line = [line for line in lines if line.startswith("EXPDTA")]
+            if expdta_line:
+                return "X-RAY" in expdta_line[0]
+            else:
+                remark_200_line = [
+                    line for line in lines if line.startswith("REMARK 200")
+                ]
+                return bool(remark_200_line)
+        elif ext == ".cif":
+            # find the _exptl.method line
+            exptl_line = [line for line in lines if line.startswith("_exptl.method")]
+            if exptl_line:
+                return "X-RAY" in exptl_line[0]
+    elif isinstance(pdb, str):
+        raw_data = get_rcsb_data(pdb)
+        if raw_data["exptl"][0]["method"] == "X-RAY DIFFRACTION":
+            return True
         else:
-            remark_200_line = [line for line in lines if line.startswith("REMARK 200")]
-            return bool(remark_200_line)
-    elif ext == ".cif":
-        # find the _exptl.method line
-        exptl_line = [line for line in lines if line.startswith("_exptl.method")]
-        if exptl_line:
-            return "X-RAY" in exptl_line[0]
+            return False
 
 
 def separate_protein_ligand(
@@ -59,7 +67,8 @@ def separate_protein_ligand(
     remove_water : bool
         Remove water molecules from the ligand structure. Default is True.
     keep_het_chain : str or list
-        Chain(s) to keep their HETATM in the protein structure. Default is None. If None, all HETATM will be kept.
+        Chain(s) to keep their HETATM in the protein structure.
+        Default is None. If None, all HETATM will be kept.
     Returns
     -------
     Protein
@@ -196,8 +205,110 @@ def check_ligand(pdb: Union[str, TextIO], reference: Union[str, TextIO]) -> bool
         return False
 
 
+def get_rcsb_data(pdb_id: str):
+    r"""
+    Get entry data for a given PDB ID using the RCSB API.
+    Parameters:
+    ----------
+    pdb_id (str): The PDB ID to retrieve the entry data for.
+    Returns:
+    -------
+    dict: The entry data for the given PDB ID.
+    """
+
+    url = f"https://data.rcsb.org/rest/v1/core/entry/{pdb_id}"
+    response = requests.get(url)
+    # check if the request was successful
+    if response.status_code != 200:
+        raise ValueError(
+            f"Error fetching data for PDB ID {pdb_id}: {response.status_code}"
+        )
+    data = response.json()
+    return data
+
+
+def has_covalent_bonds(pdb: str, rcsb_data: Iterable[dict, None] = None) -> bool:
+    r"""Check if the PDB file has covalent bonds or not.
+    Parameters
+    ----------
+    pdb : str
+        the PDB id needed to be checked.
+    rcsb_data : dict or None
+        The data for the PDB ID from the RCSB API. If None, the data will be fetched.
+    Returns
+    -------
+    bool
+        True if the PDB file has covalent bonds, False otherwise.
+    """
+    if rcsb_data is not None:
+        data = rcsb_data
+    else:
+        data = get_rcsb_data(pdb)
+    logger.debug(data["rcsb_entry_info"]["inter_mol_covalent_bond_count"])
+    if data["rcsb_entry_info"]["inter_mol_covalent_bond_count"] > 0:
+        return True
+    else:
+        return False
+
+
+def has_ligands(pdb: str, rcsb_data: Iterable[dict, None] = None) -> bool:
+    r"""Check if the PDB file has ligands or not.
+    Parameters
+    ----------
+    pdb : str
+        the PDB id needed to be checked.
+    rcsb_data : dict or None
+        The data for the PDB ID from the RCSB API. If None, the data will be fetched.
+    Returns
+    -------
+    bool
+        True if the PDB file has ligands which can be ions/additatives, False otherwise.
+    """
+    if rcsb_data is not None:
+        data = rcsb_data
+    else:
+        data = get_rcsb_data(pdb)
+    tmp = data["rcsb_entry_info"]["nonpolymer_entity_count"]
+    logger.debug(f"ligand/non polymer count for {pdb} is {tmp}")
+    if tmp > 0:
+        return True
+    else:
+        return False
+
+
+def get_entity_ids(pdb_id: str, rcsb_data: Iterable[dict, None] = None) -> dict:
+    r"""Get the entity IDs for a given PDB ID using the RCSB API.
+    Parameters
+    ----------
+    pdb_id : str
+        The PDB ID to retrieve the entity IDs for.
+    rcsb_data : dict or None
+        The data for the PDB ID from the RCSB API. If None, the data will be fetched.
+    Returns
+    -------
+    dict
+        The entity IDs for the given PDB ID as a dictionary. The keys are the entity type and the values are the entity numbers.
+    rcsb_data : dict or None
+        The data for the PDB ID from the RCSB API. If None, the data will be fetched.
+    """
+    if rcsb_data is not None:
+        data = rcsb_data
+    else:
+        data = get_rcsb_data(pdb_id)
+    entity_ids = {}
+    polymer_entity = data["rcsb_entry_container_identifiers"]["polymer_entity_ids"]
+    nonpolymer_entity = data["rcsb_entry_container_identifiers"][
+        "non_polymer_entity_ids"
+    ]
+    entity_ids["polymer"] = polymer_entity
+    entity_ids["nonpolymer"] = nonpolymer_entity
+    logger.debug(f"Polymer entity IDs: {polymer_entity}")
+    logger.debug(f"Non-polymer entity IDs: {nonpolymer_entity}")
+    return entity_ids
+
+
 # TODO: FIX THIS FUNCTION AND TRY THE CHAIN EDITS
-def check_pdb_mutation(pdb: str) -> bool:
+def pdb_has_mutation(pdb_id: str) -> bool:
     r"""Check if a PDB file has mutations or not
     Parameters
     ----------
@@ -208,17 +319,50 @@ def check_pdb_mutation(pdb: str) -> bool:
     bool
         True if the PDB file has mutations, False otherwise.
     """
-    url = f"https://data.rcsb.org/rest/v1/core/entity_p/{pdb.upper()}"  # Assuming entity_id is 1
-    response = requests.get(url)
-    logger.debug(url)
-    if response.status_code == 200:
+    polymer_ids = get_entity_ids(pdb_id)["polymer"]
+    url = f"https://data.rcsb.org/rest/v1/core/polymer_entity/{pdb_id}/"
+    list_of_mutations = []
+    if len(polymer_ids) == 1:
+        response = requests.get(url + polymer_ids[0])
         data = response.json()
-        mutation_count = data.get("entity_poly", {}).get("rcsb_mutation_count", 0)
-        logger.debug(f"Mutation count for PDB ID {pdb}: {mutation_count}")
-        if mutation_count > 0:
+        if data["entity_poly"]["rcsb_mutation_count"] > 0:
             return True
         else:
             return False
     else:
-        print(f"Error fetching data for PDB ID {pdb}: {response.status_code}")
+        for entity_id in polymer_ids:
+            response = requests.get(url + entity_id)
+            data = response.json()
+            list_of_mutations.append(data["entity_poly"]["rcsb_mutation_count"])
+    # check if the values of the list are 0
+    if all(i == 0 for i in list_of_mutations):
+        return False
+    else:
+        return True
+
+
+def validate_pdb(pdb_id: str) -> bool:
+    r"""Validate a PDB file using the RCSB API.
+    Parameters
+    ----------
+    pdb_id : str
+        The PDB ID to validate.
+    Returns
+    -------
+    bool
+        True if the PDB file is valid (i.e has ligand, no covalent bond and no mutation), False otherwise.
+    """
+    data = get_rcsb_data(pdb_id)
+    if (
+        has_ligands(pdb_id, data)
+        and not has_covalent_bonds(pdb_id, data)
+        and not pdb_has_mutation(pdb_id)
+        and is_xray_structure(pdb_id)
+    ):
+        logger.info(f"The PDB file {pdb_id} is valid.")
+        return True
+    else:
+        logger.warning(
+            f"The PDB file {pdb_id} is not valid. Check ./structure/utils.py functions for more details."
+        )
         return False

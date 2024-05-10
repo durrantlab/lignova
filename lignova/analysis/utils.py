@@ -131,7 +131,8 @@ def obabel_result_parser(output):
     Returns
     -------
     dict
-        A dictionary where the keys are arbitrary numbers (1, 2, 3, ...) and the values are the minimum values found per line.
+        A dictionary where the keys are arbitrary numbers (1, 2, 3, ...)
+        and the values are the minimum values found per line.
     """
     # Split the output into lines
     lines = output.strip().split("\n")

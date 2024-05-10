@@ -6,11 +6,7 @@ import pytest
 from lignova.io import *
 from lignova.structure.editing import *
 from lignova.structure.protein import Protein
-from lignova.structure.utils import (
-    check_pdb_mutation,
-    is_xray_structure,
-    separate_protein_ligand,
-)
+from lignova.structure.utils import *
 
 # Ensures we execute from file directory (for relative paths).
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -107,8 +103,32 @@ def test_select_residues():
     assert protein_p.resnames.all() == "M3A"
 
 
-"""
-def test_check_pdb_mutation():
-    assert not check_pdb_mutation(context_protein_6Oav["id"])
-    assert check_pdb_mutation("3c5e")
-"""
+def test_get_rcsb_data():
+    data = get_rcsb_data(context_protein_6Oav["id"])
+    assert data["exptl"][0]["method"] == "X-RAY DIFFRACTION"
+
+
+def test_has_covalent_bond():
+    assert not has_covalent_bonds(context_protein_6Oav["id"])
+
+
+def test_has_ligands():
+    assert has_ligands(context_protein_6Oav["id"])
+
+
+def test_get_entity_ids():
+    entity = get_entity_ids(context_protein_6Oav["id"])
+    assert entity["polymer"][0] == "1"
+    assert entity["nonpolymer"][0] == "2"
+
+
+def test_pdb_has_mutation():
+    assert pdb_has_mutation(context_protein_6Oav["id"])
+    assert pdb_has_mutation("3c5e")
+    assert not pdb_has_mutation("4uxl")
+
+
+def test_validate_pdb():
+    assert not validate_pdb(context_protein_6Oav["id"])
+    assert not validate_pdb("3c5e")
+    assert validate_pdb("4uxl")
