@@ -74,10 +74,10 @@ def merge_universes(mda_univs: list) -> mda.Universe:
             # get the atoms from each universe and merge them
             merge_list.append(i.atoms)
         merged = mda.Merge(*merge_list)
-        return merged.atoms
     else:
         logger.warning("Only one MDAnalysis universe to merge")
-        return mda_univs.atoms
+        merged = mda_univs
+    return merged.atoms
 
 
 def select_residues(

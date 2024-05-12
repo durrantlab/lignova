@@ -113,7 +113,7 @@ def separate_protein_ligand(
             logger.debug(f"The reference resname(s) : {reference_resname}")
             # filter out that resname from the reference_obj
             with mda.Writer("tmp.pdb", multiframe=True) as writer:
-                for ts in reference_obj.trajectory:
+                for model in reference_obj.trajectory:
                     # Select atoms belonging to the specified residue name in the current frame
                     selection = " or ".join([f"resname {r}" for r in reference_resname])
                     selected_atoms = reference_obj.select_atoms(selection)
@@ -163,7 +163,7 @@ def separate_protein_ligand(
 
 
 def check_ligand(pdb: Union[str, TextIO], reference: Union[str, TextIO]) -> bool:
-    r"""Get ligand from a PDB file.
+    r"""Compare the ligand in the PDB file with the ligand in the reference file.
     Parameters
     ----------
     pdb : str or file-like
@@ -225,6 +225,28 @@ def get_rcsb_data(pdb_id: str):
         )
     data = response.json()
     return data
+
+
+def find_resolution(pdb_id: str, rcsb_data: Iterable[dict, None] = None) -> float:
+    r"""Find the resolution of a PDB file using the RCSB API.
+    Parameters
+    ----------
+    pdb_id : str
+        The PDB ID to find the resolution for.
+    rcsb_data : dict or None
+        The data for the PDB ID from the RCSB API. If None, the data will be fetched.
+    Returns
+    -------
+    float
+        The resolution of the PDB file.
+    """
+    if rcsb_data is not None:
+        data = rcsb_data
+    else:
+        data = get_rcsb_data(pdb_id)
+    resolution = data["rcsb_entry_info"]["resolution_combined"]
+    logger.debug(f"Resolution for {pdb_id} is {resolution}")
+    return resolution
 
 
 def has_covalent_bonds(pdb: str, rcsb_data: Iterable[dict, None] = None) -> bool:
@@ -307,7 +329,6 @@ def get_entity_ids(pdb_id: str, rcsb_data: Iterable[dict, None] = None) -> dict:
     return entity_ids
 
 
-# TODO: FIX THIS FUNCTION AND TRY THE CHAIN EDITS
 def pdb_has_mutation(pdb_id: str) -> bool:
     r"""Check if a PDB file has mutations or not
     Parameters

@@ -108,6 +108,11 @@ def test_get_rcsb_data():
     assert data["exptl"][0]["method"] == "X-RAY DIFFRACTION"
 
 
+def test_find_resolution():
+    data = get_rcsb_data(context_protein_6Oav["id"])
+    assert find_resolution(context_protein_6Oav["id"], data) == [1.939]
+
+
 def test_has_covalent_bond():
     assert not has_covalent_bonds(context_protein_6Oav["id"])
 

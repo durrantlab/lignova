@@ -19,7 +19,11 @@ from lignova.docking.utils import convert_to_pdb, manipulate_complexes
 from lignova.structure.editing import write_mda_universe
 from lignova.structure.ligand import DockedLigand, Ligand
 from lignova.structure.protein import Protein
-from lignova.structure.utils import is_xray_structure, separate_protein_ligand
+from lignova.structure.utils import (
+    is_xray_structure,
+    separate_protein_ligand,
+    validate_pdb,
+)
 
 # TODO:BACKTRACK THE SEPARATE PROTEIN LIGAND FUNCTION CHANGE I.E REFERENCE CHANGE
 
@@ -62,7 +66,8 @@ def get_coordinates(
     pdb_ids: Union[str, TextIO, list], work_dir: str, limit: int = 1000
 ):
     """
-    This function takes a list of PDB IDs and downloads the PDB files to a specified directory.
+    This function takes a list of PDB IDs and downloads the PDB files to a specified directory
+    if they pass the validation test. (no mutation, has ligand, no covalent bond, x-ray structures,)
     Parameters
     ----------
     pdb_ids : Union[str,TextIO,list]
@@ -85,17 +90,20 @@ def get_coordinates(
     if isinstance(pdb_ids, list):
         logger.info("Input is a list")
         for pdb_id in pdb_ids:
-            logger.info(f"Downloading PDB file for {pdb_id}")
-            file_ext = (
-                "pdb"
-                if protein.get_pdb_from_rcsb(pdb_id).startswith("HEADER")
-                else "cif"
-            )
-            protein.load(
-                pdb_id,
-                write=True,
-                write_path=os.path.join(work_dir, pdb_id + "." + file_ext),
-            )
+            if validate_pdb(pdb_id):
+                logger.info(f"Downloading PDB file for {pdb_id}")
+                file_ext = (
+                    "pdb"
+                    if protein.get_pdb_from_rcsb(pdb_id).startswith("HEADER")
+                    else "cif"
+                )
+                protein.load(
+                    pdb_id,
+                    write=True,
+                    write_path=os.path.join(work_dir, pdb_id + "." + file_ext),
+                )
+            else:
+                logger.warning(f"{pdb_id} failed validation test")
     elif isinstance(pdb_ids, str):
         if os.path.exists(pdb_ids):
             logger.info("Input is a file")
@@ -114,33 +122,38 @@ def get_coordinates(
                 if os.path.exists(os.path.join(work_dir, tmp.lower() + ".pdb")):
                     logger.info(f"PDB file for {tmp} already exists")
                     continue
-
-                logger.info(f"Downloading PDB file for {tmp}")
-                file_ext = (
-                    "pdb"
-                    if protein.get_pdb_from_rcsb(tmp).startswith("HEADER")
-                    else "cif"
-                )
-                protein.load(
-                    pdb_id=tmp,
-                    write=True,
-                    write_path=os.path.join(work_dir, tmp.lower() + "." + file_ext),
-                )
+                if validate_pdb(tmp):
+                    logger.info(f"Downloading PDB file for {tmp}")
+                    file_ext = (
+                        "pdb"
+                        if protein.get_pdb_from_rcsb(tmp).startswith("HEADER")
+                        else "cif"
+                    )
+                    protein.load(
+                        pdb_id=tmp,
+                        write=True,
+                        write_path=os.path.join(work_dir, tmp.lower() + "." + file_ext),
+                    )
+                else:
+                    logger.warning(f"{tmp} failed validation test")
         else:
             # check if the input is a single pdb id
             logger.info("Input is a single PDB ID")
             pdb_id = pdb_ids
-            logger.info(f"Downloading PDB file for {pdb_id}")
-            file_ext = (
-                "pdb"
-                if protein.get_pdb_from_rcsb(pdb_id).startswith("HEADER")
-                else "cif"
-            )
-            protein.load(
-                pdb_id=pdb_id,
-                write=True,
-                write_path=os.path.join(work_dir, pdb_id.lower() + "." + file_ext),
-            )
+            if validate_pdb(pdb_id):
+                logger.info(f"Downloading PDB file for {pdb_id}")
+                file_ext = (
+                    "pdb"
+                    if protein.get_pdb_from_rcsb(pdb_id).startswith("HEADER")
+                    else "cif"
+                )
+                protein.load(
+                    pdb_id=pdb_id,
+                    write=True,
+                    write_path=os.path.join(work_dir, pdb_id.lower() + "." + file_ext),
+                )
+            else:
+                logger.warning(f"{pdb_id} failed validation test")
 
 
 @profile
@@ -191,7 +204,10 @@ def prep_structure(
             os.path.join(input_dir, ids.lower() + ".pdb")
         ) and not os.path.exists(os.path.join(input_dir, ids.lower() + ".cif")):
             logger.warning(f"{ids} not found in the directory. Downloading it now")
-            get_coordinates(ids, input_dir)
+            if validate_pdb(ids):
+                get_coordinates(ids, input_dir)
+            else:
+                logger.warning(f"{ids} failed validation test")
         # check if the pdb_file has an extention and if so find the file in the input dir
         if "." not in pdb_file:
             pdb_file = glob.glob(os.path.join(input_dir, ids.lower() + ".*"))[0]
@@ -269,7 +285,7 @@ def prep_structure(
 
 @profile
 def dock_ligand(
-    input_dir: str, output_dir: str, pdb: [str, list, None], limit: int = 10
+    input_dir: str, output_dir: str, pdb: [str, list, None] = None, limit: int = 10
 ):
     """
     Dock the ligand to the protein
@@ -775,7 +791,9 @@ def calc_rmsd_obabel(
     else:
         logger.info(f"{csv_file_name} does not exist in {dock_ligand_dir}")
         # make the csv file
-        with open(os.path.join(dock_ligand_dir, csv_file_name), "w") as file:
+        with open(
+            os.path.join(dock_ligand_dir, csv_file_name), "w", encoding="utf-8"
+        ) as file:
             file.write("file,RMSD\n")
     logger.info(done)
     logger.info(f"Found {len(done)} PDB IDs already done")
