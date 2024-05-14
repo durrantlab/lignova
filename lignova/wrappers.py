@@ -1149,7 +1149,6 @@ if __name__ == "__main__":
     DOCKED_DIR = "./docked"
     COMBIND_DIR = "./combind"
     """
-    # get_coordinates(RAW_FILE, RAW_INPUT_DIR, limit=10000)
     # get the names of the files in the docked directory
     files = glob.glob(os.path.join("water/" + DOCKED_DIR, "*.maegz"))
     # remove the _lig_docking_pv.maegz from the file names
@@ -1204,10 +1203,8 @@ if __name__ == "__main__":
     for ref in reference_file:
         if not os.path.exists(os.path.join("./parsed", ref)):
             shutil.copy(ref, "./parsed")
-    """
     calc_rmsd_spyrmsd("./parsed_docked", "./parsed", "rmsd.csv")
     # prep_prot(RAW_INPUT_DIR, "./parsed", pdb_ids)
-    """
     parser(
         COMBIND_DIR,
         "./parsed",

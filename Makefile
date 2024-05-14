@@ -38,8 +38,8 @@ conda-setup:
 # Conda-only packages specific to this project.
 .PHONY: conda-dependencies
 conda-dependencies:
-	echo "No conda-only packages are required."
-
+	$(CONDA) conda install -y -c conda-forge -c bioconda mmseqs2
+	
 .PHONY: conda-lock
 conda-lock:
 	- rm $(REPO_PATH)/conda-lock.yml
