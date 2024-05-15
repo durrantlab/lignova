@@ -110,7 +110,7 @@ def test_get_rcsb_data():
 
 def test_find_resolution():
     data = get_rcsb_data(context_protein_6Oav["id"])
-    assert find_resolution(context_protein_6Oav["id"], data) == [1.939]
+    assert find_resolution(context_protein_6Oav["id"], data) == 1.939
 
 
 def test_has_covalent_bond():
@@ -137,3 +137,8 @@ def test_validate_pdb():
     assert not validate_pdb(context_protein_6Oav["id"])
     assert not validate_pdb("3c5e")
     assert validate_pdb("4uxl")
+
+
+def test_validate_ligands():
+    assert not validate_ligands(context_protein_6Oav["id"])
+    assert validate_ligands("4uxl")

@@ -8,6 +8,7 @@ import pandas as pd
 import requests
 from loguru import logger
 
+from ..docking.contexts import ProteinContext
 from .editing import *
 
 
@@ -80,14 +81,26 @@ def separate_protein_ligand(
     # check if the file has hetatoms in chain A or not
     if keep_het_chain is not None:
         selection = select_chains(pdb_obj, chains=keep_het_chain)
-        # check if the selection has hetatoms
-        while len(filter_hetatoms(selection)) == 0:
+        # check if the hetatoms in the selection (the residue names)
+        # are valid using the protein context impurities
+        impurities = ProteinContext.get_current().impurities
+        valid_hetatoms = [
+            hetatom
+            for hetatom in filter_hetatoms(selection)
+            if hetatom.resname not in impurities and len(hetatom.resname) == 3
+        ]
+        while len(filter_hetatoms(selection)) == 0 or len(valid_hetatoms) == 0:
             logger.warning(
                 "No HETATM found in the selected chains.Checking another chain."
             )
             # keep changing the chain by trying B,C,D,etc until hetatoms are found
             keep_het_chain = chr(ord(keep_het_chain) + 1)
             selection = select_chains(pdb_obj, chains=keep_het_chain)
+            valid_hetatoms = [
+                hetatom
+                for hetatom in filter_hetatoms(selection)
+                if hetatom.resname not in impurities
+            ]
         hetatm = filter_hetatoms(pdb_obj, keep_het_chain)
     else:
         logger.debug(
@@ -246,7 +259,7 @@ def find_resolution(pdb_id: str, rcsb_data: Iterable[dict, None] = None) -> floa
         data = get_rcsb_data(pdb_id)
     resolution = data["rcsb_entry_info"]["resolution_combined"]
     logger.debug(f"Resolution for {pdb_id} is {resolution}")
-    return resolution
+    return float(resolution[0])
 
 
 def has_covalent_bonds(pdb: str, rcsb_data: Iterable[dict, None] = None) -> bool:
@@ -309,7 +322,8 @@ def get_entity_ids(pdb_id: str, rcsb_data: Iterable[dict, None] = None) -> dict:
     Returns
     -------
     dict
-        The entity IDs for the given PDB ID as a dictionary. The keys are the entity type and the values are the entity numbers.
+        The entity IDs for the given PDB ID as a dictionary.
+        The keys are the entity type and the values are the entity numbers.
     rcsb_data : dict or None
         The data for the PDB ID from the RCSB API. If None, the data will be fetched.
     """
@@ -362,6 +376,69 @@ def pdb_has_mutation(pdb_id: str) -> bool:
         return True
 
 
+def get_nonpolymer_names(pdb_id: str, rcsb_data: Iterable[dict, None] = None) -> list:
+    r"""Get the names of the non-polymer entities in a PDB file.
+    Parameters
+    ----------
+    pdb_id : str
+        The PDB ID to retrieve the non-polymer entity names for.
+    rcsb_data : dict or None
+        The data for the PDB ID from the RCSB API. If None, the data will be fetched.
+    Returns
+    -------
+    list
+        The names of the non-polymer entities in the PDB file.
+    """
+    if rcsb_data is not None:
+        data = rcsb_data
+    else:
+        data = get_rcsb_data(pdb_id)
+    if not has_ligands(pdb_id, data):
+        logger.warning(f"No non-polymer entities found in {pdb_id}.")
+        return []
+    nonpolymer_ids = get_entity_ids(pdb_id, data)["nonpolymer"]
+    nonpolymer_names = []
+    url = f"https://data.rcsb.org/rest/v1/core/nonpolymer_entity/{pdb_id}/"
+    for entity_id in nonpolymer_ids:
+        response = requests.get(url + entity_id)
+        data = response.json()
+        nonpolymer_names.append(data["pdbx_entity_nonpoly"]["comp_id"])
+    # exclude ligands with names less than 3 characters from the list
+    # highly likely they are ions
+    nonpolymer_names = [i for i in nonpolymer_names if len(i) == 3]
+    logger.info(f"Non-polymer entity names: {nonpolymer_names}")
+    return nonpolymer_names
+
+
+def validate_ligands(
+    pdb: str, impurities: [list, None] = ProteinContext.get_current().impurities
+) -> bool:
+    r"""Validate the ligands from pdb id using the impurities list.
+    Parameters
+    ----------
+    pdb : str
+        The PDB ID to validate.
+    impurities : list or None
+        List of impurities to check against. Default is impurities from the ProteinContext.
+    Returns
+    -------
+    bool
+        True if the ligands are valid, False otherwise.
+    """
+    ligands = get_nonpolymer_names(pdb)
+    if not validate_pdb(pdb) or len(ligands) == 0:
+        return False
+    else:
+        logger.debug(f"Ligands in {pdb}: {ligands}")
+        logger.debug(f"Impurities: {impurities}")
+        logger.debug(all(i in impurities for i in ligands))
+        # check if the ligands are in the impurities list
+        if all(i in impurities for i in ligands):
+            return False
+        else:
+            return True
+
+
 def validate_pdb(pdb_id: str) -> bool:
     r"""Validate a PDB file using the RCSB API.
     Parameters
@@ -379,6 +456,7 @@ def validate_pdb(pdb_id: str) -> bool:
         and not has_covalent_bonds(pdb_id, data)
         and not pdb_has_mutation(pdb_id)
         and is_xray_structure(pdb_id)
+        and find_resolution(pdb_id, data) < 3.0
     ):
         logger.info(f"The PDB file {pdb_id} is valid.")
         return True
