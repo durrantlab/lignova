@@ -22,6 +22,7 @@ from lignova.structure.protein import Protein
 from lignova.structure.utils import (
     is_xray_structure,
     separate_protein_ligand,
+    validate_ligands,
     validate_pdb,
 )
 
@@ -29,7 +30,9 @@ from lignova.structure.utils import (
 
 
 @profile
-def clean_cluster_files(file_path: str, delim: list = ["[", "]"]):
+def clean_cluster_files(
+    file_path: str, delim: list = ["[", "]"]
+):  # NOTE:change this delim when dealing with filtered to ( and )
     """
     This function takes a file containing a list of PDB IDs and returns a list of PDB IDs.
     Parameters
@@ -63,19 +66,19 @@ def clean_cluster_files(file_path: str, delim: list = ["[", "]"]):
 
 @profile
 def get_coordinates(
-    pdb_ids: Union[str, TextIO, list], work_dir: str, limit: int = 1000
+    pdb_ids: Union[str, list], work_dir: str, limit: Union[None, int] = 500
 ):
     """
     This function takes a list of PDB IDs and downloads the PDB files to a specified directory
     if they pass the validation test. (no mutation, has ligand, no covalent bond, x-ray structures,)
     Parameters
     ----------
-    pdb_ids : Union[str,TextIO,list]
-        A list of PDB IDs to be downloaded.
+    pdb_ids : Union[str,list]
+        A list of PDB IDs or a single PDB ids to be downloaded
     work_dir : str
         The working directory where the PDB files will be downloaded.
     limit : int, optional
-        The number of PDB IDs to be downloaded. The default is 50.
+        The number of PDB IDs to be downloaded. The default is 500.
     Returns
     -------
     None.
@@ -86,90 +89,51 @@ def get_coordinates(
     if not os.path.exists(work_dir):
         logger.info("Output_Dir not found,Creating it in working directory")
         os.mkdir(os.path.join(current_dir, work_dir))
-    # check if the input is a list or a file
-    if isinstance(pdb_ids, list):
-        logger.info("Input is a list")
-        for pdb_id in pdb_ids:
-            if validate_pdb(pdb_id):
-                logger.info(f"Downloading PDB file for {pdb_id}")
-                file_ext = (
-                    "pdb"
-                    if protein.get_pdb_from_rcsb(pdb_id).startswith("HEADER")
-                    else "cif"
-                )
-                protein.load(
-                    pdb_id,
-                    write=True,
-                    write_path=os.path.join(work_dir, pdb_id + "." + file_ext),
-                )
-            else:
-                logger.warning(f"{pdb_id} failed validation test")
-    elif isinstance(pdb_ids, str):
-        if os.path.exists(pdb_ids):
-            logger.info("Input is a file")
-            pdb_ids = clean_cluster_files(
-                pdb_ids, delim=["[", "]"]
-            )  # NOTE:change this delim when dealing with filtered to ( and )
-            logger.info(f"Found a total of {len(pdb_ids)} PDB IDs in the file")
-            limit = len(pdb_ids) if len(pdb_ids) < limit else limit
-            for i in range(limit):
-                if "|" in pdb_ids[i]:
-                    pdb_id = pdb_ids[i].split("_")[0]
-                    tmp = pdb_id.strip("'")
-                else:
-                    pdb_id = pdb_ids[i]
-                    tmp = pdb_id.lstrip("'").rstrip("'")
-                if os.path.exists(os.path.join(work_dir, tmp.lower() + ".pdb")):
-                    logger.info(f"PDB file for {tmp} already exists")
-                    continue
-                if validate_pdb(tmp):
-                    logger.info(f"Downloading PDB file for {tmp}")
-                    file_ext = (
-                        "pdb"
-                        if protein.get_pdb_from_rcsb(tmp).startswith("HEADER")
-                        else "cif"
-                    )
-                    protein.load(
-                        pdb_id=tmp,
-                        write=True,
-                        write_path=os.path.join(work_dir, tmp.lower() + "." + file_ext),
-                    )
-                else:
-                    logger.warning(f"{tmp} failed validation test")
+    if isinstance(pdb_ids, str):
+        pdb_ids = [pdb_ids]
+    limit = min(len(pdb_ids), limit)
+    for i in range(limit):
+        if "|" in pdb_ids[i]:
+            pdb_id = pdb_ids[i].split("_")[0]
+            tmp = pdb_id.strip("'")
         else:
-            # check if the input is a single pdb id
-            logger.info("Input is a single PDB ID")
-            pdb_id = pdb_ids
-            if validate_pdb(pdb_id):
-                logger.info(f"Downloading PDB file for {pdb_id}")
-                file_ext = (
-                    "pdb"
-                    if protein.get_pdb_from_rcsb(pdb_id).startswith("HEADER")
-                    else "cif"
-                )
-                protein.load(
-                    pdb_id=pdb_id,
-                    write=True,
-                    write_path=os.path.join(work_dir, pdb_id.lower() + "." + file_ext),
-                )
-            else:
-                logger.warning(f"{pdb_id} failed validation test")
+            pdb_id = pdb_ids[i]
+            tmp = pdb_id.lstrip("'").rstrip("'")
+        logger.info(f"Working on {tmp}")
+        if os.path.exists(os.path.join(work_dir, tmp.lower() + ".pdb")):
+            logger.info(f"PDB file for {tmp} already exists")
+            continue
+        if validate_pdb(tmp) and validate_ligands(tmp):
+            logger.info(f"Downloading PDB file for {tmp}")
+            file_ext = (
+                "pdb" if protein.get_pdb_from_rcsb(tmp).startswith("HEADER") else "cif"
+            )
+            protein.load(
+                pdb_id=tmp,
+                write=True,
+                write_path=os.path.join(work_dir, tmp.lower() + "." + file_ext),
+            )
+        else:
+            logger.warning(f"{tmp} failed validation test")
 
 
+# TODO:FIND OUT WHY PROTEIN PREP DOES NOT WORK
 @profile
 def prep_structure(
-    input_dir: str, output_dir: str, pdb_id: Union[str, list, None], limit: int = 500
+    input_dir: str, output_dir: str, pdb_id: Union[str, list, None], limit: int = 50
 ):
     """
     This function takes a PDB ID and a ligand ID and returns a Structure object.
     Parameters
     ----------
-    directory : str
-        The directory where the PDB file is located.
-    pdb_id : Optional[str]
-        The PDB ID of the protein. The default is None.
-    limit : int
-        The number of PDB IDs to prep. The default is 50.
+    input_dir : str
+        The directory containing the PDB files.
+    output_dir : str
+        The directory to save the prepped files.
+    pdb_id : Union[str,list]
+        The PDB ID to be prepped. If None, all the PDB files in the input directory will be prepped.
+    limit : int, optional
+        The number of PDB files to be prepped. The default is 50.
     """
     glide = Glide()
     failed = []
@@ -187,6 +151,7 @@ def prep_structure(
     if not os.path.exists(input_dir):
         raise FileNotFoundError("Input directory not found")
     if not os.path.exists(output_dir):
+        logger.info("Output_Dir not found,Creating it in working directory")
         os.mkdir(output_dir)
     if pdb_id is not None:
         if isinstance(pdb_id, str):
@@ -200,44 +165,38 @@ def prep_structure(
     limit = min(len(pdb_id), limit)
     for pdb_file in pdb_id[:limit]:
         ids = os.path.basename(pdb_file).split(".")[0]
+        if not validate_ligands(ids) and not validate_pdb(ids):
+            logger.warning(f"{ids} failed validation test")
+            failed.append(ids)
+            continue
         if not os.path.exists(
             os.path.join(input_dir, ids.lower() + ".pdb")
         ) and not os.path.exists(os.path.join(input_dir, ids.lower() + ".cif")):
             logger.warning(f"{ids} not found in the directory. Downloading it now")
-            if validate_pdb(ids):
-                get_coordinates(ids, input_dir)
-            else:
-                logger.warning(f"{ids} failed validation test")
-        # check if the pdb_file has an extention and if so find the file in the input dir
-        if "." not in pdb_file:
-            pdb_file = glob.glob(os.path.join(input_dir, ids.lower() + ".*"))[0]
-        prot = Protein(os.path.join(input_dir, pdb_file))
+            get_coordinates(ids, input_dir)
+        pdb_file = glob.glob(os.path.join(input_dir, ids.lower() + ".pdb"))[0]
+        prot = Protein(pdb_file)
         logger.debug(prot.file_path)
-        if "_lig" not in pdb_file and not os.path.exists(
+        if not os.path.exists(
             os.path.join(input_dir, pdb_file.replace(".pdb", "_lig.pdb"))
         ):
-            if is_xray_structure(prot.file_path):
-                logger.info(f"Separating {pdb_file}")
-                protein, ligand = separate_protein_ligand(
-                    prot.file_path,
-                    reference="/home/mma121/PubChem_small/try_schrodinger/valid.csv",
-                )
-                if len(ligand.atoms) == 0:
-                    logger.warning(f"No ligand found in {prot.file_name}")
-                    os.remove(pdb_file)
-                    # add the pdb file to the failed list
-                    failed.append(prot.file_name)
-                    continue
-                write_mda_universe(protein, os.path.join(input_dir, pdb_file))
-                # NOTE:I can have this named with the lig name should i do it?
-                write_mda_universe(
-                    ligand,
-                    os.path.join(input_dir, pdb_file.replace(".pdb", "_lig.pdb")),
-                )
-            else:
-                logger.warning(f"{pdb_file} is not an X-ray structure")
+            logger.info(f"Separating {pdb_file}")
+            protein, ligand = separate_protein_ligand(
+                prot.file_path, remove_water=True, keep_het_chain="A"
+            )
+            """
+            if len(ligand.atoms) == 0:
+                logger.warning(f"No ligand found in {prot.file_name}")
                 os.remove(pdb_file)
+                # add the pdb file to the failed list
+                failed.append(prot.file_name)
                 continue
+            """
+            write_mda_universe(protein, pdb_file)
+            write_mda_universe(
+                ligand,
+                pdb_file.replace(".pdb", "_lig.pdb"),
+            )
         if (
             len(
                 glob.glob(os.path.join(output_dir, prot.file_name.replace(".pdb", "*")))
@@ -249,7 +208,6 @@ def prep_structure(
             logger.info(f"{prot.file_name} already prepped")
             continue
         raw_prot = Protein(os.path.join(input_dir, pdb_file))
-        # use check ligand on raw_prot
         lig_file = os.path.join(input_dir, raw_prot.file_id + "_lig.pdb")
         raw_lig = Ligand(file_path=lig_file)
         glide.convert_to_mae(raw_lig, context)
@@ -267,6 +225,7 @@ def prep_structure(
         except Exception:
             logger.warning(f"Could not prepare {prot.file_name}")
             # save the pdb file in a folder called failed
+            """
             logger.debug(f"Removing {prot.file_name} from the directory")
             failed.append(prot.file_name)
             # remove any files in the output directory With the same name
@@ -276,6 +235,7 @@ def prep_structure(
                 logger.debug(f"Removing {file}")
                 os.remove(file)
             continue
+        """
     if len(failed) > 0:
         with open(
             os.path.join(output_dir, "failed.txt"), "w", encoding="utf-8"
@@ -295,7 +255,7 @@ def dock_ligand(
         The directory containing the prepped protein and ligand files
     output_dir : str
         The directory to save the docked files
-    pdb : Optional[str,list]
+    pdb : Optional[str,list,None]
         The pdb file to dock. If None, all the pdb files in the input directory will be docked
     limit : int, optional
         The number of files to dock, by default 10
@@ -321,7 +281,9 @@ def dock_ligand(
         pdb = glob.glob(os.path.join(input_dir, "*_grid.zip"))
         logger.info(f"Found {len(pdb)} docking files")
         if len(pdb) == 0:
-            raise FileNotFoundError(f"No docking files found in {input_dir}")
+            raise FileNotFoundError(
+                f"No prepared structures files found in {input_dir}"
+            )
     glide = Glide()
     context = GlideContext.get_current()
     context.write_dir = output_dir
@@ -330,6 +292,7 @@ def dock_ligand(
     pdb = pdb[:limit]
     for pdb_file in pdb:
         # check if the pdb_file has an extention and if so add to it
+        """
         #  _grid.zip and find the file in the input dir
         if "." not in pdb_file:
             pdb_file = glob.glob(
@@ -346,7 +309,7 @@ def dock_ligand(
                 prep_structure(
                     input_dir, output_dir, pdb_id=pdb_file.split("_grid.zip")[0]
                 )
-        logger.info(f"Docking {pdb_file}")
+        """
         prep_prot = Protein(pdb_file)
         prep_lig = Ligand(
             os.path.join(
@@ -1148,6 +1111,10 @@ if __name__ == "__main__":
     PREPPED_DIR = "./prepped"
     DOCKED_DIR = "./docked"
     COMBIND_DIR = "./combind"
+    get_coordinates(["6n2w", "1xoi"], "./trial")
+    prep_structure("./trial", "./prepped", ["6n2w.pdb", "1xoi.pdb"])
+    dock_ligand("./prepped", "./trial")
+    calc_rmsd_spyrmsd("./trial", "./trial", "rmsd.csv")
     """
     # get the names of the files in the docked directory
     files = glob.glob(os.path.join("water/" + DOCKED_DIR, "*.maegz"))

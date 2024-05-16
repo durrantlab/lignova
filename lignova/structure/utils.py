@@ -87,8 +87,13 @@ def separate_protein_ligand(
         valid_hetatoms = [
             hetatom
             for hetatom in filter_hetatoms(selection)
-            if hetatom.resname not in impurities and len(hetatom.resname) == 3
+            if hetatom.resname not in impurities
+            and len(hetatom.resname) == 3
+            and hetatom.resname != "HOH"
         ]
+        # check if the length of hetatoms line is < 4 using mda
+        logger.debug((filter_hetatoms(selection).resnames.all()))
+        logger.debug((filter_hetatoms(selection).atoms.resnames.all()))
         while len(filter_hetatoms(selection)) == 0 or len(valid_hetatoms) == 0:
             logger.warning(
                 "No HETATM found in the selected chains.Checking another chain."
@@ -100,6 +105,8 @@ def separate_protein_ligand(
                 hetatom
                 for hetatom in filter_hetatoms(selection)
                 if hetatom.resname not in impurities
+                and len(hetatom.resname) == 3
+                and hetatom.resname != "HOH"
             ]
         hetatm = filter_hetatoms(pdb_obj, keep_het_chain)
     else:
@@ -233,9 +240,8 @@ def get_rcsb_data(pdb_id: str):
     response = requests.get(url)
     # check if the request was successful
     if response.status_code != 200:
-        raise ValueError(
-            f"Error fetching data for PDB ID {pdb_id}: {response.status_code}"
-        )
+        logger.error(f"Error fetching data for PDB ID {pdb_id}: {response.status_code}")
+        return {}
     data = response.json()
     return data
 
@@ -430,7 +436,6 @@ def validate_ligands(
         return False
     else:
         logger.debug(f"Ligands in {pdb}: {ligands}")
-        logger.debug(f"Impurities: {impurities}")
         logger.debug(all(i in impurities for i in ligands))
         # check if the ligands are in the impurities list
         if all(i in impurities for i in ligands):
@@ -456,7 +461,7 @@ def validate_pdb(pdb_id: str) -> bool:
         and not has_covalent_bonds(pdb_id, data)
         and not pdb_has_mutation(pdb_id)
         and is_xray_structure(pdb_id)
-        and find_resolution(pdb_id, data) < 3.0
+        and find_resolution(pdb_id, data) <= 3.0
     ):
         logger.info(f"The PDB file {pdb_id} is valid.")
         return True

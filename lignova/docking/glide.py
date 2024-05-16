@@ -126,8 +126,7 @@ class Glide(Docking):
             stdout, stderr = process.communicate()
             if process.returncode == 0:
                 logger.info("Conversion completed successfully.")
-            else:
-                logger.error(f"Conversion failed with error:\n{stderr}")
+
         except Exception as e:
             logger.error(f"An error occurred during conversion: {str(e)}")
             raise e
