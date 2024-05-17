@@ -1,6 +1,7 @@
 r"""Implementation for different Schrodinger's suplementary functions."""
 from typing import Union
 
+import glob
 import os
 import subprocess
 
@@ -37,13 +38,8 @@ def manipulate_complexes(
     if "-out" in outfile_name:
         logger.error("Output file name cannot contain '-out'")
         raise ValueError("Output file name cannot contain '-out'")
-    filename = os.path.basename(input_file)
-    if "_pv" in os.path.splitext(filename)[0]:
-        filename = os.path.splitext(filename)[0].replace("_pv", "")
-    elif "_epv" in os.path.splitext(filename)[0]:
-        filename = os.path.splitext(filename)[0].replace("_epv", "")
-    else:
-        filename = os.path.splitext(filename)[0]
+    filename = os.path.basename(input_file).split(".")[0]
+    logger.debug(f"Filename: {filename}")
     # check if mode is not from the list of options
     if mode not in [
         "merge",
@@ -92,16 +88,18 @@ def manipulate_complexes(
             # Find the generated complexes file
             if mode not in ["split_epv", "pv_to_epv", "epv_to_pv"]:
                 complexes_file = None
-                for file in os.listdir(os.path.dirname(input_file)):
-                    # logger.debug(f"Checking file: {file}")
+                # find the file with the same name as the input file but with "-out" in the name and .maegz extension
+                for file in glob.glob(os.path.join(context.write_dir, "*")):
+                    filename = os.path.basename(file)
+                    logger.debug(f"Checking file: {file}")
                     if (
-                        file.startswith(filename)
-                        and file.endswith(".maegz")
-                        and file != os.path.basename(input_file)
+                        filename.startswith(filename)
+                        and filename.endswith(".maegz")
+                        and filename != os.path.basename(input_file)
                         and "-out" in file
                     ):
-                        complexes_file = os.path.join(os.path.dirname(input_file), file)
-                        print(complexes_file)
+                        logger.debug(f"found it: {file}")
+                        complexes_file = file
                         break
                 if complexes_file:
                     # Rename the complexes file to match the input file name

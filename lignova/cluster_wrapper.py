@@ -94,11 +94,47 @@ def pdb_validations(csvfilenames: str) -> dict:
     return new_file
 
 
+def binding_moad_validation(csvfilenames: str) -> list:
+    r"""Validate the PDB files for the proteins in the CSV file.
+    Parameters
+    ----------
+    csvfilenames : str
+        Path to the CSV file containing the protein ids.
+    """
+    start_time = time.time()
+    # check if the CSV file exists
+    if not os.path.exists(csvfilenames):
+        raise FileNotFoundError(f"CSV file {csvfilenames} not found.")
+    # read the CSV file using pandas
+    protein_ids = pd.read_csv(csvfilenames)
+    # get the PDB column
+    pdb_ids = protein_ids["pdb_id"]
+    # make a list to store the valid pdb ids
+    valid_pdb_ids = []
+    # iterate over the PDB ids and validate them
+    for pdb_id in pdb_ids:
+        # validate the pdb id
+        if len(get_rcsb_data(pdb_id)) == 0:
+            logger.error(f"Invalid PDB id {pdb_id}")
+            continue
+        if not validate_pdb(pdb_id) or not validate_ligands(pdb_id):
+            logger.error(f"Invalid PDB id {pdb_id}")
+            continue
+        logger.info(f"Valid PDB id {pdb_id}")
+        valid_pdb_ids.append(pdb_id)
+
+        if time.time() - start_time > 60 * 60:
+            df = pd.DataFrame(valid_pdb_ids, columns=["pdb_id"])
+            df.to_csv("valid_pdb_ids.csv", index=False)
+            start_time = time.time()
+    return valid_pdb_ids
+
+
 if __name__ == "__main__":
     BIND_MOAD_FASTA = "/home/mma121/PubChem_small/try_schrodinger/MOAD_sequences.fasta"
     PUBCHEM_FASTA = "/home/mma121/PubChem_small/try_schrodinger/PUBCHEM_HDF5.fasta"
     """
-    bind_moad_protein_ids = fasta_parser(BIND_MOAD_FASTA)
+    bind_moad_protein_ids = fasta_parser(BIND_MOAD_FASTA, delimiter="|")
     PubChem_protein_ids = fasta_parser(PUBCHEM_FASTA)
     logger.info("Number of proteins in bind MOAD: {}", len(bind_moad_protein_ids))
     logger.info("Number of proteins in PubChem: {}", len(PubChem_protein_ids))
@@ -106,11 +142,17 @@ if __name__ == "__main__":
     with open("PubChem_protein_ids.txt", "w", encoding="utf-8") as f:
         for protein_id in PubChem_protein_ids:
             f.write(protein_id + "\n")
+    # save the bind MOAD protein ids to a file as csv file
+    #split the protein ids by _ and take the first element
+    bind_moad_protein_ids = [protein_id.split("_")[0] for protein_id in bind_moad_protein_ids]
+    df = pd.DataFrame(bind_moad_protein_ids, columns=["pdb_id"])
+    df.to_csv("bind_moad_protein_ids.csv", index=False)
     """
+
     # validate the PDB files for the proteins in the CSV file
-    new_file = pdb_validations(
-        "/home/mma121/PubChem_small/try_schrodinger/gene-id_with_pdb.csv"
+    new_file = binding_moad_validation(
+        "/home/mma121/PubChem_small/try_schrodinger/bind_moad_protein_ids.csv"
     )
-    # save the new file which is a dictionary to a csv file
-    df = pd.DataFrame(new_file.items(), columns=["Gene_id", "PDB"])
-    df.to_csv("new_pdb_files", index=False)
+    # save the new file which is a list to a csv file
+    df = pd.DataFrame(valid_pdb_ids, columns=["pdb_id"])
+    df.to_csv("valid_pdb_ids.csv", index=False)

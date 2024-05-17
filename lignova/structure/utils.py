@@ -78,6 +78,7 @@ def separate_protein_ligand(
         Universe object containing the ligand.
     """
     pdb_obj = get_mda_universe(pdb)
+    water_object = select_residues(pdb_obj, residues=["HOH"])
     # check if the file has hetatoms in chain A or not
     if keep_het_chain is not None:
         selection = select_chains(pdb_obj, chains=keep_het_chain)
@@ -85,16 +86,19 @@ def separate_protein_ligand(
         # are valid using the protein context impurities
         impurities = ProteinContext.get_current().impurities
         valid_hetatoms = [
-            hetatom
+            hetatom.resname
             for hetatom in filter_hetatoms(selection)
-            if hetatom.resname not in impurities
-            and len(hetatom.resname) == 3
-            and hetatom.resname != "HOH"
+            if hetatom.resname not in impurities and len(hetatom.resname) == 3
         ]
         # check if the length of hetatoms line is < 4 using mda
         logger.debug((filter_hetatoms(selection).resnames.all()))
         logger.debug((filter_hetatoms(selection).atoms.resnames.all()))
-        while len(filter_hetatoms(selection)) == 0 or len(valid_hetatoms) == 0:
+        logger.debug(all(atom == "HOH" for atom in valid_hetatoms))
+        while (
+            len(filter_hetatoms(selection)) == 0
+            or len(valid_hetatoms) == 0
+            or all(atom == "HOH" for atom in list(set(valid_hetatoms))) is True
+        ):
             logger.warning(
                 "No HETATM found in the selected chains.Checking another chain."
             )
@@ -102,18 +106,22 @@ def separate_protein_ligand(
             keep_het_chain = chr(ord(keep_het_chain) + 1)
             selection = select_chains(pdb_obj, chains=keep_het_chain)
             valid_hetatoms = [
-                hetatom
+                hetatom.resname
                 for hetatom in filter_hetatoms(selection)
-                if hetatom.resname not in impurities
-                and len(hetatom.resname) == 3
-                and hetatom.resname != "HOH"
+                if hetatom.resname not in impurities and len(hetatom.resname) == 3
             ]
+            keep_het_chain = keep_het_chain
         hetatm = filter_hetatoms(pdb_obj, keep_het_chain)
     else:
         logger.debug(
-            f"No chain specified. Selecting all chains.i.e {pdb_obj.segments.segids}"
+            f"No chain specified. Selecting all chains.i.e {list(set(pdb_obj.segments.segids))}"
         )
-        selection = select_chains(pdb_obj, chains=pdb_obj.segments.segids)
+        # make a list of all the chains in the pdb file using the pdb_obj object
+        keep_het_chain = list(set(pdb_obj.segments.segids))
+        # delete empty values from the list
+        keep_het_chain = [i for i in keep_het_chain if i]
+        logger.debug(f"Chains in the pdb file: {keep_het_chain}")
+        selection = select_chains(pdb_obj, chains=keep_het_chain)
         hetatm = filter_hetatoms(pdb_obj)
     if reference is not None:
         reference_obj = get_mda_universe(reference)
@@ -165,9 +173,12 @@ def separate_protein_ligand(
         ligand = select_residues(pdb_obj, residues=reference_ligand)
         return selection.atoms, ligand
     if remove_water:
+        # select the water molecules from the hetatm
         ligand = remove_residues(hetatm, residues=["HOH"])
     else:
-        ligand = hetatm
+        ligand = merge_universes(
+            [hetatm, select_chains(water_object, chains=keep_het_chain)]
+        )
         logger.warning("Water molecules are not removed from the ligand structure.")
         logger.debug(ligand.resnames.all())
         """

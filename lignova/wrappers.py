@@ -26,8 +26,6 @@ from lignova.structure.utils import (
     validate_pdb,
 )
 
-# TODO:BACKTRACK THE SEPARATE PROTEIN LIGAND FUNCTION CHANGE I.E REFERENCE CHANGE
-
 
 @profile
 def clean_cluster_files(
@@ -117,7 +115,6 @@ def get_coordinates(
             logger.warning(f"{tmp} failed validation test")
 
 
-# TODO:FIND OUT WHY PROTEIN PREP DOES NOT WORK
 @profile
 def prep_structure(
     input_dir: str, output_dir: str, pdb_id: Union[str, list, None], limit: int = 50
@@ -145,8 +142,8 @@ def prep_structure(
         failed = list(set(failed).union(set(file_line)))
     context = GlideContext.get_current()
     context.write_dir = output_dir
-    context.samplewater = False
-    context.prot_watdist = "0"
+    # context.samplewater = False
+    # context.prot_watdist = "0"
     context.set_current(context)
     if not os.path.exists(input_dir):
         raise FileNotFoundError("Input directory not found")
@@ -176,13 +173,13 @@ def prep_structure(
             get_coordinates(ids, input_dir)
         pdb_file = glob.glob(os.path.join(input_dir, ids.lower() + ".pdb"))[0]
         prot = Protein(pdb_file)
-        logger.debug(prot.file_path)
+        logger.debug(f"Protein file path:{prot.file_path}")
         if not os.path.exists(
             os.path.join(input_dir, pdb_file.replace(".pdb", "_lig.pdb"))
         ):
             logger.info(f"Separating {pdb_file}")
             protein, ligand = separate_protein_ligand(
-                prot.file_path, remove_water=True, keep_het_chain="A"
+                prot.file_path, remove_water=False, keep_het_chain="A"
             )
             """
             if len(ligand.atoms) == 0:
@@ -207,21 +204,23 @@ def prep_structure(
         ):
             logger.info(f"{prot.file_name} already prepped")
             continue
-        raw_prot = Protein(os.path.join(input_dir, pdb_file))
-        lig_file = os.path.join(input_dir, raw_prot.file_id + "_lig.pdb")
+        logger.info(
+            f"Prepping {prot.file_name} and {prot.file_name.replace('.pdb','_lig.pdb')}"
+        )
+        lig_file = os.path.join(input_dir, prot.file_id + "_lig.pdb")
         raw_lig = Ligand(file_path=lig_file)
         glide.convert_to_mae(raw_lig, context)
         lig_mae = Ligand(os.path.join(context.write_dir, raw_lig.file_id + ".mae"))
-        glide.convert_to_mae(raw_prot, context)
+        glide.convert_to_mae(prot, context)
         prot_mae = Protein(
-            file_path=os.path.join(context.write_dir, raw_prot.file_id + ".mae")
+            file_path=os.path.join(context.write_dir, prot.file_id + ".mae")
         )
         try:
             glide.PrepLigand(lig_mae, context)
             glide.PrepProtein(prot_mae, context)
-            os.remove(os.path.join(context.write_dir, raw_prot.file_id + "_grid.log"))
-            os.remove(os.path.join(context.write_dir, prot_mae.file_name))
-            os.remove(os.path.join(context.write_dir, raw_prot.file_id + "_lig.mae"))
+            os.remove(os.path.join(context.write_dir, prot.file_id + "_grid.log"))
+            # os.remove(os.path.join(context.write_dir, prot_mae.file_name))
+            # os.remove(os.path.join(context.write_dir, prot.file_id + "_lig.mae"))
         except Exception:
             logger.warning(f"Could not prepare {prot.file_name}")
             # save the pdb file in a folder called failed
@@ -896,7 +895,7 @@ def calc_rmsd_spyrmsd(
     number : Union[str,int]
         The number of ligand to calculate the rmsd for, by default 3
     csv_file_name : str
-        The name of the csv file to save the rmsd values,it will be created if it does not exist in the dock_ligand_dir
+        The Path of the csv file to save the rmsd values,it will be created if it does not exist in the dock_ligand_dir
     """
     done = []
     failed = []
@@ -924,21 +923,15 @@ def calc_rmsd_spyrmsd(
     # check if the csv_file_name exists in the dock_ligand_dir
     if os.path.exists(os.path.join(context.write_dir, csv_file_name)):
         logger.info(f"{csv_file_name} already exists in {dock_ligand_dir}")
-        # read the csv file using pandas
         rmsd_df = pd.read_csv(os.path.join(context.write_dir, csv_file_name))
-        # get the 1st column of the csv file and add it to done
         column = rmsd_df.iloc[:, 0]
-        # split the column by _ and get the first element
         done.extend(list(set([i.split("_")[0] for i in list(set(column))])))
     else:
         logger.info(f"{csv_file_name} does not exist in {context.write_dir}")
-        # create an empty csv file with the name csv_file_name
         with open(os.path.join(context.write_dir, csv_file_name), "w") as file:
             file.write("file,RMSD\n")
-    logger.info(done)
+        rmsd_df = pd.read_csv(os.path.join(context.write_dir, csv_file_name))
     logger.info(f"Found {len(done)} PDB IDs already done")
-    # read the csv file using pandas
-    rmsd_df = pd.read_csv(os.path.join(context.write_dir, csv_file_name))
     # get all the docked ligand files in the dock_ligand_dir
     docked_ligands = glob.glob(os.path.join(dock_ligand_dir, "*.maegz"))
     # loop over the docked ligand files
@@ -950,35 +943,53 @@ def calc_rmsd_spyrmsd(
         if pdb_id in done:
             logger.info(f"{pdb_id} already done")
             continue
-            # get the reference ligand file from the reference_dir
-        # check if the reference ligand file exists and if not continue
         if not os.path.exists(
             os.path.join(reference_dir, pdb_id + "_protein_prepared.mae")
         ):
-            logger.warning(f"{pdb_id} not found in the reference directory")
-            continue
+            logger.error(f"Prepared {pdb_id} file not found in the reference directory")
+            raise FileNotFoundError(
+                f"Prepared {pdb_id} file not found in the reference directory"
+            )
         full_reference_ligand = glob.glob(
             os.path.join(reference_dir, pdb_id + "*_protein_prepared.mae")
         )[0]
-        # run manipulate to get the ligand file
+        logger.debug(f"Reference ligand: {full_reference_ligand}")
+        reference_ligand = Ligand(full_reference_ligand)
+        logger.debug(f"The reference file id: {reference_ligand.file_id}")
         docked_ligand = DockedLigand(docked_ligand)
-        # try:
+        # check if the docked_ligand file_id had _merge or split_lig in it and if so skip it
+        if "_merge" in docked_ligand.file_id or "_split_lig" in docked_ligand.file_id:
+            continue
+        # run manipulate to get the ligand file
         if not os.path.exists(
             os.path.join(context.write_dir, docked_ligand.file_id + "_split_lig.pdb")
         ):
-            logger.info(f"Splitting {docked_ligand.file_name}")
-            manipulate_complexes(
-                docked_ligand.file_path,
-                context=context,
-                mode="merge",
-                outfile_name=docked_ligand.file_id + "_merge.maegz",
-            )
-            manipulate_complexes(
-                os.path.join(context.write_dir, docked_ligand.file_id + "_merge.maegz"),
-                context=context,
-                mode="split_ligand",
-                outfile_name=docked_ligand.file_id + "_split_lig.maegz",
-            )
+            logger.info(f"Splitting {docked_ligand.file_name} to get the ligand")
+            if not os.path.exists(
+                os.path.join(context.write_dir, docked_ligand.file_id + "_merge.maegz")
+            ):
+                logger.debug(
+                    f"looking for {os.path.join(context.write_dir, docked_ligand.file_id + '_merge.maegz')}"
+                )
+                manipulate_complexes(
+                    docked_ligand.file_path,
+                    context=context,
+                    mode="merge",
+                    outfile_name=docked_ligand.file_id + "_merge.maegz",
+                )
+            if not os.path.exists(
+                os.path.join(
+                    context.write_dir, docked_ligand.file_id + "_split_lig.maegz"
+                )
+            ):
+                manipulate_complexes(
+                    os.path.join(
+                        context.write_dir, docked_ligand.file_id + "_merge.maegz"
+                    ),
+                    context=context,
+                    mode="split_ligand",
+                    outfile_name=docked_ligand.file_id + "_split_lig.maegz",
+                )
             if convert_to_pdb(
                 os.path.join(
                     context.write_dir, docked_ligand.file_id + "_split_lig.maegz"
@@ -986,21 +997,15 @@ def calc_rmsd_spyrmsd(
                 context=context,
             ):
                 flag = 1
-        """
-        except Exception as e:
-            logger.error(str(e))
-            failed.append(docked_ligand.file_id)
-            continue
-        """
-        logger.debug(f"Reference ligand: {full_reference_ligand}")
-        reference_ligand = Ligand(full_reference_ligand)
-        logger.debug(reference_ligand.file_id)
         if not os.path.exists(
             os.path.join(context.write_dir, reference_ligand.file_id + "_lig.pdb")
         ):
             logger.info(f"Splitting {reference_ligand.file_name}")
             # convert mae to pdb using convert_to_pdb
-            convert_to_pdb(full_reference_ligand, context=context)
+            if not os.path.exists(
+                os.path.join(context.write_dir, reference_ligand.file_id + ".pdb")
+            ):
+                convert_to_pdb(full_reference_ligand, context=context)
             if flag == 1:
                 protein, ligand = separate_protein_ligand(
                     os.path.join(context.write_dir, reference_ligand.file_id + ".pdb"),
@@ -1011,7 +1016,7 @@ def calc_rmsd_spyrmsd(
                 )
             else:
                 logger.debug(
-                    os.path.join(context.write_dir, reference_ligand.file_id + ".pdb")
+                    f"PDB for reference ligand: {os.path.join(context.write_dir, reference_ligand.file_id + '.pdb')}"
                 )
                 protein, ligand = separate_protein_ligand(
                     os.path.join(context.write_dir, reference_ligand.file_id + ".pdb"),
@@ -1024,12 +1029,6 @@ def calc_rmsd_spyrmsd(
                 ligand,
                 os.path.join(context.write_dir, reference_ligand.file_id + "_lig.pdb"),
             )
-            """
-            except Exception as e:
-                logger.error(str(e))
-                failed.append(reference_ligand.file_id)
-                continue
-            """
         ref_lig_pdb = DockedLigand(
             os.path.join(context.write_dir, reference_ligand.file_id + "_lig.pdb")
         )
@@ -1113,8 +1112,8 @@ if __name__ == "__main__":
     COMBIND_DIR = "./combind"
     get_coordinates(["6n2w", "1xoi"], "./trial")
     prep_structure("./trial", "./prepped", ["6n2w.pdb", "1xoi.pdb"])
-    dock_ligand("./prepped", "./trial")
-    calc_rmsd_spyrmsd("./trial", "./trial", "rmsd.csv")
+    # dock_ligand("./prepped", "./trial")
+    # calc_rmsd_spyrmsd("./trial", "./prepped", "rmsd.csv")
     """
     # get the names of the files in the docked directory
     files = glob.glob(os.path.join("water/" + DOCKED_DIR, "*.maegz"))
