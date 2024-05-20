@@ -7,6 +7,7 @@ import time
 import pandas as pd
 from loguru import logger
 
+from lignova.clustering.mmseq import mmseqs_cluster, mmseqs_parser
 from lignova.structure.utils import get_rcsb_data, validate_ligands, validate_pdb
 
 
@@ -125,9 +126,59 @@ def binding_moad_validation(csvfilenames: str) -> list:
 
         if time.time() - start_time > 60 * 60:
             df = pd.DataFrame(valid_pdb_ids, columns=["pdb_id"])
-            df.to_csv("valid_pdb_ids.csv", index=False)
+            df.to_csv("valid_binding_moad.csv", index=False)
             start_time = time.time()
     return valid_pdb_ids
+
+
+def fasta_filter(
+    fasta: Union[str, TextIO],
+    outfile_name: str,
+    csvfilenames: str,
+    delimiter: Union[str, None] = "|",
+) -> TextIO:
+    r"""filter the proteins in the fasta file that are not in the csv file
+    Parameters
+    ----------
+    fasta : Union[str, TextIO]
+        Path to the FASTA file.
+    outfile_name : str
+        Path to the new FASTA file.
+    csvfilenames : str
+        Path to the CSV file containing the protein ids.
+    delimiter : Union[str, None]
+        Delimiter to split the protein id from the FASTA header. Default is |.
+    Returns
+    -------
+    TextIO
+        New FASTA file with the proteins in the csv file.
+    """
+    # Check if the fasta file exists and has .fasta extension
+    if not os.path.exists(fasta) or not fasta.endswith(".fasta"):
+        raise FileNotFoundError(f"FASTA file {fasta} not found or not a valid file.")
+
+    # Read the CSV file using pandas
+    protein_ids_df = pd.read_csv(csvfilenames)
+    # Get the PDB column and make it a list
+    pdb_ids = protein_ids_df["pdb_id"].tolist()
+
+    # Read the fasta file and filter the sequences
+    new_fasta = []
+    keep_sequence = False
+
+    with open(fasta, "r", encoding="utf-8") as file:
+        for line in file:
+            if line.startswith(">"):
+                protein_id = line.split(delimiter)[0].strip(">").split("_")[0]
+                keep_sequence = protein_id in pdb_ids
+                if keep_sequence:
+                    new_fasta.append(line)
+            elif keep_sequence:
+                new_fasta.append(line)
+
+    # Write the new fasta file
+    with open(outfile_name, "w", encoding="utf-8") as f:
+        f.writelines(new_fasta)
 
 
 if __name__ == "__main__":
@@ -154,5 +205,19 @@ if __name__ == "__main__":
         "/home/mma121/PubChem_small/try_schrodinger/bind_moad_protein_ids.csv"
     )
     # save the new file which is a list to a csv file
-    df = pd.DataFrame(valid_pdb_ids, columns=["pdb_id"])
-    df.to_csv("valid_pdb_ids.csv", index=False)
+    df = pd.DataFrame(new_file, columns=["pdb_id"])
+    df.to_csv("../valid_binding_moad.csv", index=False)
+    # filter the proteins in the fasta file that are not in the csv file
+    fasta_filter(
+        BIND_MOAD_FASTA, "../valid_binding_moad.csv", outfile_name="../valid_MOAD.fasta"
+    )
+    NEW_BINDING_MOAD_FASTA = "../valid_MOAD.fasta"
+    # cluster the fasta file
+    mmseqs_cluster(
+        PUBCHEM_FASTA,
+        NEW_BINDING_MOAD_FASTA,
+        outfile_name_suffix="../clusters",
+        tmp_dir="../tmp",
+    )
+    # parse the cluster file
+    mmseqs_parser("../clusters_rep_seq.fasta.tsv", save=True)
