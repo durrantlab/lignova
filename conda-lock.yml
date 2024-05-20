@@ -2269,15 +2269,15 @@ package:
   manager: conda
   platform: win-64
   dependencies:
-    libxml2: '>=2.12.6,<3.0a0'
+    libxml2: '>=2.12.7,<3.0a0'
     pthreads-win32: ''
     ucrt: '>=10.0.20348.0'
     vc: '>=14.2,<15'
     vc14_runtime: '>=14.29.30139'
-  url: https://conda.anaconda.org/conda-forge/win-64/libhwloc-2.10.0-default_h2fffb23_1000.conda
+  url: https://conda.anaconda.org/conda-forge/win-64/libhwloc-2.10.0-default_h8125262_1001.conda
   hash:
-    md5: ee944f0d41d9e2048f9d7492c1623ca3
-    sha256: e0d75da50e67a81e3cb37e2ee3b0d6ddc6543ec0f7b3828f884558552a1c4d93
+    md5: e761885eb4c181074d172220d46319a0
+    sha256: 7f1aa1b071269df72e88297c046ec153b7f9a81e6f135d2da4401c96f41b5052
   category: main
   optional: false
 - name: libiconv
@@ -3221,39 +3221,39 @@ package:
   category: main
   optional: false
 - name: platformdirs
-  version: 4.2.1
+  version: 4.2.2
   manager: conda
   platform: linux-64
   dependencies:
     python: '>=3.8'
-  url: https://conda.anaconda.org/conda-forge/noarch/platformdirs-4.2.1-pyhd8ed1ab_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/platformdirs-4.2.2-pyhd8ed1ab_0.conda
   hash:
-    md5: d478a8a3044cdff1aa6e62f9269cefe0
-    sha256: 5718fef2954f016834058ae1d359e407ff8e2e847b35ab43d5d91bcf22d5578d
+    md5: 6f6cf28bf8e021933869bae3f84b8fc9
+    sha256: adc59384cf0b2fc6dc7362840151e8cb076349197a38f7230278252698a88442
   category: main
   optional: false
 - name: platformdirs
-  version: 4.2.1
+  version: 4.2.2
   manager: conda
   platform: osx-64
   dependencies:
     python: '>=3.8'
-  url: https://conda.anaconda.org/conda-forge/noarch/platformdirs-4.2.1-pyhd8ed1ab_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/platformdirs-4.2.2-pyhd8ed1ab_0.conda
   hash:
-    md5: d478a8a3044cdff1aa6e62f9269cefe0
-    sha256: 5718fef2954f016834058ae1d359e407ff8e2e847b35ab43d5d91bcf22d5578d
+    md5: 6f6cf28bf8e021933869bae3f84b8fc9
+    sha256: adc59384cf0b2fc6dc7362840151e8cb076349197a38f7230278252698a88442
   category: main
   optional: false
 - name: platformdirs
-  version: 4.2.1
+  version: 4.2.2
   manager: conda
   platform: win-64
   dependencies:
     python: '>=3.8'
-  url: https://conda.anaconda.org/conda-forge/noarch/platformdirs-4.2.1-pyhd8ed1ab_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/platformdirs-4.2.2-pyhd8ed1ab_0.conda
   hash:
-    md5: d478a8a3044cdff1aa6e62f9269cefe0
-    sha256: 5718fef2954f016834058ae1d359e407ff8e2e847b35ab43d5d91bcf22d5578d
+    md5: 6f6cf28bf8e021933869bae3f84b8fc9
+    sha256: adc59384cf0b2fc6dc7362840151e8cb076349197a38f7230278252698a88442
   category: main
   optional: false
 - name: poetry
@@ -4089,7 +4089,7 @@ package:
   category: main
   optional: false
 - name: rapidfuzz
-  version: 3.9.0
+  version: 3.9.1
   manager: conda
   platform: linux-64
   dependencies:
@@ -4098,30 +4098,30 @@ package:
     numpy: ''
     python: '>=3.11,<3.12.0a0'
     python_abi: 3.11.*
-  url: https://conda.anaconda.org/conda-forge/linux-64/rapidfuzz-3.9.0-py311h4332511_0.conda
+  url: https://conda.anaconda.org/conda-forge/linux-64/rapidfuzz-3.9.1-py311h4332511_0.conda
   hash:
-    md5: ce16df66416cbb49fe446509828643ae
-    sha256: 3c41894c3fdef61fa3858021ac25b0a329e7fb387051789e879f6f93bdc389ad
+    md5: a69a2e757d76043c0d44127801870030
+    sha256: 8632131891d25377226b062137d8ee74cee3f17c5639482415fe554a64c86049
   category: main
   optional: false
 - name: rapidfuzz
-  version: 3.9.0
+  version: 3.9.1
   manager: conda
   platform: osx-64
   dependencies:
-    __osx: '>=10.9'
+    __osx: '>=10.13'
     libcxx: '>=16'
     numpy: ''
     python: '>=3.11,<3.12.0a0'
     python_abi: 3.11.*
-  url: https://conda.anaconda.org/conda-forge/osx-64/rapidfuzz-3.9.0-py311h5b766ea_0.conda
+  url: https://conda.anaconda.org/conda-forge/osx-64/rapidfuzz-3.9.1-py311hbafa61a_0.conda
   hash:
-    md5: 67c1a395d212517f5ec1c5930729b66b
-    sha256: 84323f2134f0d31754d4b927f596fc116be10db80a253bf66e1649503560ba6b
+    md5: d8415b7a53eb82b17425341019e99856
+    sha256: caabda31b6021f2ebe8b31b9ae486def070b05f3e85f50f30ab97b584f5a0433
   category: main
   optional: false
 - name: rapidfuzz
-  version: 3.9.0
+  version: 3.9.1
   manager: conda
   platform: win-64
   dependencies:
@@ -4131,10 +4131,10 @@ package:
     ucrt: '>=10.0.20348.0'
     vc: '>=14.2,<15'
     vc14_runtime: '>=14.29.30139'
-  url: https://conda.anaconda.org/conda-forge/win-64/rapidfuzz-3.9.0-py311hda3d55a_0.conda
+  url: https://conda.anaconda.org/conda-forge/win-64/rapidfuzz-3.9.1-py311hda3d55a_0.conda
   hash:
-    md5: 3ee422f54b43c521ad23296c3d21c552
-    sha256: c7387787fa87dde2fc8a6819abc3690c51b4310199f960c2587821c37707119f
+    md5: 8d7d82f1c988fcc8307a51b6f5027bb4
+    sha256: 54f923bcc58489aa4d6617478dc455ad723153e0d2059a86dd1bb3031dd7c660
   category: main
   optional: false
 - name: readline
@@ -4507,10 +4507,10 @@ package:
     ucrt: '>=10.0.20348.0'
     vc: '>=14.2,<15'
     vc14_runtime: '>=14.29.30139'
-  url: https://conda.anaconda.org/conda-forge/win-64/tbb-2021.12.0-h91493d7_0.conda
+  url: https://conda.anaconda.org/conda-forge/win-64/tbb-2021.12.0-hc790b64_1.conda
   hash:
-    md5: 21745fdd12f01b41178596143cbecffd
-    sha256: 621926aae93513408bdca3dd21c97e2aa8ba7dcd2c400dab804fb0ce7da1387b
+    md5: e98333643abc739ebea1bac97a479828
+    sha256: 87461c83a4f0d4f119af7368f20c47bbe0c27d963a7c22a3d08c71075077f855
   category: main
   optional: false
 - name: tk
@@ -4697,39 +4697,39 @@ package:
   category: main
   optional: false
 - name: trove-classifiers
-  version: 2024.4.10
+  version: 2024.5.17
   manager: conda
   platform: linux-64
   dependencies:
     python: '>=3.7'
-  url: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.4.10-pyhd8ed1ab_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.5.17-pyhd8ed1ab_0.conda
   hash:
-    md5: 9622d541e2314c0207bebdc0359fa478
-    sha256: cbc8e5c5f82b1eeff7aa21aaff77757336c1e6d64a4255b071c783acd60f4618
+    md5: af83a15fac578ddf2a621ad195986c37
+    sha256: 37da4db453e80f88965ee945565f6a28f6dcf4c00bc62f2f3c4c83ee219609a3
   category: main
   optional: false
 - name: trove-classifiers
-  version: 2024.4.10
+  version: 2024.5.17
   manager: conda
   platform: osx-64
   dependencies:
     python: '>=3.7'
-  url: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.4.10-pyhd8ed1ab_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.5.17-pyhd8ed1ab_0.conda
   hash:
-    md5: 9622d541e2314c0207bebdc0359fa478
-    sha256: cbc8e5c5f82b1eeff7aa21aaff77757336c1e6d64a4255b071c783acd60f4618
+    md5: af83a15fac578ddf2a621ad195986c37
+    sha256: 37da4db453e80f88965ee945565f6a28f6dcf4c00bc62f2f3c4c83ee219609a3
   category: main
   optional: false
 - name: trove-classifiers
-  version: 2024.4.10
+  version: 2024.5.17
   manager: conda
   platform: win-64
   dependencies:
     python: '>=3.7'
-  url: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.4.10-pyhd8ed1ab_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.5.17-pyhd8ed1ab_0.conda
   hash:
-    md5: 9622d541e2314c0207bebdc0359fa478
-    sha256: cbc8e5c5f82b1eeff7aa21aaff77757336c1e6d64a4255b071c783acd60f4618
+    md5: af83a15fac578ddf2a621ad195986c37
+    sha256: 37da4db453e80f88965ee945565f6a28f6dcf4c00bc62f2f3c4c83ee219609a3
   category: main
   optional: false
 - name: typing-extensions

@@ -39,7 +39,7 @@ conda-setup:
 .PHONY: conda-dependencies
 conda-dependencies:
 	$(CONDA) conda install -y -c conda-forge -c bioconda mmseqs2
-	
+	$(CONDA) conda install pydantic -c conda-forge
 .PHONY: conda-lock
 conda-lock:
 	- rm $(REPO_PATH)/conda-lock.yml
