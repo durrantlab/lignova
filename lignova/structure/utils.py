@@ -66,7 +66,7 @@ def separate_protein_ligand(
     reference : str or file-like
         Path to the Reference file or file-like object.
     remove_water : bool
-        Remove water molecules from the ligand structure. Default is True.
+        Remove crystallographic waters from the protein structures. Default is True.
     keep_het_chain : str or list
         Chain(s) to keep their HETATM in the protein structure.
         Default is None. If None, all HETATM will be kept.
@@ -172,6 +172,7 @@ def separate_protein_ligand(
             ligand = select_residues(selection, residues=reference_ligand)
         ligand = select_residues(pdb_obj, residues=reference_ligand)
         return selection.atoms, ligand
+    actual_ligand = remove_residues(hetatm, residues=["HOH"])
     if remove_water:
         # select the water molecules from the hetatm
         ligand = remove_residues(hetatm, residues=["HOH"])
@@ -179,7 +180,9 @@ def separate_protein_ligand(
         ligand = merge_universes(
             [hetatm, select_chains(water_object, chains=keep_het_chain)]
         )
-        logger.warning("Water molecules are not removed from the ligand structure.")
+        logger.warning(
+            "Crystallographic Water molecules are not removed from the protein structure."
+        )
         logger.debug(ligand.resnames.all())
         """
         for i in list(set(hetatm.resnames)):
@@ -190,7 +193,7 @@ def separate_protein_ligand(
         """
     protein = remove_hetatoms(pdb_obj)
     save_prot = merge_universes([protein, ligand])
-    return save_prot, ligand
+    return save_prot, actual_ligand
 
 
 def check_ligand(pdb: Union[str, TextIO], reference: Union[str, TextIO]) -> bool:

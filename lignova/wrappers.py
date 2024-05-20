@@ -195,10 +195,10 @@ def prep_structure(
                 pdb_file.replace(".pdb", "_lig.pdb"),
             )
         if (
-            len(
-                glob.glob(os.path.join(output_dir, prot.file_name.replace(".pdb", "*")))
+            (
+                os.path.exists(pdb_file.replace(".pdb", "_lig_prepared.mae"))
+                and os.path.exists(pdb_file.replace(".pdb", "_prepared.mae"))
             )
-            == 3
             or "_lig" in pdb_file
             or prot.file_name in failed
         ):
@@ -209,15 +209,19 @@ def prep_structure(
         )
         lig_file = os.path.join(input_dir, prot.file_id + "_lig.pdb")
         raw_lig = Ligand(file_path=lig_file)
-        glide.convert_to_mae(raw_lig, context)
+        if not os.path.exists(raw_lig.file_path.replace(".pdb", ".mae")):
+            glide.convert_to_mae(raw_lig, context)
         lig_mae = Ligand(os.path.join(context.write_dir, raw_lig.file_id + ".mae"))
-        glide.convert_to_mae(prot, context)
+        if not os.path.exists(prot.file_path.replace(".pdb", ".mae")):
+            glide.convert_to_mae(prot, context)
         prot_mae = Protein(
             file_path=os.path.join(context.write_dir, prot.file_id + ".mae")
         )
         try:
-            glide.PrepLigand(lig_mae, context)
-            glide.PrepProtein(prot_mae, context)
+            if not os.path.exists(lig_mae.file_path.replace(".mae", "_prepared.mae")):
+                glide.PrepLigand(lig_mae, context)
+            if not os.path.exists(prot_mae.file_path.replace(".mae", "_prepared.mae")):
+                glide.PrepProtein(prot_mae, context)
             os.remove(os.path.join(context.write_dir, prot.file_id + "_grid.log"))
             # os.remove(os.path.join(context.write_dir, prot_mae.file_name))
             # os.remove(os.path.join(context.write_dir, prot.file_id + "_lig.mae"))
@@ -558,7 +562,7 @@ def combind_pose_selction(
         file.write("\n".join(failed_list))
 
 
-def parser(
+def calculate_rmsd_mda(
     input_dir: str,
     output_dir: str,
     pdb: Union[str, list, None],
@@ -631,7 +635,7 @@ def parser(
             continue
 
 
-def calculate_rmsd(
+def calculate_rmsd_schrodinger(
     dock_ligand_dir: str,
     reference_dir: str,
     csv_file_name: str,
@@ -1112,8 +1116,8 @@ if __name__ == "__main__":
     COMBIND_DIR = "./combind"
     get_coordinates(["6n2w", "1xoi"], "./trial")
     prep_structure("./trial", "./prepped", ["6n2w.pdb", "1xoi.pdb"])
-    # dock_ligand("./prepped", "./trial")
-    # calc_rmsd_spyrmsd("./trial", "./prepped", "rmsd.csv")
+    dock_ligand("./prepped", "./trial")
+    calc_rmsd_spyrmsd("./trial", "./prepped", "rmsd.csv")
     """
     # get the names of the files in the docked directory
     files = glob.glob(os.path.join("water/" + DOCKED_DIR, "*.maegz"))
@@ -1171,7 +1175,7 @@ if __name__ == "__main__":
             shutil.copy(ref, "./parsed")
     calc_rmsd_spyrmsd("./parsed_docked", "./parsed", "rmsd.csv")
     # prep_prot(RAW_INPUT_DIR, "./parsed", pdb_ids)
-    parser(
+    calculate_rmsd_mda(
         COMBIND_DIR,
         "./parsed",
         pdb=None,

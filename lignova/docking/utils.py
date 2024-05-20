@@ -89,7 +89,11 @@ def manipulate_complexes(
             if mode not in ["split_epv", "pv_to_epv", "epv_to_pv"]:
                 complexes_file = None
                 # find the file with the same name as the input file but with "-out" in the name and .maegz extension
-                for file in glob.glob(os.path.join(context.write_dir, "*")):
+                # find that file in the same directory as the input file
+                # find the input file directory
+                directory = os.path.dirname(input_file)
+                logger.debug(f"looking for the file in: {directory}")
+                for file in glob.glob(os.path.join(directory, "*")):
                     filename = os.path.basename(file)
                     logger.debug(f"Checking file: {file}")
                     if (
