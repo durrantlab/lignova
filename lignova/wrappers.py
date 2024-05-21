@@ -142,8 +142,8 @@ def prep_structure(
         failed = list(set(failed).union(set(file_line)))
     context = GlideContext.get_current()
     context.write_dir = output_dir
-    # context.samplewater = False
-    # context.prot_watdist = "0"
+    context.samplewater = False
+    context.prot_watdist = "0"
     context.set_current(context)
     if not os.path.exists(input_dir):
         raise FileNotFoundError("Input directory not found")
@@ -174,30 +174,32 @@ def prep_structure(
         pdb_file = glob.glob(os.path.join(input_dir, ids.lower() + ".pdb"))[0]
         prot = Protein(pdb_file)
         logger.debug(f"Protein file path:{prot.file_path}")
+        logger.debug(prot.file_name.replace(".pdb", "_lig.pdb"))
         if not os.path.exists(
-            os.path.join(input_dir, pdb_file.replace(".pdb", "_lig.pdb"))
+            os.path.join(input_dir, prot.file_name.replace(".pdb", "_lig.pdb"))
         ):
-            logger.info(f"Separating {pdb_file}")
+            logger.info(f"Separating {prot.file_path} into protein and ligand")
             protein, ligand = separate_protein_ligand(
-                prot.file_path, remove_water=False, keep_het_chain="A"
+                prot.file_path, remove_water=True, keep_het_chain="A"
             )
-            """
-            if len(ligand.atoms) == 0:
-                logger.warning(f"No ligand found in {prot.file_name}")
-                os.remove(pdb_file)
-                # add the pdb file to the failed list
-                failed.append(prot.file_name)
-                continue
-            """
             write_mda_universe(protein, pdb_file)
             write_mda_universe(
                 ligand,
-                pdb_file.replace(".pdb", "_lig.pdb"),
+                prot.file_path.replace(".pdb", "_lig.pdb"),
             )
         if (
             (
-                os.path.exists(pdb_file.replace(".pdb", "_lig_prepared.mae"))
-                and os.path.exists(pdb_file.replace(".pdb", "_prepared.mae"))
+                os.path.exists(
+                    os.path.join(
+                        output_dir, prot.file_name.replace(".pdb", "_lig_prepared.mae")
+                    )
+                )
+                and os.path.exists(
+                    os.path.join(
+                        output_dir,
+                        prot.file_name.replace(".pdb", "_protein_prepared.mae"),
+                    )
+                )
             )
             or "_lig" in pdb_file
             or prot.file_name in failed
@@ -220,17 +222,17 @@ def prep_structure(
         try:
             if not os.path.exists(lig_mae.file_path.replace(".mae", "_prepared.mae")):
                 glide.PrepLigand(lig_mae, context)
-            if not os.path.exists(prot_mae.file_path.replace(".mae", "_prepared.mae")):
+            if not os.path.exists(
+                prot_mae.file_path.replace(".mae", "_protein_prepared.mae")
+            ):
                 glide.PrepProtein(prot_mae, context)
             os.remove(os.path.join(context.write_dir, prot.file_id + "_grid.log"))
-            # os.remove(os.path.join(context.write_dir, prot_mae.file_name))
-            # os.remove(os.path.join(context.write_dir, prot.file_id + "_lig.mae"))
         except Exception:
             logger.warning(f"Could not prepare {prot.file_name}")
             # save the pdb file in a folder called failed
-            """
-            logger.debug(f"Removing {prot.file_name} from the directory")
+            # logger.debug(f"Removing {prot.file_name} from the directory")
             failed.append(prot.file_name)
+            """
             # remove any files in the output directory With the same name
             for file in glob.glob(
                 os.path.join(output_dir, prot.file_name.replace(".pdb", "*"))
@@ -294,25 +296,6 @@ def dock_ligand(
     limit = min(limit, len(pdb))
     pdb = pdb[:limit]
     for pdb_file in pdb:
-        # check if the pdb_file has an extention and if so add to it
-        """
-        #  _grid.zip and find the file in the input dir
-        if "." not in pdb_file:
-            pdb_file = glob.glob(
-                os.path.join(input_dir, pdb_file.lower() + "_grid.zip")
-            )[0]
-            # if not found, and not in the failed.txt file in the input dir,
-            # then run the prep_structure function after logging a warning
-            while not os.path.exists(pdb_file) and pdb_file not in os.path.join(
-                input_dir, "failed.txt"
-            ):
-                logger.warning(
-                    f"{pdb_file} not found in the directory. Prepping it now"
-                )
-                prep_structure(
-                    input_dir, output_dir, pdb_id=pdb_file.split("_grid.zip")[0]
-                )
-        """
         prep_prot = Protein(pdb_file)
         prep_lig = Ligand(
             os.path.join(
@@ -332,6 +315,23 @@ def dock_ligand(
             or prep_lig.file_name in failed
         ):
             logger.info(f"{prep_lig.file_name} already docked")
+            if not os.path.exists(
+                os.path.join(
+                    context.write_dir,
+                    prep_prot.file_id.replace("grid", "lig_docking_pv_sorted.maegz"),
+                )
+            ):
+                logger.debug(
+                    os.path.join(
+                        context.write_dir,
+                        prep_prot.file_id.replace("grid", "lig_docking_pv.maegz"),
+                    )
+                )
+                results = os.path.join(
+                    context.write_dir,
+                    prep_prot.file_id.replace("grid", "lig_docking_pv.maegz"),
+                )
+                glide.sort_docking_results(results, context)
             continue
         try:
             glide.run(prep_prot, prep_lig, context)
@@ -899,7 +899,7 @@ def calc_rmsd_spyrmsd(
     number : Union[str,int]
         The number of ligand to calculate the rmsd for, by default 3
     csv_file_name : str
-        The Path of the csv file to save the rmsd values,it will be created if it does not exist in the dock_ligand_dir
+        The Path of the csv file to save the rmsd values,it will be created in the dock_ligand_dir if the path not exists
     """
     done = []
     failed = []
@@ -914,34 +914,34 @@ def calc_rmsd_spyrmsd(
     if not os.path.exists(reference_dir):
         raise FileNotFoundError(f"{reference_dir} does not exist")
     # check if the csv_file_name is a path
-    if "/" in csv_file_name:
-        csv_file_name = os.path.basename(csv_file_name)
-        # make the context write_dir the directory of the csv_file_name
-        context.write_dir = os.path.dirname(csv_file_name)
-        context.set_current(context)
+    if "/" not in csv_file_name:
+        csv_file_name = os.path.join(dock_ligand_dir, csv_file_name)
     # check if failed.txt exists in the dock_ligand_dir
     if os.path.exists(os.path.join(dock_ligand_dir, "failed.txt")):
         with open(os.path.join(dock_ligand_dir, "failed.txt"), "r") as file:
             failed = file.read().splitlines()
         done.extend([x.split("_")[0] for x in failed])
     # check if the csv_file_name exists in the dock_ligand_dir
-    if os.path.exists(os.path.join(context.write_dir, csv_file_name)):
-        logger.info(f"{csv_file_name} already exists in {dock_ligand_dir}")
-        rmsd_df = pd.read_csv(os.path.join(context.write_dir, csv_file_name))
+    if os.path.exists(csv_file_name):
+        logger.info(
+            f"{csv_file_name} already exists in {os.path.dirname(csv_file_name)}"
+        )
+        rmsd_df = pd.read_csv(csv_file_name)
         column = rmsd_df.iloc[:, 0]
         done.extend(list(set([i.split("_")[0] for i in list(set(column))])))
     else:
-        logger.info(f"{csv_file_name} does not exist in {context.write_dir}")
-        with open(os.path.join(context.write_dir, csv_file_name), "w") as file:
+        logger.info(
+            f"{csv_file_name} does not exist in {os.path.dirname(csv_file_name)}"
+        )
+        with open(os.path.join(csv_file_name), "w") as file:
             file.write("file,RMSD\n")
-        rmsd_df = pd.read_csv(os.path.join(context.write_dir, csv_file_name))
+        rmsd_df = pd.read_csv(os.path.join(csv_file_name))
     logger.info(f"Found {len(done)} PDB IDs already done")
     # get all the docked ligand files in the dock_ligand_dir
-    docked_ligands = glob.glob(os.path.join(dock_ligand_dir, "*.maegz"))
+    docked_ligands = glob.glob(os.path.join(context.write_dir, "*_sorted.maegz"))
     # loop over the docked ligand files
     for docked_ligand in docked_ligands:
         flag = 0
-        logger.info(f"Working on {docked_ligand}")
         # get the pdb_id from the file name
         pdb_id = os.path.basename(docked_ligand).split("_")[0]
         if pdb_id in done:
@@ -955,7 +955,7 @@ def calc_rmsd_spyrmsd(
                 f"Prepared {pdb_id} file not found in the reference directory"
             )
         full_reference_ligand = glob.glob(
-            os.path.join(reference_dir, pdb_id + "*_protein_prepared.mae")
+            os.path.join(reference_dir, pdb_id + "_protein_prepared.mae")
         )[0]
         logger.debug(f"Reference ligand: {full_reference_ligand}")
         reference_ligand = Ligand(full_reference_ligand)
@@ -964,23 +964,25 @@ def calc_rmsd_spyrmsd(
         # check if the docked_ligand file_id had _merge or split_lig in it and if so skip it
         if "_merge" in docked_ligand.file_id or "_split_lig" in docked_ligand.file_id:
             continue
+        logger.info(f"Working on {docked_ligand.file_path}")
         # run manipulate to get the ligand file
+        if not os.path.exists(
+            os.path.join(context.write_dir, docked_ligand.file_id + "_merge.maegz")
+        ):
+            logger.debug(
+                f"Complex generation for {os.path.join(context.write_dir, docked_ligand.file_id)}"
+            )
+            manipulate_complexes(
+                docked_ligand.file_path,
+                context=context,
+                mode="merge",
+                outfile_name=docked_ligand.file_id + "_merge.maegz",
+            )
         if not os.path.exists(
             os.path.join(context.write_dir, docked_ligand.file_id + "_split_lig.pdb")
         ):
             logger.info(f"Splitting {docked_ligand.file_name} to get the ligand")
-            if not os.path.exists(
-                os.path.join(context.write_dir, docked_ligand.file_id + "_merge.maegz")
-            ):
-                logger.debug(
-                    f"looking for {os.path.join(context.write_dir, docked_ligand.file_id + '_merge.maegz')}"
-                )
-                manipulate_complexes(
-                    docked_ligand.file_path,
-                    context=context,
-                    mode="merge",
-                    outfile_name=docked_ligand.file_id + "_merge.maegz",
-                )
+
             if not os.path.exists(
                 os.path.join(
                     context.write_dir, docked_ligand.file_id + "_split_lig.maegz"
@@ -1013,7 +1015,7 @@ def calc_rmsd_spyrmsd(
             if flag == 1:
                 protein, ligand = separate_protein_ligand(
                     os.path.join(context.write_dir, reference_ligand.file_id + ".pdb"),
-                    remove_water=False,
+                    remove_water=True,
                     reference=os.path.join(
                         context.write_dir, docked_ligand.file_id + "_split_lig-1.pdb"
                     ),
@@ -1024,7 +1026,7 @@ def calc_rmsd_spyrmsd(
                 )
                 protein, ligand = separate_protein_ligand(
                     os.path.join(context.write_dir, reference_ligand.file_id + ".pdb"),
-                    remove_water=False,
+                    remove_water=True,
                     reference=os.path.join(
                         context.write_dir, docked_ligand.file_id + "_split_lig.pdb"
                     ),
@@ -1099,7 +1101,7 @@ def calc_rmsd_spyrmsd(
         ):
             os.remove(file)
         # save the rmsd_df to a csv file in the dock_ligand_dir with the name csv_file_name and the same columns
-        rmsd_df.to_csv(os.path.join(dock_ligand_dir, csv_file_name), index=False)
+        rmsd_df.to_csv(csv_file_name, index=False)
         # save the failed list to a file
         with open(os.path.join(dock_ligand_dir, "failed.txt"), "w") as file:
             file.write("\n".join(failed))
