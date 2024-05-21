@@ -300,3 +300,33 @@ class Glide(Docking):
             )
             raise e
         return prep
+
+    @staticmethod
+    def sort_docking_results(docking_results, context):
+        r"""Sort the docking maegz output based on the glide score"""
+        command = [
+            context.command + "/utilities/glide_sort",
+            "-use_dscore",
+            "-o",
+            docking_results.replace(".maegz", "_sorted.maegz"),
+            docking_results,
+        ]
+        try:
+            process = subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+            )
+            stdout, stderr = process.communicate()
+            if process.returncode == 0:
+                logger.info(f"Sorting completed for {docking_results}")
+            else:
+                logger.error(f"Sorting failed for {docking_results}")
+                logger.error(f"Error Output:\n{stderr}")
+                raise subprocess.CalledProcessError(
+                    process.returncode, " ".join(command)
+                )
+        except Exception as e:
+            logger.error(f"An error occurred during sorting: {str(e)}")
+            raise e
