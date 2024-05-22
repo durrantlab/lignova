@@ -25,7 +25,16 @@ class Glide(Docking):
         pass
 
     def run(self, target, ligand, context):
-        r"""Dock ligand into protein grid."""
+        r"""Dock ligand into protein grid.
+        Parameters
+        ----------
+        target : PreparedProtein
+            The protein structure to dock the ligand into
+        ligand : PreparedLigand
+            The ligand structure to dock into the protein
+        context : GlideContext
+            The context for the glide docking
+        """
         # ensure that prepped_ligand and grid_file are defined and if not raise an error and exit
         logger.info(ligand.file_path, ligand.file_id)
         jobname = str(ligand.file_id.split("_prepared")[0]) + "_docking"
@@ -110,7 +119,14 @@ class Glide(Docking):
 
     @staticmethod
     def convert_to_mae(input_object, context):
-        r"""Convert from the pdb format to mae format needed for Schrodinger"""
+        r"""Convert from the pdb format to mae format needed for Schrodinger
+        Parameters
+        ----------
+        input_object : Ligand or Protein object
+            The object to be converted to mae format
+        context : GlideContext
+            The context for the glide docking
+        """
         command = [
             context.command + "/utilities/structconvert",
             input_object.file_path,
@@ -134,7 +150,14 @@ class Glide(Docking):
     @staticmethod
     def PrepLigand(ligand, context):
         r"""Check the extension of the ligand file using the split function and
-        Prepare ligands for docking using Schrödinger's LigPrep"""
+        Prepare ligands for docking using Schrödinger's LigPrep
+        Parameters
+        ----------
+        ligand : Ligand object
+            The ligand structure to be prepared for docking as a Ligand object
+        context : GlideContext
+            The context for the glide docking
+        """
         if ligand.file_ext == "pdb":
             Glide().convert_to_mae(ligand, context)
             ligand = Ligand(
@@ -205,7 +228,14 @@ class Glide(Docking):
 
     @staticmethod
     def PrepProtein(protein, context):
-        r"""Prepare protein structures using Schrödinger's Protein Wizard"""
+        r"""Prepare protein structures using Schrödinger's Protein Wizard
+        Parameters
+        ----------
+        protein : Protein object
+            The protein structure to be prepared for docking as a Protein object
+        context : GlideContext
+            The context for the glide docking
+        """
         command = [
             context.command + "/utilities/prepwizard",
             protein.file_path,
@@ -303,7 +333,14 @@ class Glide(Docking):
 
     @staticmethod
     def sort_docking_results(docking_results, context):
-        r"""Sort the docking maegz output based on the glide score"""
+        r"""Sort the docking maegz output based on the glide score
+        Parameters
+        ----------
+        docking_results : str
+            The path to the docking results file
+        context : GlideContext
+            The context for the glide docking
+        """
         command = [
             context.command + "/utilities/glide_sort",
             "-use_dscore",

@@ -12,7 +12,7 @@ from lignova.clustering.mmseq import mmseqs_cluster, mmseqs_parser
 from lignova.structure.utils import get_rcsb_data, validate_ligands, validate_pdb
 
 
-def fasta_parser(fasta: Union[str, TextIO], delimiter: Union[str, None] = None) -> list:
+def fasta_parser(fasta: str | TextIO, delimiter: str | None = None) -> list:
     r"""Parse FASTA files to get the protein ids
     Parameters
     ----------
@@ -133,10 +133,10 @@ def binding_moad_validation(csvfilenames: str) -> list:
 
 
 def fasta_filter(
-    fasta: Union[str, TextIO],
+    fasta: str | TextIO,
     outfile_name: str,
     csvfilenames: str,
-    delimiter: Union[str, None] = "|",
+    delimiter: str | None = "|",
 ) -> TextIO:
     r"""filter the proteins in the fasta file that are not in the csv file
     Parameters
@@ -182,9 +182,7 @@ def fasta_filter(
         f.writelines(new_fasta)
 
 
-def clean_cluster_files(
-    file_path: str, delim: list = ["[", "]"]
-):  # NOTE:change this delim when dealing with filtered to ( and )
+def clean_cluster_files(file_path: str, delim: list = ["[", "]"]) -> list:
     """
     This function takes the mmseqs2 cluster file and cleans it by removing clusters with no representatives
     Parameters
@@ -264,13 +262,11 @@ if __name__ == "__main__":
 
     """
     valid_pubchem = pd.read_csv("../valid_pubchem.csv")
-    # NOTE: this is a working code to assess the loss of data in the clustering process NOT DONE YET
-    # read the ../clusters_cluster_parsed.csv file
     with open("../clusters_cluster_parsed.csv", "r", encoding="utf-8") as clust_file:
         lines = clust_file.readlines()
     i = 0
     new_lines = []
-    count = 7014
+    count = len(clean_cluster_files("../clusters_cluster_parsed.csv"))
     pubcount = 2247
     while i < len(lines):
         line = lines[i]
@@ -281,6 +277,7 @@ if __name__ == "__main__":
             # check if this cluster_id has | in it and if so skip it
             if "|" in cluster_id:
                 logger.info(f"Cluster {cluster_id} has | in it")
+                line = f"Cluster : {cluster_id}\n"
                 new_lines.append(line)
                 i += 1
                 count -= 1
@@ -299,7 +296,7 @@ if __name__ == "__main__":
                     ].tolist()
                 )
                 # new line is Cluster with the value of the PDB column in the valid_pubchem file
-                new_line = f"Cluster {ast.literal_eval(valid_pubchem[valid_pubchem['Gene_id']==int(cluster_id)]['PDB'].to_list()[0])}\n"
+                new_line = f"Cluster : {ast.literal_eval(valid_pubchem[valid_pubchem['Gene_id']==int(cluster_id)]['PDB'].to_list()[0])}\n"
                 new_lines.append(new_line)
                 i += 1
                 pubcount -= 1
@@ -317,16 +314,27 @@ if __name__ == "__main__":
                 else:
                     # check if any cluster members is in the valid_pubchem file or has | in the name
                     for member in cluster_members:
-                        if member in valid_pubchem["Gene_id"].tolist() or "|" in member:
+                        if "|" in member:
                             tmp_rep = member
                             break
+                        elif (
+                            int(member) in valid_pubchem["Gene_id"].tolist()
+                            and valid_pubchem[valid_pubchem["Gene_id"] == int(member)][
+                                "PDB"
+                            ].tolist()[0]
+                            != "[]"
+                        ):
+                            tmp_rep = member
+                            break
+                        else:
+                            continue
                     if tmp_rep != cluster_id:
                         logger.info(f"new representative: {tmp_rep}")
                         if "|" not in tmp_rep:
                             tmp_rep = valid_pubchem[
-                                valid_pubchem["Gene_id"] == tmp_rep
-                            ]["Gene_id"].tolist()[0]
-                        new_line = f"Cluster {tmp_rep}:\n"
+                                valid_pubchem["Gene_id"] == int(tmp_rep)
+                            ]["PDB"].tolist()[0]
+                        new_line = f"Cluster : {tmp_rep}\n"
                         new_lines.append(new_line)
                         # add to new_lines the cluster members
                         for member in cluster_members:
@@ -338,17 +346,75 @@ if __name__ == "__main__":
         else:
             i += 1
             new_lines.append(line)
+
     # write the new_lines to a new file
-    with open("new_clusters_cluster_parsed.csv", "w", encoding="utf-8") as f:
+    with open("../new_clusters_cluster_parsed.csv", "w", encoding="utf-8") as f:
         f.writelines(new_lines)
+    # NOTE:EXTRA SANITY CHECK
+    with open("../new_clusters_cluster_parsed.csv", "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    # exclude the clusters with only | in their members
+    new_lines = []
+    i = 0
+    member = []
+    while i < len(lines):
+        # add the member list to new_lines
+        member = []
+        if lines[i].startswith("Cluster"):
+            cluster_id = lines[i].split(":")[1].strip()
+            if "|" in cluster_id:
+                new_lines.append(lines[i])
+                i += 1
+                # save line to new file
+                while i < len(lines) and not lines[i].startswith("Cluster"):
+                    # save the line in members list
+                    member.append(lines[i])
+                    i += 1
+                # check if all members have | in them and if so add members to new_lines
+                # and if not delete te last new_lines added
+                if all("|" in mem for mem in member):
+                    new_lines.extend(member)
+                else:
+                    new_lines.pop()
+                    continue
+            else:
+                i += 1
+                continue
+        else:
+            i += 1
+            continue
+
+    with open("../no_pubchem.csv", "w", encoding="utf-8") as f:
+        f.writelines(new_lines)
+    # count the number of clusters with no PubChem members
+    with open("../no_pubchem.csv", "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    logger.info(
+        "Number of clusters with no PubChem members: {}",
+        len([line for line in lines if line.startswith("Cluster")]),
+    )
+
+    # compare lines list and new lines list and delete common lines between them
+    with open("../new_clusters_cluster_parsed.csv", "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    with open("../no_pubchem.csv", "r", encoding="utf-8") as f:
+        new_lines = f.readlines()
+    # delete common lines between lines and new_lines
+    pubchem_only = [line for line in lines if line not in new_lines]
+    with open("../pubchem_only_clusters.csv", "w", encoding="utf-8") as f:
+        f.writelines(pubchem_only)
+    logger.info(
+        "Number of clusters with only PubChem members: {}",
+        len([line for line in pubchem_only if line.startswith("Cluster")]),
+    )
 
     logger.info("Number of PubChem clusters: {}", count)
     logger.info("Number of invalid PubChem clusters: {}", pubcount)
     # find the number of representatives in the new_clusters_cluster_parsed.csv file
-    representatives = clean_cluster_files("new_clusters_cluster_parsed.csv")
-    logger.info("Number of representatives: {}", len(representatives))
+    representatives = clean_cluster_files("../new_clusters_cluster_parsed.csv")
+    logger.info("Number of representatives after parsing: {}", len(representatives))
     # find the number of representatives using lines starting with Cluster
-    with open("new_clusters_cluster_parsed.csv", "r", encoding="utf-8") as f:
+    with open("../new_clusters_cluster_parsed.csv", "r", encoding="utf-8") as f:
         lines = f.readlines()
     clusters = [line for line in lines if line.startswith("Cluster")]
     logger.info("Number of clusters: {}", len(clusters))
@@ -366,120 +432,21 @@ if __name__ == "__main__":
         "Number of clusters in the original clusters_cluster_parsed.csv file: {}",
         len(clusters),
     )
-    """
-    with open("../clusters_cluster_parsed.csv", "r", encoding="utf-8") as f:
+    # find the number of proteins in ../PUBCHEM_HDF5.fasta file
+    with open("../PUBCHEM_HDF5.fasta", "r", encoding="utf-8") as f:
         lines = f.readlines()
-    clusters = [line for line in lines if line.startswith("Cluster")]
-    logger.info("Number of clusters: {}", len(clusters))
-    #clean the cluster files using the clean_cluster_files function
-    representatives=clean_cluster_files("../clusters_cluster_parsed.csv")
-    logger.info("Number of representatives: {}", len(representatives))
-    #save the representatives to a file
-    with open("../representative_prot.txt", "w", encoding="utf-8") as f:
-        for rep in representatives:
-            f.write(rep + "\n")
-    """
-    """
-    #read this file '../representative_prot.txt' using pandas and find the number of representatives without | in the name
-    representatives=pd.read_csv("../representative_prot.txt", header=None)
-    representatives=representatives[0].tolist()
-    #find the representatives without | in the name
-    representatives_pubchem=[int(rep.rstrip(":")) for rep in representatives if "|" not in rep]
-    logger.info("Number of representatives without | in the name: {}", len(representatives_pubchem))
-    #find theses representatives in the ../valid_pubchem.csv file
-    valid_pubchem=pd.read_csv("../valid_pubchem.csv")
-    #find the representatives in the valid_pubchem file
-    valid_pubchem=valid_pubchem[valid_pubchem["Gene_id"].isin(representatives_pubchem)]
-    logger.info("Number of representatives in the valid_pubchem file: {}", len(valid_pubchem))
-    #what are the not found representatives
-    not_found=[rep for rep in representatives_pubchem if rep not in valid_pubchem["Gene_id"].tolist()]
-    logger.info("Number of representatives not found in the valid_pubchem file: {}", len(not_found))
-    #loop through the found representatives and check if the PDB column is []
-    count=0
-    need_to_check_gp=[]
-    for rep in valid_pubchem["Gene_id"].tolist():
-        if valid_pubchem[valid_pubchem["Gene_id"]==rep]["PDB"].tolist()[0]=="[]":
-            count=count+1
-            need_to_check_gp.append(rep)
-    logger.info("Number of representatives with no PDB IDs: {}", count)
-    #save the need_to_check_gp to a file
-    with open("need_to_check_gp.txt", "w", encoding="utf-8") as f:
-        for rep in need_to_check_gp:
-            f.write(str(rep) + "\n")
-    # read the need_to_check_gp file and find the clusters with members more than 1
-    with open("need_to_check_gp.txt", "r", encoding="utf-8") as f:
-        need_to_check_gp = f.readlines()
-    need_to_check_gp = [rep.strip() for rep in need_to_check_gp]
-    # find the need_to_check_gp in the clusters_cluster_parsed.csv file and
-    # check if the cluster has members more than 1
-    # by reading line by line and checking if the line starts with Cluster and the
-    # number of lines till the next Cluster line is more than 1
-    with open("../clusters_cluster_parsed.csv", "r", encoding="utf-8") as f:
-        lines = f.readlines()
-    clusters = {}
-    cluster_members = []
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-        if line.startswith("Cluster"):
-            tmp = line.split("Cluster")[1].split(":")[0].strip()
-            logger.info(tmp)
-            if tmp in need_to_check_gp:
-                i += 1
-                while i < len(lines) and not lines[i].startswith("Cluster"):
-                    cluster_members.append(lines[i].strip())
-                    i += 1
-                if len(cluster_members) > 1:
-                    clusters[tmp] = cluster_members
-                    logger.info(f"Cluster members: {len(cluster_members)}")
-                else:
-                    cluster_members = []
-                clusters[tmp] = cluster_members
-                logger.info(f"Cluster members: {len(cluster_members)}")
-                cluster_members = []
-            else:
-                i += 1
-        else:
-            i += 1
-    #save the clusters dictionary to a txt file using pandas
-    df = pd.DataFrame(clusters.items(), columns=["Gene_id", "PDB"])
-    df.to_csv("clusters_members.csv", index=False)
-    # read the ../valid_pubchem.csv file
-    valid_pubchem = pd.read_csv("../valid_pubchem.csv")
-    # get a list of the Gene_id column
-    gene_ids = valid_pubchem["Gene_id"].tolist()
-    # find the number of clusters where the value is []
-    count = 0
-    for key, value in clusters.items():
-        if value == []:
-            count += 1
-    logger.info("Number of clusters with no members: {}", count)
-    # loop over the clusters_cluster_parsed.csv lines and if the clusters value is [] delete the lines till the next Cluster line
-    with open("../clusters_cluster_parsed.csv", "r", encoding="utf-8") as f:
+    proteins = [line for line in lines if line.startswith(">")]
+    logger.info("Number of proteins in PUBCHEM_FASTA: {}", len(proteins))
+
+    # Find out the number of gene ids i have left
+    with open("../new_clusters_cluster_parsed.csv", "r", encoding="utf-8") as f:
         lines = f.readlines()
     new_lines = []
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-        new_lines.append(line)
-        if line.startswith("Cluster"):
-            tmp = line.split("Cluster")[1].split(":")[0].strip()
-            if tmp in clusters and clusters[tmp] == []:
-                i += 1
-                while i < len(lines) and not lines[i].startswith("Cluster"):
-                    i += 1
-                # delete the last item in the new_lines list
-                new_lines.pop()
-            elif tmp not in gene_ids:
-                new_lines.pop()
-                i += 1
-            else:
-                new_lines.append(line)
-                i += 1
+    for line in lines:
+        if line.startswith("Cluster") or "|" in line:
+            continue
         else:
-            new_lines.append(line)
-            i += 1
-    # write the new lines to a new file
-    with open("new_clusters_cluster_parsed.csv", "w", encoding="utf-8") as f:
-        f.writelines(new_lines)
-"""
+            new_lines.append(line.strip())
+    # find length of new_lines
+    logger.info("Length of new_lines: {}", len(new_lines))
+    logger.info("new_lines: {}", new_lines)

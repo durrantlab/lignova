@@ -1,6 +1,7 @@
 r" Implemtnation for a wrapper to use lignova for validation"
-from typing import TextIO, Union
+from typing import TextIO
 
+import ast
 import glob
 import os
 import shutil
@@ -28,11 +29,9 @@ from lignova.structure.utils import (
 
 
 @profile
-def clean_cluster_files(
-    file_path: str, delim: list = ["[", "]"]
-):  # NOTE:change this delim when dealing with filtered to ( and )
+def find_cluster_reps(file_path: str, delim: str = ":"):
     """
-    This function takes a file containing a list of PDB IDs and returns a list of PDB IDs.
+    This function takes the mmseqs cluster file and returns the representative PDB IDs.
     Parameters
     ----------
     file_path : str
@@ -47,31 +46,32 @@ def clean_cluster_files(
     with open(file_path, "r", encoding="utf-8") as file:
         pdb_ids = []
         for line in file:
-            if line.startswith("Cluster: []"):
+            if line.startswith("Cluster "):
+                logger.debug(line.split(delim)[1].rstrip())
+                if "|" in line.split(delim)[1].rstrip():
+                    # split the line by _ and get the first element
+                    cluster_id = line.split(delim)[1].rstrip().split("_")[0]
+                    cluster_id = cluster_id.split("|")[0]
+                    cluster_id = cluster_id.strip()
+                    pdb_ids.append(cluster_id)
+                else:
+                    cluster_id = line.split(delim)[1].rstrip()
+                    cluster_id = ast.literal_eval(cluster_id)
+                    pdb_ids.extend(cluster_id)
+            else:
                 continue
-            if line.startswith("Cluster:"):
-                cluster_id = (
-                    line.split(":")[1]
-                    .strip()
-                    .replace(delim[0], "")
-                    .replace(delim[1], "")
-                    .replace("\n", "")
-                )
-                pdb_ids.extend(cluster_id.split(", "))
         pdb_ids = [x for x in pdb_ids if x not in (" ", "''")]
         return pdb_ids
 
 
 @profile
-def get_coordinates(
-    pdb_ids: Union[str, list], work_dir: str, limit: Union[None, int] = 500
-):
+def get_coordinates(pdb_ids: str | list, work_dir: str, limit: None | int = 500):
     """
     This function takes a list of PDB IDs and downloads the PDB files to a specified directory
     if they pass the validation test. (no mutation, has ligand, no covalent bond, x-ray structures,)
     Parameters
     ----------
-    pdb_ids : Union[str,list]
+    pdb_ids : str|list
         A list of PDB IDs or a single PDB ids to be downloaded
     work_dir : str
         The working directory where the PDB files will be downloaded.
@@ -117,7 +117,7 @@ def get_coordinates(
 
 @profile
 def prep_structure(
-    input_dir: str, output_dir: str, pdb_id: Union[str, list, None], limit: int = 50
+    input_dir: str, output_dir: str, pdb_id: str | list | None, limit: int = 50
 ):
     """
     This function takes a PDB ID and a ligand ID and returns a Structure object.
@@ -127,7 +127,7 @@ def prep_structure(
         The directory containing the PDB files.
     output_dir : str
         The directory to save the prepped files.
-    pdb_id : Union[str,list]
+    pdb_id : str|list
         The PDB ID to be prepped. If None, all the PDB files in the input directory will be prepped.
     limit : int, optional
         The number of PDB files to be prepped. The default is 50.
@@ -250,7 +250,7 @@ def prep_structure(
 
 @profile
 def dock_ligand(
-    input_dir: str, output_dir: str, pdb: [str, list, None] = None, limit: int = 10
+    input_dir: str, output_dir: str, pdb: str | list | None = None, limit: int = 10
 ):
     """
     Dock the ligand to the protein
@@ -370,7 +370,7 @@ def dock_ligand(
 
 
 def combind_pose_selction(
-    input_dir: str, output_dir: str, pdb: Union[str, list, None], limit: int = 50
+    input_dir: str, output_dir: str, pdb: str | list | None, limit: int = 50
 ):
     """
     Combine the poses from the docking
@@ -558,14 +558,14 @@ def combind_pose_selction(
                         os.remove(i)
     failed_list = list(set(failed_list))
     # Write failed list to a file
-    with open(os.path.join(output_dir, "failed.txt"), "w") as file:
+    with open(os.path.join(output_dir, "failed.txt"), "w", encoding="utf-8") as file:
         file.write("\n".join(failed_list))
 
 
 def calculate_rmsd_mda(
     input_dir: str,
     output_dir: str,
-    pdb: Union[str, list, None],
+    pdb: str | list | None,
     reference_dir: str,
     limit: int,
 ):
@@ -639,7 +639,7 @@ def calculate_rmsd_schrodinger(
     dock_ligand_dir: str,
     reference_dir: str,
     csv_file_name: str,
-    number: Union[str, int] = 3,
+    number: str | int = 3,
 ):
     """
     Calculate the rmsd between the docked ligand and the reference ligand using rmsd_schrodinger
@@ -649,7 +649,7 @@ def calculate_rmsd_schrodinger(
         The directory containing the docked ligand files
     reference_dir : str
         The directory containing the reference ligand files
-    number : Union[str,int]
+    number : str|int
         The number of ligand to calculate the rmsd for, by default 3
     csv_file_name : str
         The name of the csv file to save the rmsd values
@@ -724,7 +724,7 @@ def calc_rmsd_obabel(
     dock_ligand_dir: str,
     reference_dir: str,
     csv_file_name: str,
-    number: Union[str, int] = 3,
+    number: str | int = 3,
 ):
     """
     Calculate the rmsd between the docked ligand and the reference ligand using rmsd_obabel
@@ -734,7 +734,7 @@ def calc_rmsd_obabel(
         The directory containing the docked ligand files
     reference_dir : str
         The directory containing the reference ligand files
-    number : Union[str,int]
+    number : str or int
         The number of ligand to calculate the rmsd for, by default 3
     csv_file_name : str
         The name of the csv file to save the rmsd values
@@ -829,7 +829,6 @@ def calc_rmsd_obabel(
             protein, ligand = separate_protein_ligand(
                 os.path.join(context.write_dir, reference_ligand.file_id + ".pdb"),
                 remove_water=False,
-                reference="/home/mma121/PubChem_small/try_schrodinger/valid.csv",
             )
             print(ligand)
             write_mda_universe(
@@ -849,7 +848,8 @@ def calc_rmsd_obabel(
                 mode="split_ligand",
                 outfile_name=reference_ligand.file_id+"_split_lig.maegz",
             )
-            convert_to_pdb(os.path.join(context.write_dir,reference_ligand.file_id+ "_split_lig.maegz"),context=context)
+            convert_to_pdb(os.path.join(context.write_dir,reference_ligand.file_id+ "_split_lig.maegz")
+            ,context=context)
             """
         dock_lig_pdb = DockedLigand(
             os.path.join(context.write_dir, docked_ligand.file_id + "_split_lig.pdb")
@@ -886,7 +886,7 @@ def calc_rmsd_spyrmsd(
     dock_ligand_dir: str,
     reference_dir: str,
     csv_file_name: str,
-    number: Union[str, int] = 3,
+    number: str | int = 3,
 ):
     """
     Calculate the rmsd between the docked ligand and the reference ligand using rmsd_obabel
@@ -896,10 +896,11 @@ def calc_rmsd_spyrmsd(
         The directory containing the docked ligand files
     reference_dir : str
         The directory containing the reference ligand files
-    number : Union[str,int]
+    number : str |int
         The number of ligand to calculate the rmsd for, by default 3
     csv_file_name : str
-        The Path of the csv file to save the rmsd values,it will be created in the dock_ligand_dir if the path not exists
+        The Path of the csv file to save the rmsd values,
+        it will be created in the dock_ligand_dir if the path not exists
     """
     done = []
     failed = []
@@ -1069,12 +1070,6 @@ def calc_rmsd_spyrmsd(
             failed.append(docked_ligand.file_id)
             continue
 
-        """
-        except Exception as e:
-            logger.error(str(e))
-            failed.append(reference_ligand.file_id)
-            continue
-        """
         print(values)
         # load the values dictionary to a dataframe
         current_rmsd_df = pd.DataFrame(values.items(), columns=["file", "RMSD"])
@@ -1108,80 +1103,14 @@ def calc_rmsd_spyrmsd(
 
 
 if __name__ == "__main__":
-    RAW_FILE = "/home/mma121/PubChem_small/try_schrodinger/clusters.csv"
-    FILTERED_FILE = (
-        "/home/mma121/PubChem_small/try_schrodinger/new_clusters_pdb_postfilter.csv"
-    )
-    RAW_INPUT_DIR = "/home/mma121/PubChem_small/representatives"
+    CLUSTER_FILE = "../new_clusters_cluster_parsed.csv"
+    reps = find_cluster_reps(CLUSTER_FILE)
+    logger.info(f"Found {len(reps)} representatives")
+    RAW_INPUT_DIR = "../../representatives"
     PREPPED_DIR = "./prepped"
     DOCKED_DIR = "./docked"
     COMBIND_DIR = "./combind"
-    get_coordinates(["6n2w", "1xoi"], "./trial")
-    prep_structure("./trial", "./prepped", ["6n2w.pdb", "1xoi.pdb"])
-    dock_ligand("./prepped", "./trial")
-    calc_rmsd_spyrmsd("./trial", "./prepped", "rmsd.csv")
-    """
-    # get the names of the files in the docked directory
-    files = glob.glob(os.path.join("water/" + DOCKED_DIR, "*.maegz"))
-    # remove the _lig_docking_pv.maegz from the file names
-    pdb_ids = []
-    for file in files:
-        file_name = file.split("_lig")[0]
-        file_name = os.path.basename(file_name)
-        pdb_ids.append(file_name)
-    logger.info(f"{len(pdb_ids)} were found in the input directory")
-    # find the pdb_ids in the valid.csv file
-    valid_df = pd.read_csv("../valid.csv")
-    valid = valid_df["PDB"].str.lower()
-    valid = valid.to_list()
-    found_pdb = [x for x in valid if x in pdb_ids]
-    logger.info(f"{len(found_pdb)} were found in the valid.csv file")
-    # use the valid list to get the columns from the csv file
-    # valid_lig = valid_df[valid_df["PDB"].str.lower().isin(found_pdb)]
-    # add .pdb and /RAW_INPUT_DIR to the found_pdb list
-    raw_files = [x + ".pdb" for x in found_pdb]
-    all_pdb_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.pdb"))
-    # find the intersection between the raw_files and all_pdb_files
-    pdb_files = [x for x in all_pdb_files if os.path.basename(x) in raw_files]
-    logger.info(f"{len(pdb_files)} were found in the input directory")
-    cif_files = glob.glob(os.path.join(RAW_INPUT_DIR, "*.cif"))
-    prep_structure(
-        RAW_INPUT_DIR,
-        PREPPED_DIR,
-        pdb_id=found_pdb,
-    )
-    dock_ligand(PREPPED_DIR, DOCKED_DIR, pdb=found_pdb, limit=400)
-    combind_pose_selction(DOCKED_DIR, COMBIND_DIR, pdb=found_pdb, limit=400)
-    files = glob.glob(COMBIND_DIR + "/*.maegz")
-    print(files)
-    if not os.path.exists("./parsed_docked"):
-        os.mkdir("./parsed_docked")
-    # copy files in the combind directory to the parsed directory
-    for file in files:
-        print(os.path.basename(file))
-        if not os.path.exists(os.path.join("./parsed_docked", os.path.basename(file))):
-            shutil.copy(file, "./parsed_docked")
-    # iterate over this files list and split the names using _lig keeping the first part in one line
-    pdb_ids = []
-    for file in files:
-        file_name = file.split("_lig")[0]
-        file_name = os.path.basename(file_name)
-        pdb_ids.append(file_name)
-    logger.info(f"{len(pdb_ids)} were found in the input directory")
-    reference_file = glob.glob(os.path.join(PREPPED_DIR, "*_protein_prepared.mae"))
-    # make a reference directory called ./parsed and copy the reference files to it
-    if not os.path.exists("./parsed"):
-        os.mkdir("./parsed")
-    for ref in reference_file:
-        if not os.path.exists(os.path.join("./parsed", ref)):
-            shutil.copy(ref, "./parsed")
-    calc_rmsd_spyrmsd("./parsed_docked", "./parsed", "rmsd.csv")
-    # prep_prot(RAW_INPUT_DIR, "./parsed", pdb_ids)
-    calculate_rmsd_mda(
-        COMBIND_DIR,
-        "./parsed",
-        pdb=None,
-        reference_dir=RAW_INPUT_DIR,
-        limit=400,
-    )
-    """
+    get_coordinates(reps, RAW_INPUT_DIR, limit=6000)
+    # prep_structure("./trial", "./prepped", ["6n2w.pdb", "1xoi.pdb"])
+    # dock_ligand("./prepped", "./trial")
+    # calc_rmsd_spyrmsd("./trial", "./prepped", "rmsd.csv")

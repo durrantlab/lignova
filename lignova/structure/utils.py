@@ -12,7 +12,7 @@ from ..docking.contexts import ProteinContext
 from .editing import *
 
 
-def is_xray_structure(pdb: Union[str, TextIO]) -> bool:
+def is_xray_structure(pdb: str | TextIO) -> bool:
     """
     Check if the PDB file was generated from X-ray diffraction data.
 
@@ -53,10 +53,10 @@ def is_xray_structure(pdb: Union[str, TextIO]) -> bool:
 
 
 def separate_protein_ligand(
-    pdb: Union[str, TextIO],
-    reference: Union[str, TextIO] = None,
-    remove_water: Union[bool, None] = True,
-    keep_het_chain: Union[str, list, None] = None,
+    pdb: str | TextIO,
+    reference: str | TextIO = None,
+    remove_water: bool | None = True,
+    keep_het_chain: str | list | None = None,
 ) -> tuple["Protein", "Ligand"]:
     r"""Separate protein and ligand from a PDB file.
     Parameters
@@ -152,22 +152,6 @@ def separate_protein_ligand(
         if check_ligand(pdb, reference) is False:
             logger.warning("The ligand is not the same as the reference file.")
             # get the chains from the reference file
-            """
-            # select the chains from the pdb f
-            reference = pd.read_csv(reference)
-            print(os.path.basename(pdb).split("_")[0].upper())
-            reference = reference[
-                reference["PDB"] == os.path.basename(pdb).split("_")[0].upper()
-            ]
-            print(reference)
-            reference_chain = reference["CHAIN"].values
-            print(reference_chain)
-            reference_ligand = list(set(reference["LIGAND"].values))
-            print(reference_ligand[0])
-            #ast.literal_eval(reference_ligand[0])
-            if len(reference_chain) > 1:
-                reference_chain = reference_chain[0]
-            """
             selection = select_chains(pdb_obj, chains=reference_chain)
             ligand = select_residues(selection, residues=reference_ligand)
         ligand = select_residues(pdb_obj, residues=reference_ligand)
@@ -184,19 +168,12 @@ def separate_protein_ligand(
             "Crystallographic Water molecules are not removed from the protein structure."
         )
         logger.debug(ligand.resnames.all())
-        """
-        for i in list(set(hetatm.resnames)):
-            if len(i) != 3:
-                hetatm = remove_residues(hetatm, residues=[i])
-        selection_2 = select_chains(pdb_obj, chains=hetatm.segments.segids)
-        return selection_2.atoms, ligand
-        """
     protein = remove_hetatoms(pdb_obj)
     save_prot = merge_universes([protein, ligand])
     return save_prot, actual_ligand
 
 
-def check_ligand(pdb: Union[str, TextIO], reference: Union[str, TextIO]) -> bool:
+def check_ligand(pdb: str | TextIO, reference: str | TextIO) -> bool:
     r"""Compare the ligand in the PDB file with the ligand in the reference file.
     Parameters
     ----------
@@ -260,7 +237,7 @@ def get_rcsb_data(pdb_id: str):
     return data
 
 
-def find_resolution(pdb_id: str, rcsb_data: Iterable[dict, None] = None) -> float:
+def find_resolution(pdb_id: str, rcsb_data: dict | None = None) -> float:
     r"""Find the resolution of a PDB file using the RCSB API.
     Parameters
     ----------
@@ -282,7 +259,7 @@ def find_resolution(pdb_id: str, rcsb_data: Iterable[dict, None] = None) -> floa
     return float(resolution[0])
 
 
-def has_covalent_bonds(pdb: str, rcsb_data: Iterable[dict, None] = None) -> bool:
+def has_covalent_bonds(pdb: str, rcsb_data: dict | None = None) -> bool:
     r"""Check if the PDB file has covalent bonds or not.
     Parameters
     ----------
@@ -306,7 +283,7 @@ def has_covalent_bonds(pdb: str, rcsb_data: Iterable[dict, None] = None) -> bool
         return False
 
 
-def has_ligands(pdb: str, rcsb_data: Iterable[dict, None] = None) -> bool:
+def has_ligands(pdb: str, rcsb_data: dict | None = None) -> bool:
     r"""Check if the PDB file has ligands or not.
     Parameters
     ----------
@@ -331,7 +308,7 @@ def has_ligands(pdb: str, rcsb_data: Iterable[dict, None] = None) -> bool:
         return False
 
 
-def get_entity_ids(pdb_id: str, rcsb_data: Iterable[dict, None] = None) -> dict:
+def get_entity_ids(pdb_id: str, rcsb_data: dict | None = None) -> dict[str, list[str]]:
     r"""Get the entity IDs for a given PDB ID using the RCSB API.
     Parameters
     ----------
@@ -396,7 +373,7 @@ def pdb_has_mutation(pdb_id: str) -> bool:
         return True
 
 
-def get_nonpolymer_names(pdb_id: str, rcsb_data: Iterable[dict, None] = None) -> list:
+def get_nonpolymer_names(pdb_id: str, rcsb_data: dict | None = None) -> list:
     r"""Get the names of the non-polymer entities in a PDB file.
     Parameters
     ----------
@@ -431,7 +408,7 @@ def get_nonpolymer_names(pdb_id: str, rcsb_data: Iterable[dict, None] = None) ->
 
 
 def validate_ligands(
-    pdb: str, impurities: [list, None] = ProteinContext.get_current().impurities
+    pdb: str, impurities: list | None = ProteinContext.get_current().impurities
 ) -> bool:
     r"""Validate the ligands from pdb id using the impurities list.
     Parameters
