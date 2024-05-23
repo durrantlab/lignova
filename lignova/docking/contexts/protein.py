@@ -1,8 +1,6 @@
 r""" Implementation of the ProteinContext class containing the configuration for PDB/protein validation."""
 from typing import Optional
 
-from loguru import logger
-
 _default_glide_context: "Optional[ProteinContext]" = None
 
 DEFAULT_IMPURITIES = [

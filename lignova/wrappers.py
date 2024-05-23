@@ -1,9 +1,8 @@
 r" Implemtnation for a wrapper to use lignova for validation"
-from typing import TextIO
-
 import ast
 import glob
 import os
+import random
 import shutil
 
 import pandas as pd
@@ -21,7 +20,6 @@ from lignova.structure.editing import write_mda_universe
 from lignova.structure.ligand import DockedLigand, Ligand
 from lignova.structure.protein import Protein
 from lignova.structure.utils import (
-    is_xray_structure,
     separate_protein_ligand,
     validate_ligands,
     validate_pdb,
@@ -47,7 +45,6 @@ def find_cluster_reps(file_path: str, delim: str = ":"):
         pdb_ids = []
         for line in file:
             if line.startswith("Cluster "):
-                logger.debug(line.split(delim)[1].rstrip())
                 if "|" in line.split(delim)[1].rstrip():
                     # split the line by _ and get the first element
                     cluster_id = line.split(delim)[1].rstrip().split("_")[0]
@@ -60,8 +57,8 @@ def find_cluster_reps(file_path: str, delim: str = ":"):
                     pdb_ids.extend(cluster_id)
             else:
                 continue
-        pdb_ids = [x for x in pdb_ids if x not in (" ", "''")]
-        return pdb_ids
+    pdb_ids = [x for x in pdb_ids if x not in (" ", "''")]
+    return pdb_ids
 
 
 @profile
@@ -117,7 +114,7 @@ def get_coordinates(pdb_ids: str | list, work_dir: str, limit: None | int = 500)
 
 @profile
 def prep_structure(
-    input_dir: str, output_dir: str, pdb_id: str | list | None, limit: int = 50
+    input_dir: str, output_dir: str, pdb_id: str | list | None = None, limit: int = 50
 ):
     """
     This function takes a PDB ID and a ligand ID and returns a Structure object.
@@ -127,7 +124,7 @@ def prep_structure(
         The directory containing the PDB files.
     output_dir : str
         The directory to save the prepped files.
-    pdb_id : str|list
+    pdb_id : str|list| None
         The PDB ID to be prepped. If None, all the PDB files in the input directory will be prepped.
     limit : int, optional
         The number of PDB files to be prepped. The default is 50.
@@ -162,6 +159,8 @@ def prep_structure(
     limit = min(len(pdb_id), limit)
     for pdb_file in pdb_id[:limit]:
         ids = os.path.basename(pdb_file).split(".")[0]
+        if "_lig" in ids:
+            continue
         if not validate_ligands(ids) and not validate_pdb(ids):
             logger.warning(f"{ids} failed validation test")
             failed.append(ids)
@@ -1106,11 +1105,61 @@ if __name__ == "__main__":
     CLUSTER_FILE = "../new_clusters_cluster_parsed.csv"
     reps = find_cluster_reps(CLUSTER_FILE)
     logger.info(f"Found {len(reps)} representatives")
-    RAW_INPUT_DIR = "../../representatives"
-    PREPPED_DIR = "./prepped"
-    DOCKED_DIR = "./docked"
-    COMBIND_DIR = "./combind"
-    get_coordinates(reps, RAW_INPUT_DIR, limit=6000)
-    # prep_structure("./trial", "./prepped", ["6n2w.pdb", "1xoi.pdb"])
+    RAW_INPUT_DIR = "../representatives"
+    PREPPED_DIR = "./water/prepped"
+    DOCKED_DIR = "./water/docked"
+    COMBIND_DIR = "./water/combind"
+    NO_WAT_REB = "./nt_water/representatives"
+    NO_WAT_PREPPED_DIR = "./nt_water/prepped"
+    NO_WAT_DOCKED_DIR = "./nt_water/docked"
+    NO_WAT_COMBIND_DIR = ",/nt_water/combind"
+    """
+    #read the cluster file and get the representatives by using lines starting with Cluster and splitting them by cluster and :
+    reps = []
+    with open(CLUSTER_FILE, "r") as file:
+        for line in file:
+            if line.startswith("Cluster"):
+                reps.append(line.split('Cluster')[1].split(":")[1].strip())
+    logger.info(f"Found {len(reps)} representatives")
+    #choose random 50 representatives that will be the same every time the code is run using random.seed
+    random.seed(0)
+    reps = random.sample(reps, 50)
+    logger.info(reps)
+    logger.info(f"Found {len(reps)} representatives")
+    valid = pd.read_csv("../valid_pubchem.csv")
+    valid = valid[valid['PDB'].isin(reps)]
+    logger.info(valid['Gene_id'].values)
+    logger.info(f"Found {len(valid)} valid representatives")
+
+    #save the gene_ids to a file
+    with open("../validation_gene_ids.txt", "w",encoding='utf-8') as file:
+        for gene_id in valid['Gene_id'].values:
+            logger.info(gene_id)
+            file.write(str(gene_id) + "\n")
+    #Choose the random pdbs 
+    validation_pdbs = []
+    for rep in reps:
+        rep = ast.literal_eval(rep)
+        logger.info(rep)
+        validation_pdbs.append(random.choice(rep))
+        logger.info(validation_pdbs)
+    logger.info(validation_pdbs)
+    logger.info(f"Found {len(validation_pdbs)} validation pdbs")
+    with open("../validation_pdbs.txt", "w",encoding='utf-8') as file:
+        file.write("\n".join(validation_pdbs))
+    """
+    validation_pdbs = []
+    # read the validation_pdbs.txt file and get the pdb ids
+    with open("../validation_pdbs.txt", "r") as file:
+        validation_pdbs = file.read().splitlines()
+    logger.info(validation_pdbs)
+    get_coordinates(validation_pdbs, NO_WAT_REB)
+    prep_structure(NO_WAT_REB, NO_WAT_PREPPED_DIR)
+    dock_ligand(NO_WAT_PREPPED_DIR, NO_WAT_DOCKED_DIR)
+    calculate_rmsd_mda(NO_WAT_DOCKED_DIR, NO_WAT_COMBIND_DIR, "rmsd.csv")
+
+    # get_coordinates(reps, RAW_INPUT_DIR, limit=6000)
+    # get_coordinates('1xoi', RAW_INPUT_DIR)
+    # prep_structure(RAW_INPUT_DIR, "./prepped", ["1xoi.pdb"])
     # dock_ligand("./prepped", "./trial")
     # calc_rmsd_spyrmsd("./trial", "./prepped", "rmsd.csv")

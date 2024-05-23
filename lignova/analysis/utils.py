@@ -37,14 +37,14 @@ def interconvert_mae_sdf(
         return
     logger.info(os.path.splitext(test_file)[1])
     if os.path.splitext(test_file)[1] == ".sdf":
-        logger.info(f"Input file is in SDF format.Converting to MAE format.")
+        logger.info("Input file is in SDF format.Converting to MAE format.")
         fileformat = "-isdf"
         outformat = "-omae"
     elif (
         os.path.splitext(test_file)[1] == ".maegz"
         or os.path.splitext(test_file)[1] == ".mae"
     ):
-        logger.info(f"Input file is in MAE format.Converting to SDF format.")
+        logger.info("Input file is in MAE format.Converting to SDF format.")
         fileformat = "-imae"
         outformat = "-osdf"
     else:

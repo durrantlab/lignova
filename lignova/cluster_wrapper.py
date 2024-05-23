@@ -96,42 +96,6 @@ def pdb_validations(csvfilenames: str) -> dict:
     return new_file
 
 
-def binding_moad_validation(csvfilenames: str) -> list:
-    r"""Validate the PDB files for the proteins in the CSV file.
-    Parameters
-    ----------
-    csvfilenames : str
-        Path to the CSV file containing the protein ids.
-    """
-    start_time = time.time()
-    # check if the CSV file exists
-    if not os.path.exists(csvfilenames):
-        raise FileNotFoundError(f"CSV file {csvfilenames} not found.")
-    # read the CSV file using pandas
-    protein_ids = pd.read_csv(csvfilenames)
-    # get the PDB column
-    pdb_ids = protein_ids["pdb_id"]
-    # make a list to store the valid pdb ids
-    valid_pdb_ids = []
-    # iterate over the PDB ids and validate them
-    for pdb_id in pdb_ids:
-        # validate the pdb id
-        if len(get_rcsb_data(pdb_id)) == 0:
-            logger.error(f"Invalid PDB id {pdb_id}")
-            continue
-        if not validate_pdb(pdb_id) or not validate_ligands(pdb_id):
-            logger.error(f"Invalid PDB id {pdb_id}")
-            continue
-        logger.info(f"Valid PDB id {pdb_id}")
-        valid_pdb_ids.append(pdb_id)
-
-        if time.time() - start_time > 60 * 60:
-            df = pd.DataFrame(valid_pdb_ids, columns=["pdb_id"])
-            df.to_csv("valid_binding_moad.csv", index=False)
-            start_time = time.time()
-    return valid_pdb_ids
-
-
 def fasta_filter(
     fasta: str | TextIO,
     outfile_name: str,
@@ -178,8 +142,8 @@ def fasta_filter(
                 new_fasta.append(line)
 
     # Write the new fasta file
-    with open(outfile_name, "w", encoding="utf-8") as f:
-        f.writelines(new_fasta)
+    with open(outfile_name, "w", encoding="utf-8") as file:
+        file.writelines(new_fasta)
 
 
 def clean_cluster_files(file_path: str, delim: list = ["[", "]"]) -> list:
@@ -215,65 +179,35 @@ def clean_cluster_files(file_path: str, delim: list = ["[", "]"]) -> list:
 
 
 if __name__ == "__main__":
-    BIND_MOAD_FASTA = "/home/mma121/PubChem_small/try_schrodinger/MOAD_sequences.fasta"
-    PUBCHEM_FASTA = "/home/mma121/PubChem_small/try_schrodinger/PUBCHEM_HDF5.fasta"
+    PUBCHEM_FASTA = "../PUBCHEM_HDF5.fasta"
     """
-
     #Parse the fasta files to get the protein ids
-    bind_moad_protein_ids = fasta_parser(BIND_MOAD_FASTA, delimiter="|")
     PubChem_protein_ids = fasta_parser(PUBCHEM_FASTA)
-    logger.info("Number of proteins in bind MOAD: {}", len(bind_moad_protein_ids))
     logger.info("Number of proteins in PubChem: {}", len(PubChem_protein_ids))
-    # save the bind MOAD protein ids to a file as csv file
-    #split the protein ids by _ and take the first element
-    bind_moad_protein_ids = [protein_id.split("_")[0] for protein_id in bind_moad_protein_ids]
-    df = pd.DataFrame(bind_moad_protein_ids, columns=["pdb_id"])
-    df.to_csv("bind_moad_protein_ids.csv", index=False)
-    
-
-    # validate the PDB files for both the bind MOAD and PubChem proteins
-    new_file = binding_moad_validation(
-        "/home/mma121/PubChem_small/try_schrodinger/bind_moad_protein_ids.csv"
-    )
-    # save the new file which is a list to a csv file
-    df = pd.DataFrame(new_file, columns=["pdb_id"])
-    df.to_csv("../valid_binding_moad.csv", index=False)
-    valid_pubchem = pdb_validations( "/home/mma121/PubChem_small/try_schrodinger/gene-id_with_pdb.csv")
+    valid_pubchem = pdb_validations( "../gene-id_with_pdb.csv")
     df = pd.DataFrame(valid_pubchem.items(), columns=['Gene_id','PDB'])
     df.to_csv("../valid_pubchem.csv", index=False)
+    """
 
-
-    # Delete the invalid Binding MOAD proteins from the fasta file and save the new fasta file
-    fasta_filter(
-        BIND_MOAD_FASTA, "../valid_binding_moad.csv", outfile_name="../valid_MOAD.fasta"
-    )
-    NEW_BINDING_MOAD_FASTA = "../valid_MOAD.fasta"
-   
-
-    # cluster the valid Binding MOAD fasta file and the PubChem fasta file
+    # cluster the PubChem fasta file
     mmseqs_cluster(
         PUBCHEM_FASTA,
-        NEW_BINDING_MOAD_FASTA,
         outfile_name_suffix="../clusters",
         tmp_dir="../tmp",
     )
     # parse the cluster file
-    mmseqs_parser("../clusters_rep_seq.fasta.tsv", save=True)
+    mmseqs_parser("../clusters_cluster.tsv", save=True)
 
-    """
     valid_pubchem = pd.read_csv("../valid_pubchem.csv")
     with open("../clusters_cluster_parsed.csv", "r", encoding="utf-8") as clust_file:
         lines = clust_file.readlines()
     i = 0
     new_lines = []
     count = len(clean_cluster_files("../clusters_cluster_parsed.csv"))
-    pubcount = 2247
     while i < len(lines):
         line = lines[i]
         if line.startswith("Cluster"):
             cluster_id = line.split("Cluster")[1].split(":")[0].strip()
-            logger.debug(cluster_id)
-            logger.info(f"Cluster {cluster_id}")
             # check if this cluster_id has | in it and if so skip it
             if "|" in cluster_id:
                 logger.info(f"Cluster {cluster_id} has | in it")
@@ -289,17 +223,10 @@ if __name__ == "__main__":
                 ].tolist()[0]
                 != "[]"
             ):
-                logger.info(f"Cluster {cluster_id} has a valid PDB ID")
-                logger.debug(
-                    valid_pubchem[valid_pubchem["Gene_id"] == int(cluster_id)][
-                        "PDB"
-                    ].tolist()
-                )
                 # new line is Cluster with the value of the PDB column in the valid_pubchem file
                 new_line = f"Cluster : {ast.literal_eval(valid_pubchem[valid_pubchem['Gene_id']==int(cluster_id)]['PDB'].to_list()[0])}\n"
                 new_lines.append(new_line)
                 i += 1
-                pubcount -= 1
                 continue
             else:
                 tmp_rep = cluster_id
@@ -353,6 +280,7 @@ if __name__ == "__main__":
     # NOTE:EXTRA SANITY CHECK
     with open("../new_clusters_cluster_parsed.csv", "r", encoding="utf-8") as f:
         lines = f.readlines()
+    """
     # exclude the clusters with only | in their members
     new_lines = []
     i = 0
@@ -393,7 +321,6 @@ if __name__ == "__main__":
         "Number of clusters with no PubChem members: {}",
         len([line for line in lines if line.startswith("Cluster")]),
     )
-
     # compare lines list and new lines list and delete common lines between them
     with open("../new_clusters_cluster_parsed.csv", "r", encoding="utf-8") as f:
         lines = f.readlines()
@@ -407,9 +334,8 @@ if __name__ == "__main__":
         "Number of clusters with only PubChem members: {}",
         len([line for line in pubchem_only if line.startswith("Cluster")]),
     )
-
+    """
     logger.info("Number of PubChem clusters: {}", count)
-    logger.info("Number of invalid PubChem clusters: {}", pubcount)
     # find the number of representatives in the new_clusters_cluster_parsed.csv file
     representatives = clean_cluster_files("../new_clusters_cluster_parsed.csv")
     logger.info("Number of representatives after parsing: {}", len(representatives))

@@ -1,5 +1,5 @@
 r""" Utility functions for structure module. """
-from typing import TextIO, Union
+from typing import TextIO
 
 import os
 
@@ -228,7 +228,7 @@ def get_rcsb_data(pdb_id: str):
     """
 
     url = f"https://data.rcsb.org/rest/v1/core/entry/{pdb_id}"
-    response = requests.get(url)
+    response = requests.get(url, timeout=5)
     # check if the request was successful
     if response.status_code != 200:
         logger.error(f"Error fetching data for PDB ID {pdb_id}: {response.status_code}")
@@ -355,7 +355,7 @@ def pdb_has_mutation(pdb_id: str) -> bool:
     url = f"https://data.rcsb.org/rest/v1/core/polymer_entity/{pdb_id}/"
     list_of_mutations = []
     if len(polymer_ids) == 1:
-        response = requests.get(url + polymer_ids[0])
+        response = requests.get(url + polymer_ids[0], timeout=5)
         data = response.json()
         if data["entity_poly"]["rcsb_mutation_count"] > 0:
             return True
@@ -363,7 +363,7 @@ def pdb_has_mutation(pdb_id: str) -> bool:
             return False
     else:
         for entity_id in polymer_ids:
-            response = requests.get(url + entity_id)
+            response = requests.get(url + entity_id, timeout=5)
             data = response.json()
             list_of_mutations.append(data["entity_poly"]["rcsb_mutation_count"])
     # check if the values of the list are 0
@@ -397,7 +397,7 @@ def get_nonpolymer_names(pdb_id: str, rcsb_data: dict | None = None) -> list:
     nonpolymer_names = []
     url = f"https://data.rcsb.org/rest/v1/core/nonpolymer_entity/{pdb_id}/"
     for entity_id in nonpolymer_ids:
-        response = requests.get(url + entity_id)
+        response = requests.get(url + entity_id, timeout=10)
         data = response.json()
         nonpolymer_names.append(data["pdbx_entity_nonpoly"]["comp_id"])
     # exclude ligands with names less than 3 characters from the list
