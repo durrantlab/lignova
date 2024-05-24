@@ -1113,30 +1113,30 @@ if __name__ == "__main__":
     NO_WAT_PREPPED_DIR = "./nt_water/prepped"
     NO_WAT_DOCKED_DIR = "./nt_water/docked"
     NO_WAT_COMBIND_DIR = ",/nt_water/combind"
-    """
-    #read the cluster file and get the representatives by using lines starting with Cluster and splitting them by cluster and :
+
+    # read the cluster file and get the representatives by using lines starting with Cluster and splitting them by cluster and :
     reps = []
     with open(CLUSTER_FILE, "r") as file:
         for line in file:
             if line.startswith("Cluster"):
-                reps.append(line.split('Cluster')[1].split(":")[1].strip())
+                reps.append(line.split("Cluster")[1].split(":")[1].strip())
     logger.info(f"Found {len(reps)} representatives")
-    #choose random 50 representatives that will be the same every time the code is run using random.seed
+    # choose random 50 representatives that will be the same every time the code is run using random.seed
     random.seed(0)
     reps = random.sample(reps, 50)
     logger.info(reps)
     logger.info(f"Found {len(reps)} representatives")
     valid = pd.read_csv("../valid_pubchem.csv")
-    valid = valid[valid['PDB'].isin(reps)]
-    logger.info(valid['Gene_id'].values)
+    valid = valid[valid["PDB"].isin(reps)]
+    logger.info(valid["Gene_id"].values)
     logger.info(f"Found {len(valid)} valid representatives")
 
-    #save the gene_ids to a file
-    with open("../validation_gene_ids.txt", "w",encoding='utf-8') as file:
-        for gene_id in valid['Gene_id'].values:
+    # save the gene_ids to a file
+    with open("../validation_gene_ids.txt", "w", encoding="utf-8") as file:
+        for gene_id in valid["Gene_id"].values:
             logger.info(gene_id)
             file.write(str(gene_id) + "\n")
-    #Choose the random pdbs 
+    # Choose the random pdbs
     validation_pdbs = []
     for rep in reps:
         rep = ast.literal_eval(rep)
@@ -1145,9 +1145,9 @@ if __name__ == "__main__":
         logger.info(validation_pdbs)
     logger.info(validation_pdbs)
     logger.info(f"Found {len(validation_pdbs)} validation pdbs")
-    with open("../validation_pdbs.txt", "w",encoding='utf-8') as file:
+    with open("../validation_pdbs.txt", "w", encoding="utf-8") as file:
         file.write("\n".join(validation_pdbs))
-    """
+
     validation_pdbs = []
     # read the validation_pdbs.txt file and get the pdb ids
     with open("../validation_pdbs.txt", "r") as file:
@@ -1156,7 +1156,7 @@ if __name__ == "__main__":
     get_coordinates(validation_pdbs, NO_WAT_REB)
     prep_structure(NO_WAT_REB, NO_WAT_PREPPED_DIR)
     dock_ligand(NO_WAT_PREPPED_DIR, NO_WAT_DOCKED_DIR)
-    calculate_rmsd_mda(NO_WAT_DOCKED_DIR, NO_WAT_COMBIND_DIR, "rmsd.csv")
+    calc_rmsd_spyrmsd(NO_WAT_DOCKED_DIR, NO_WAT_COMBIND_DIR, "rmsd.csv")
 
     # get_coordinates(reps, RAW_INPUT_DIR, limit=6000)
     # get_coordinates('1xoi', RAW_INPUT_DIR)
