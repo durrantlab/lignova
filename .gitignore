@@ -638,3 +638,5 @@ parsed_docked/
 tests/tmp/*
 !tests/tmp/.gitkeep
 trial/
+water/
+nt_water/
