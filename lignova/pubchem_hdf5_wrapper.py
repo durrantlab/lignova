@@ -90,12 +90,12 @@ def complete_hdf5(hdf5_file_path: str):
                     if "smiles" not in hdf5_file[f"/aids/{aid}/cids/{cids}"]:
                         logger.info(f"Processing CID {cids} for AID {aid}.")
                         pubchem = PubChemAPI()
-                        data = pubchem.get_smiles(
+                        data = pubchem.get_cids_info(
                             int(cids), ["IsomericSMILES", "ExactMass"]
                         )
-                        smiles = data["smiles"]
+                        smiles = data["IsomericSMILES"]
                         logger.info(f"Smiles: {smiles}")
-                        mass = data["mass"]
+                        mass = data["ExactMass"]
                         logger.info(f"Exact mass: {mass}")
                         # Save smiles to the HDF5 file
                         hdf5_file[f"/aids/{aid}/cids/{cids}"].create_dataset(
@@ -113,47 +113,12 @@ def complete_hdf5(hdf5_file_path: str):
                             shape=(1,),
                         )
                         # add a timeout to avoid being blocked by the server
-                        time.sleep(5)
+                        time.sleep(3)
 
     except Exception as e:
         logger.error(f"Error occurred: {e}")
     else:
         logger.info("HDF5 file completed.")
-
-    """
-    # open hdf5 file
-    hdf5_file = h5py.File(hdf5_file_path, "r+")
-    for aid in list(hdf5_file["/aids"].keys()):
-        for cids in list(hdf5_file["/aids/" + str(aid) + "/cids"].keys()):
-            if (
-                "smiles"
-                not in hdf5_file["/aids/" + str(aid) + "/cids/" + str(cids)].keys()
-            ):
-                # get smiles from pubchem
-                logger.info(f"Processing CID {cids} for AID {aid}.")
-                data = get_smiles(int(cids), ["IsomericSMILES", "ExactMass"])
-                smiles = data["smiles"]
-                logger.info(f"Smiles: {smiles}")
-                mass = data["mass"]
-                logger.info(f"Exact mass: {mass}")
-                # save smiles to the hdf5 file
-                hdf5_file["/aids/" + str(aid) + "/cids/" + str(cids)].create_dataset(
-                    "smiles",
-                    data=smiles,
-                    dtype=h5py.special_dtype(vlen=str),
-                    maxshape=(None,),
-                    shape=(1,),
-                )
-                hdf5_file["/aids/" + str(aid) + "/cids/" + str(cids)].create_dataset(
-                    "exact_mass",
-                    data=mass,
-                    dtype="float64",
-                    maxshape=(None,),
-                    shape=(1,),
-                )
-    hdf5_file.close()
-    logger.info("HDF5 file completed.")
-"""
 
 
 if __name__ == "__main__":

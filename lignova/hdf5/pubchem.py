@@ -28,7 +28,7 @@ class PubChemAPI:
         self.api_key = api_key
         self.format = format
 
-    def get_smiles(self, cid: int, properties: list) -> dict:
+    def get_cids_info(self, cid: int, properties: list) -> dict:
         r"""Get compound information from PubChem API.
 
         Parameters:
@@ -53,53 +53,60 @@ class PubChemAPI:
             response = response.json()
             logger.debug(f"Retrieved compound information for CID {cid}.")
             logger.debug(f"Properties: {response['PropertyTable']['Properties']}")
-            if (
-                "IsomericSMILES" in response["PropertyTable"]["Properties"][0]
-                and "ExactMass" in response["PropertyTable"]["Properties"][0]
-            ):
-                logger.debug(f"Retrieved compound information for CID {cid}.")
-                logger.debug(
-                    f"SMILES: {response['PropertyTable']['Properties'][0]['IsomericSMILES']}"
-                )
-                logger.debug(
-                    f"Mass: {response['PropertyTable']['Properties'][0]['ExactMass']}"
-                )
-                # save smiles and mass to a dictionary
-                smiles = response["PropertyTable"]["Properties"][0]["IsomericSMILES"]
-                mass = response["PropertyTable"]["Properties"][0]["ExactMass"]
-                return {"smiles": smiles, "mass": mass}
+            compound_info = {}
+            if "Properties" in response["PropertyTable"]:
+                properties_data = response["PropertyTable"]["Properties"][0]
+                for prop in properties:
+                    if str(prop) in properties_data:
+                        logger.debug(f"{prop}: {properties_data[str(prop)]}")
+                        compound_info[str(prop)] = properties_data[str(prop)]
+                    else:
+                        logger.warning(
+                            f"Failed to find {prop} information for CID {cid}."
+                        )
+                        compound_info[str(prop)] = ""
+                return compound_info
             else:
-                logger.warning(f"Failed to find smiles information for CID {cid}.")
+                logger.warning(f"Failed to find properties information for CID {cid}.")
                 return {}
         else:
             logger.warning(f"Failed to retrieve compound information for CID {cid}.")
             return {}
 
-    def get_binding_affinity(self, cid: int) -> dict:
+    def get_binding_affinity(self, aid: int, cid: list[int]) -> dict:
         r"""Get binding affinity information from PubChem API.
 
         Parameters:
         ----------
             aid : int
                 PubChem Assay ID.
-
+            cid : List[int]
+                List of PubChem Compound IDs.
         Returns:
         ----------
             dict: Binding affinity information.
         """
-        url = f"{self.api_key}/compound/cid/{str(cid)}/assaysummary/{self.format}"
+        url = f"{self.api_key}/assay/aid/{str(aid)}/concise/{self.format}"
         response = requests.get(url)
         data = response.json()
         if response.status_code == 200:
             if "Table" in data and "Row" in data["Table"]:
                 columns = data["Table"]["Columns"]["Column"]
                 rows = data["Table"]["Row"]
-
                 # Extract columns and rows with "Activity" in the column name
                 activity_data = {}
-                for column, row in zip(columns, rows[0]["Cell"]):
-                    if "Activity" in column:
-                        activity_data[column] = row
+                for row in rows:
+                    cid_value = None
+                    cid_data = {}
+                    for column, cell in zip(columns, row["Cell"]):
+                        if column == "CID":
+                            logger.debug(f"Extracting CID value: {cell}")
+                            cid_value = int(cell)
+                        if "Activity" in column:
+                            cid_data[column] = cell
+                            logger.debug(cid_data)
+                    if cid_value in cid:
+                        activity_data[cid_value] = cid_data
                 return activity_data
             else:
                 logger.warning(
