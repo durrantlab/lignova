@@ -14,7 +14,7 @@ from rdkit.ML.Cluster import Butina
 class TanimotoClustering:
     r"""Tanimoto clustering algorithm."""
 
-    def __init__(self, similarity_threshold: float):
+    def __init__(self, similarity_threshold: float = 0.2):
         r"""Initialize the Tanimoto clustering algorithm.
         parameters:
         ----------
@@ -63,35 +63,56 @@ class TanimotoClustering:
         else:
             return DataStructs.TanimotoSimilarity(mol1, mol2)
 
-    def cluster_tanimoto(self, tanimoto_score: Dict[str, float]) -> List[List[str]]:
-        r"""Cluster the SMILES based on Tanimoto similarity.
+    def cal_distance(
+        self, tanimoto_score: list[list[float]] | list[float]
+    ) -> List[float]:
+        r"""Calculate the distance between two fingerprints.
+        parameters:
+        ----------
+            tanimoto_score: list[list[float]]
+                List of Tanimoto similarity scores.
+        returns:
+        ----------
+            float: Distance.
+        """
+        # knowing that the tanimoto_score is a list of list of similarity scores
+        # we will calculate the distance between the fingerprints using the formula 1 - score
+        distance = []
+        if isinstance(tanimoto_score[0], float):
+            for i in range(len(tanimoto_score)):
+                distance.append(1 - tanimoto_score[i])
+            return distance
+        for i in range(len(tanimoto_score)):
+            tmp = []
+            for j in range(len(tanimoto_score[i])):
+                tmp.append(1 - tanimoto_score[i][j])
+            distance.extend(tmp)
+        logger.debug(f"Distances: {distance}")
+        return distance
+
+    def cluster_tanimoto(
+        self, tanimoto_score: list[list[float]], smiles: list[str]
+    ) -> List[List[str]]:
+        r"""Cluster the SMILES based on Tanimoto similarity using butina algorithm.
         parameters:
         ----------
             tanimoto_score: Dict[str, float]
                 Dictionary of SMILES or compound identifiers and their Tanimoto similarity scores.
+            smiles: List[str]
+                List of SMILES or compound identifiers.
         returns:
         ----------
             List[List[str]]: Clustered .
         """
         clusters = []
-        for key, value in tanimoto_score.items():
-            if not clusters:
-                clusters.append([key])
-            else:
-                found = False
-                for cluster in clusters:
-                    for member in cluster:
-                        if (
-                            self.tanimoto_similarity(
-                                self.get_morgan_fingerprint(key),
-                                self.get_morgan_fingerprint(member),
-                            )
-                            > self.similarity_threshold
-                        ):
-                            cluster.append(key)
-                            found = True
-                            break
-                    if found:
-                        break
-                if not found:
-                    clusters.append([key])
+        # calculate the distance between the fingerprints using cal_distance
+        distance = self.cal_distance(tanimoto_score)
+        clusters = Butina.ClusterData(
+            distance, len(smiles), self.similarity_threshold, isDistData=True
+        )
+        logger.info(f"Number of clusters: {len(clusters)}")
+        logger.debug(f"Clusters: {clusters}")
+        # convert the clusters to smiles
+        clusters = [[smiles[i] for i in cluster] for cluster in clusters]
+        logger.info(f"Clusters: {clusters}")
+        return clusters
