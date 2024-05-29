@@ -142,3 +142,16 @@ def test_validate_pdb():
 def test_validate_ligands():
     assert not validate_ligands(context_protein_6Oav["id"])
     assert validate_ligands("4uxl")
+
+
+def test_get_smiles():
+    protein = Protein()
+    protein._load_from_pdb_id(
+        pdb_id="6OAV",
+        write=True,
+        write_path=context_protein_6Oav["write_dir"] + "/6oav.pdb",
+    )
+    smiles = get_smiles(protein._pdb_file_path)
+    assert isinstance(smiles, dict)
+    assert smiles["smiles"] == "c1ccc(cc1)NC(=O)n2c(nc(n2)Nc3ccc(cc3)C#N)N"
+    assert smiles["stereo_smiles"] == "c1ccc(cc1)NC(=O)n2c(nc(n2)Nc3ccc(cc3)C#N)N"
