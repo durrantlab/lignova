@@ -2,8 +2,12 @@ import os
 
 import h5py
 import numpy as np
+import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 from loguru import logger
 
+from lignova.hdf5.parquet import ParquetParser
 from lignova.hdf5.parser import HDF5Parser
 
 # Ensures we execute from file directory (for relative paths).
@@ -16,6 +20,8 @@ context_hdf5_parser = {
 file_path = os.path.join(
     context_hdf5_parser["write_dir"], context_hdf5_parser["test_file"]
 )
+
+parquet_file_path = os.path.join(context_hdf5_parser["write_dir"], "test.parquet")
 
 
 def prep_dirs():
@@ -39,7 +45,7 @@ def test_create():
 def test_write():
     parser = HDF5Parser(file_path)
     data = np.array([1, 2, 3])
-    parser.write("dataset", data)
+    parser.write(data, "dataset")
     assert os.path.exists(file_path)
     assert np.array_equal(parser.read("dataset"), data)
 
@@ -75,3 +81,102 @@ def test_find_file_stats():
     with open(statfile, "r") as f:
         stats = f.read()
     assert "File Path: " in stats
+
+
+def test_parquet_create():
+    parser = ParquetParser(parquet_file_path)
+    parser.create()
+    assert os.path.exists(parquet_file_path)
+
+
+def test_parquet_write():
+    parser = ParquetParser(parquet_file_path)
+    # Define the schema for the nested structure
+    schema = pa.schema(
+        [
+            ("id", pa.int64()),
+            ("name", pa.string()),
+            (
+                "attributes",
+                pa.struct(
+                    [
+                        ("age", pa.int64()),
+                        (
+                            "address",
+                            pa.struct(
+                                [
+                                    ("street", pa.string()),
+                                    ("city", pa.string()),
+                                    ("zip", pa.int64()),
+                                ]
+                            ),
+                        ),
+                    ]
+                ),
+            ),
+        ]
+    )
+    data = [
+        {
+            "id": 2,
+            "name": "Jane Smith",
+            "attributes": {
+                "age": 25,
+                "address": {
+                    "street": "456 Maple Ave",
+                    "city": "Othertown",
+                    "zip": 67890,
+                },
+            },
+        },
+    ]
+    parser.write(pd.DataFrame(data), schema)
+    assert os.path.exists(parquet_file_path)
+    result = parser.read(schema=schema)
+    assert result.column_names == ["id", "name", "attributes"]
+    assert result.to_pandas().equals(pd.DataFrame(data))
+
+
+def test_parquet_read():
+    parser = ParquetParser(parquet_file_path)
+    schema = pa.schema(
+        [
+            ("id", pa.int64()),
+            ("name", pa.string()),
+            (
+                "attributes",
+                pa.struct(
+                    [
+                        ("age", pa.int64()),
+                        (
+                            "address",
+                            pa.struct(
+                                [
+                                    ("street", pa.string()),
+                                    ("city", pa.string()),
+                                    ("zip", pa.int64()),
+                                ]
+                            ),
+                        ),
+                    ]
+                ),
+            ),
+        ]
+    )
+    data = [
+        {
+            "id": 2,
+            "name": "Jane Smith",
+            "attributes": {
+                "age": 25,
+                "address": {
+                    "street": "456 Maple Ave",
+                    "city": "Othertown",
+                    "zip": 67890,
+                },
+            },
+        },
+    ]
+    result = parser.read(schema=schema)
+    assert result.column_names == ["id", "name", "attributes"]
+    assert result.to_pandas().equals(pd.DataFrame(data))

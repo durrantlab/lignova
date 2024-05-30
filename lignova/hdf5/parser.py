@@ -7,8 +7,10 @@ import h5py
 import numpy as np
 from loguru import logger
 
+from .files import FormatManager
 
-class HDF5Parser:
+
+class HDF5Parser(FormatManager):
     r"""Class for parsing HDF5 files.
 
     Parameters:
@@ -19,9 +21,6 @@ class HDF5Parser:
     ----------
         file_path (str): Path to the HDF5 file.
     """
-
-    def __init__(self, file_path: str):
-        self.file_path = file_path
 
     def create(self) -> None:
         r"""Create an HDF5 file."""
@@ -52,26 +51,28 @@ class HDF5Parser:
             raise e
         return data
 
-    def write(self, dataset: str, data: np.ndarray | List[np.ndarray]) -> None:
+    def write(self, data: np.ndarray | List[np.ndarray], data_scheme: str) -> None:
         r"""Write data to the HDF5 file.
 
         Parameters:
         ----------
-            dataset : str
-                Name of the dataset to write. If the dataset does not exist, it will be created.
             data : np.ndarray | List[np.ndarray]
                 Data to write. If the dataset already exists, the data will be appended to the dataset.
+            data_scheme : str
+                Name of the dataset to write. If the dataset does not exist, it will be created.
         """
         try:
             with h5py.File(self.file_path, "r+") as hdf5_file:
-                if dataset not in hdf5_file.keys():
-                    logger.warning(f"Dataset {dataset} not found. Creating dataset.")
-                    hdf5_file.create_dataset(dataset, data=data, shape=data.shape)
-                else:
-                    hdf5_file[dataset].resize(
-                        (hdf5_file[dataset].shape[0] + data.shape[0]), axis=0
+                if data_scheme not in hdf5_file.keys():
+                    logger.warning(
+                        f"Dataset {data_scheme} not found. Creating dataset."
                     )
-                    hdf5_file[dataset][-data.shape[0] :] = data
+                    hdf5_file.create_dataset(data_scheme, data=data, shape=data.shape)
+                else:
+                    hdf5_file[data_scheme].resize(
+                        (hdf5_file[data_scheme].shape[0] + data.shape[0]), axis=0
+                    )
+                    hdf5_file[data_scheme][-data.shape[0] :] = data
 
         except Exception as e:
             raise e
@@ -132,13 +133,15 @@ class HDF5Parser:
             raise FileNotFoundError(f"File {self.file_path} not found.")
         try:
             # save the file stats to a file in the same directory as the hdf5 file
-            with open(self.file_path.replace(".hdf5", "_stats.txt"), "w") as f:
+            with open(self.file_path.replace(".hdf5", "_stats.txt"), "w") as txt_file:
                 with h5py.File(self.file_path, "r") as hdf5_file:
-                    f.write(f"File Path: {self.file_path}\n")
-                    f.write(f"Dataset Count: {len(list(hdf5_file.keys()))}\n")
+                    txt_file.write(f"File Path: {self.file_path}\n")
+                    txt_file.write(f"Dataset Count: {len(list(hdf5_file.keys()))}\n")
                     for dataset in list(hdf5_file.keys()):
-                        f.write(f"Dataset: {dataset}\n")
-                        f.write(f"Attributes: {dict(hdf5_file[dataset].attrs)}\n")
-                        f.write(f"Shape: {hdf5_file[dataset].shape}\n")
+                        txt_file.write(f"Dataset: {dataset}\n")
+                        txt_file.write(
+                            f"Attributes: {dict(hdf5_file[dataset].attrs)}\n"
+                        )
+                        txt_file.write(f"Shape: {hdf5_file[dataset].shape}\n")
         except Exception as e:
             raise e
