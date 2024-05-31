@@ -23,10 +23,10 @@ class PubChemAPI:
     def __init__(
         self,
         api_key: str = "https://pubchem.ncbi.nlm.nih.gov/rest/pug",
-        format: str = "JSON",
+        retrieve_format: str = "JSON",
     ):
         self.api_key = api_key
-        self.format = format
+        self.retrieve_format = retrieve_format
 
     def get_cids_info(self, cid: int, properties: list) -> dict:
         r"""Get compound information from PubChem API.
@@ -47,7 +47,7 @@ class PubChemAPI:
             raise ValueError("No properties provided.")
         cids_str = str(cid)
         properties_str = ",".join(properties)
-        url = f"{self.api_key}/compound/cid/{str(cid)}/property/{properties_str}/{self.format}"
+        url = f"{self.api_key}/compound/cid/{str(cid)}/property/{properties_str}/{self.retrieve_format}"
         response = requests.get(url, timeout=10)
         if response.status_code == 200:
             response = response.json()
@@ -86,7 +86,7 @@ class PubChemAPI:
         ----------
             dict: Binding affinity information.
         """
-        url = f"{self.api_key}/assay/aid/{str(aid)}/concise/{self.format}"
+        url = f"{self.api_key}/assay/aid/{str(aid)}/concise/{self.retrieve_format}"
         response = requests.get(url)
         data = response.json()
         if response.status_code == 200:
