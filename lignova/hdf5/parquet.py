@@ -43,7 +43,7 @@ class ParquetParser(FormatManager):
         logger.info(f"Data read from Parquet file at {self.file_path}")
         return table
 
-    def write(self, data: pd.DataFrame, data_scheme: pa.Schema) -> None:
+    def write(self, data: pd.DataFrame | list, data_scheme: pa.Schema) -> None:
         r"""Write data to a Parquet file using PyArrow
 
         Parameters:
@@ -53,6 +53,13 @@ class ParquetParser(FormatManager):
             schema : pa.Schema
                 Schema of the data to write.
         """
+        if isinstance(data, list):
+            data = pd.DataFrame(data)
+        elif not isinstance(data, pd.DataFrame):
+            raise ValueError(
+                "Data must be a pandas DataFrame or a list of dictionaries"
+            )
+
         # Create a table from the pandas DataFrame
         table = pa.Table.from_pandas(data, schema=data_scheme)
         # Write the table to a Parquet file

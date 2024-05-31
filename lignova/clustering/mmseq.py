@@ -153,7 +153,7 @@ def mmseqs_parser(
             logger.info(f"Saving parsed clusters to {save_filename}")
         with open(save_filename, "w", encoding="utf-8") as file:
             for name, group in clusters.groupby("cluster"):
-                file.write(f"Cluster {name}:\n")
+                file.write(f"Cluster :{name}\n")
                 for member in group["members"]:
                     file.write(f"{member}\n")
     return clusters.groupby("cluster")

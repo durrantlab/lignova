@@ -6,9 +6,12 @@ import os
 import time
 
 import pandas as pd
+import pyarrow as pa
 from loguru import logger
 
 from lignova.clustering.mmseq import mmseqs_cluster, mmseqs_parser
+from lignova.hdf5.parquet import ParquetParser
+from lignova.hdf5.parser import HDF5Parser
 from lignova.structure.utils import get_rcsb_data, validate_ligands, validate_pdb
 
 
@@ -173,21 +176,166 @@ def clean_cluster_files(file_path: str, delim: list = ["[", "]"]) -> list:
                     .replace(delim[1], "")
                     .replace("\n", "")
                 )
-                pdb_ids.extend(cluster_id.split(", "))
+                pdb_ids.append(cluster_id.split(", "))
         pdb_ids = [x for x in pdb_ids if x not in (" ", "''")]
         return pdb_ids
 
 
-if __name__ == "__main__":
-    PUBCHEM_FASTA = "../PUBCHEM_HDF5.fasta"
+def make_cluster_file(new_file: str, cluster_csv: str) -> None:
+    r"""Make a new cluster file with the new lines.
+    Parameters
+    ----------
+    new_file : str
+        Path to the new cluster file. if the file not found, it will be created.
+    cluster_csv : str
+        Path to the cluster file.
     """
+    # check if the cluster file exists
+    if not os.path.exists(cluster_csv) or not cluster_csv.endswith(".csv"):
+        raise FileNotFoundError(
+            f"Cluster file {cluster_csv} not found or not a valid file."
+        )
+    # check the extension of the new file if it is h5 or parquet
+    if new_file.endswith(".h5") or new_file.endswith(".hdf5"):
+        if not os.path.exists(new_file):
+            hdf5 = HDF5Parser(new_file)
+            hdf5.create()
+    elif new_file.endswith(".parquet"):
+        if not os.path.exists(new_file):
+            parquet = ParquetParser(new_file)
+            parquet.create()
+
+        schema = pa.schema(
+            [
+                ("Cluster number", pa.int64()),
+                (
+                    "Represenatives",
+                    pa.struct(
+                        [
+                            ("name", pa.string()),
+                            (
+                                "attributes",
+                                pa.struct(
+                                    [
+                                        ("smiles", pa.list_(pa.string())),
+                                        ("cluster no", pa.list_(pa.int64())),
+                                    ]
+                                ),
+                            ),
+                        ]
+                    ),
+                ),
+                (
+                    "members",
+                    pa.list_(
+                        pa.struct(
+                            [
+                                ("name", pa.string()),
+                                (
+                                    "attributes",
+                                    pa.struct(
+                                        [
+                                            ("smiles", pa.string()),
+                                            ("cluster no", pa.int64()),
+                                        ]
+                                    ),
+                                ),
+                            ]
+                        )
+                    ),
+                ),
+            ]
+        )
+
+        # loop through the cluster file and write the data to the new file
+        with open(cluster_csv, "r", encoding="utf-8") as file:
+            lines = file.readlines()
+        cluster_number = 0
+        representatives = []
+        members = []
+        tmp = []
+        for line in lines:
+            if line.startswith("Cluster"):
+                if tmp != []:
+                    members.append(tmp)
+                    tmp = []
+                # split the line by : and append the value to the representatives
+                cluster_number += 1
+                representatives.append(line.split(":")[1].strip())
+                continue
+            else:
+                tmp.append(line.strip())
+        # write the data to the new file by
+        # making a dictionary following the schema and writing it to the new file
+        original_data_list = []
+        # loop through the representatives and members list
+        i = 1
+        for rep, mem in zip(representatives, members):
+            cluster_data = {
+                "Cluster number": i,
+                "Represenatives": {
+                    "name": rep,
+                    "attributes": {"smiles": [], "cluster no": []},
+                },
+                "members": {
+                    "name": mem,
+                    "attributes": {"smiles": [], "cluster no": []},
+                },
+            }
+            original_data_list.append(cluster_data)
+            i += 1
+        data = []
+        # Process each dictionary in the original data list
+        for idx, original_data in enumerate(original_data_list, start=1):
+            # Process representatives
+            rep_data = {
+                "name": original_data["Represenatives"]["name"],
+                "attributes": {
+                    key: value
+                    for key, value in original_data["Represenatives"][
+                        "attributes"
+                    ].items()
+                },
+            }
+            # Process members
+            members = original_data["members"]["name"]
+            mem_attributes = original_data["members"]["attributes"]
+            mem_data = []
+            for member, attributes in zip(members, zip(*mem_attributes.values())):
+                mem_data.append(
+                    {
+                        "name": member,
+                        "attributes": {
+                            key: [value]
+                            for key, value in zip(mem_attributes.keys(), attributes)
+                        },
+                    }
+                )
+
+            # Combine data
+            cluster_data = {
+                "Cluster number": idx,
+                "Represenatives": rep_data,
+                "members": mem_data,
+            }
+
+            data.append(cluster_data)
+        parquet = ParquetParser(new_file)
+        parquet.write(data, schema)
+
+    else:
+        raise ValueError(f"Invalid file extension {new_file}")
+
+
+if __name__ == "__main__":
+    """
+    PUBCHEM_FASTA = "../PUBCHEM_HDF5.fasta"
     #Parse the fasta files to get the protein ids
     PubChem_protein_ids = fasta_parser(PUBCHEM_FASTA)
     logger.info("Number of proteins in PubChem: {}", len(PubChem_protein_ids))
     valid_pubchem = pdb_validations( "../gene-id_with_pdb.csv")
     df = pd.DataFrame(valid_pubchem.items(), columns=['Gene_id','PDB'])
     df.to_csv("../valid_pubchem.csv", index=False)
-    """
 
     # cluster the PubChem fasta file
     mmseqs_cluster(
@@ -197,7 +345,6 @@ if __name__ == "__main__":
     )
     # parse the cluster file
     mmseqs_parser("../clusters_cluster.tsv", save=True)
-
     valid_pubchem = pd.read_csv("../valid_pubchem.csv")
     with open("../clusters_cluster_parsed.csv", "r", encoding="utf-8") as clust_file:
         lines = clust_file.readlines()
@@ -207,7 +354,7 @@ if __name__ == "__main__":
     while i < len(lines):
         line = lines[i]
         if line.startswith("Cluster"):
-            cluster_id = line.split("Cluster")[1].split(":")[0].strip()
+            cluster_id = line.split("Cluster")[1].split(":")[1].strip()
             # check if this cluster_id has | in it and if so skip it
             if "|" in cluster_id:
                 logger.info(f"Cluster {cluster_id} has | in it")
@@ -256,7 +403,6 @@ if __name__ == "__main__":
                         else:
                             continue
                     if tmp_rep != cluster_id:
-                        logger.info(f"new representative: {tmp_rep}")
                         if "|" not in tmp_rep:
                             tmp_rep = valid_pubchem[
                                 valid_pubchem["Gene_id"] == int(tmp_rep)
@@ -277,92 +423,21 @@ if __name__ == "__main__":
     # write the new_lines to a new file
     with open("../new_clusters_cluster_parsed.csv", "w", encoding="utf-8") as f:
         f.writelines(new_lines)
-    # NOTE:EXTRA SANITY CHECK
-    with open("../new_clusters_cluster_parsed.csv", "r", encoding="utf-8") as f:
-        lines = f.readlines()
-    """
-    # exclude the clusters with only | in their members
-    new_lines = []
-    i = 0
-    member = []
-    while i < len(lines):
-        # add the member list to new_lines
-        member = []
-        if lines[i].startswith("Cluster"):
-            cluster_id = lines[i].split(":")[1].strip()
-            if "|" in cluster_id:
-                new_lines.append(lines[i])
-                i += 1
-                # save line to new file
-                while i < len(lines) and not lines[i].startswith("Cluster"):
-                    # save the line in members list
-                    member.append(lines[i])
-                    i += 1
-                # check if all members have | in them and if so add members to new_lines
-                # and if not delete te last new_lines added
-                if all("|" in mem for mem in member):
-                    new_lines.extend(member)
-                else:
-                    new_lines.pop()
-                    continue
-            else:
-                i += 1
-                continue
-        else:
-            i += 1
-            continue
-
-    with open("../no_pubchem.csv", "w", encoding="utf-8") as f:
-        f.writelines(new_lines)
-    # count the number of clusters with no PubChem members
-    with open("../no_pubchem.csv", "r", encoding="utf-8") as f:
-        lines = f.readlines()
-    logger.info(
-        "Number of clusters with no PubChem members: {}",
-        len([line for line in lines if line.startswith("Cluster")]),
-    )
-    # compare lines list and new lines list and delete common lines between them
-    with open("../new_clusters_cluster_parsed.csv", "r", encoding="utf-8") as f:
-        lines = f.readlines()
-    with open("../no_pubchem.csv", "r", encoding="utf-8") as f:
-        new_lines = f.readlines()
-    # delete common lines between lines and new_lines
-    pubchem_only = [line for line in lines if line not in new_lines]
-    with open("../pubchem_only_clusters.csv", "w", encoding="utf-8") as f:
-        f.writelines(pubchem_only)
-    logger.info(
-        "Number of clusters with only PubChem members: {}",
-        len([line for line in pubchem_only if line.startswith("Cluster")]),
-    )
-    """
-    logger.info("Number of PubChem clusters: {}", count)
     # find the number of representatives in the new_clusters_cluster_parsed.csv file
-    representatives = clean_cluster_files("../new_clusters_cluster_parsed.csv")
-    logger.info("Number of representatives after parsing: {}", len(representatives))
+    with open("../clusters_cluster_parsed.csv", "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    clusters = [line for line in lines if line.startswith("Cluster")]
+    logger.info("Number of clusters before parsing: {}", len(clusters))
     # find the number of representatives using lines starting with Cluster
     with open("../new_clusters_cluster_parsed.csv", "r", encoding="utf-8") as f:
         lines = f.readlines()
     clusters = [line for line in lines if line.startswith("Cluster")]
-    logger.info("Number of clusters: {}", len(clusters))
-    # find the number of representatives in the original clusters_cluster_parsed.csv file
-    representatives = clean_cluster_files("../clusters_cluster_parsed.csv")
-    logger.info(
-        "Number of representatives in the original clusters_cluster_parsed.csv file: {}",
-        len(representatives),
-    )
-    # find the number of clusters in the original clusters_cluster_parsed.csv file
-    with open("../clusters_cluster_parsed.csv", "r", encoding="utf-8") as f:
-        lines = f.readlines()
-    clusters = [line for line in lines if line.startswith("Cluster")]
-    logger.info(
-        "Number of clusters in the original clusters_cluster_parsed.csv file: {}",
-        len(clusters),
-    )
+    logger.info("Number of clusters after parsing: {}", len(clusters))
     # find the number of proteins in ../PUBCHEM_HDF5.fasta file
     with open("../PUBCHEM_HDF5.fasta", "r", encoding="utf-8") as f:
         lines = f.readlines()
     proteins = [line for line in lines if line.startswith(">")]
-    logger.info("Number of proteins in PUBCHEM_FASTA: {}", len(proteins))
+    logger.info("Number of gene ids in PUBCHEM_FASTA: {}", len(proteins))
 
     # Find out the number of gene ids i have left
     with open("../new_clusters_cluster_parsed.csv", "r", encoding="utf-8") as f:
@@ -374,5 +449,52 @@ if __name__ == "__main__":
         else:
             new_lines.append(line.strip())
     # find length of new_lines
-    logger.info("Length of new_lines: {}", len(new_lines))
-    logger.info("new_lines: {}", new_lines)
+    logger.info("Length of gene ids after parsing: {}", len(new_lines))
+    """
+    make_cluster_file("trial.parquet", "../new_clusters_cluster_parsed.csv")
+    make_cluster_file("trial.hdf5", "../new_clusters_cluster_parsed.csv")
+    # read the parquet file
+    schema = pa.schema(
+        [
+            ("Cluster number", pa.int64()),
+            (
+                "Represenatives",
+                pa.struct(
+                    [
+                        ("name", pa.string()),
+                        (
+                            "attributes",
+                            pa.struct(
+                                [
+                                    ("smiles", pa.list_(pa.string())),
+                                    ("cluster no", pa.list_(pa.int64())),
+                                ]
+                            ),
+                        ),
+                    ]
+                ),
+            ),
+            (
+                "members",
+                pa.list_(
+                    pa.struct(
+                        [
+                            ("name", pa.string()),
+                            (
+                                "attributes",
+                                pa.struct(
+                                    [
+                                        ("smiles", pa.string()),
+                                        ("cluster no", pa.int64()),
+                                    ]
+                                ),
+                            ),
+                        ]
+                    )
+                ),
+            ),
+        ]
+    )
+    parquet = ParquetParser("trial.parquet")
+    data = parquet.read(schema)
+    logger.info(data[2])
