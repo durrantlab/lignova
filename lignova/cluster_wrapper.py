@@ -7,6 +7,7 @@ import time
 
 import pandas as pd
 import pyarrow as pa
+import pyarrow.parquet as pq
 from loguru import logger
 
 from lignova.clustering.mmseq import mmseqs_cluster, mmseqs_parser
@@ -181,6 +182,48 @@ def clean_cluster_files(file_path: str, delim: list = ["[", "]"]) -> list:
         return pdb_ids
 
 
+def get_clusters(cluster_file: str) -> dict[tuple | list]:
+    r"""Get the clusters from the cluster file.
+    Parameters
+    ----------
+    cluster_file : str
+        Path to the cluster file.
+    Returns
+    -------
+    dict
+        Dictionary of clusters. The keys are the cluster representative and the values are the cluster members.
+    """
+
+    # loop through the cluster file and write the data to the new file
+    with open(cluster_file, "r", encoding="utf-8") as file:
+        lines = file.readlines()
+    # find lines starting with Cluster and get the number of lines
+    clusters = [line for line in lines if line.startswith("Cluster")]
+    cluster_number = 0
+    members = []
+    representatives = []
+    tmp = []
+    cluster_dict = {}
+    for line in lines:
+        if line.startswith("Cluster"):
+            if tmp != []:
+                members.append(tmp)
+                cluster_dict[representatives[cluster_number - 1]] = members
+                tmp = []
+                members = []
+            # split the line by : and append the value to the representatives
+            cluster_number += 1
+            representatives.append(line.split(":")[1].strip())
+            continue
+        else:
+            tmp.append(line.strip())
+        # check if this is the last line and if so append the members to the members list in the cluster_dict
+        if line == lines[-1]:
+            members.append(tmp)
+            cluster_dict[representatives[cluster_number - 1]] = members
+    return cluster_dict
+
+
 def make_cluster_file(new_file: str, cluster_csv: str) -> None:
     r"""Make a new cluster file with the new lines.
     Parameters
@@ -201,10 +244,6 @@ def make_cluster_file(new_file: str, cluster_csv: str) -> None:
             hdf5 = HDF5Parser(new_file)
             hdf5.create()
     elif new_file.endswith(".parquet"):
-        if not os.path.exists(new_file):
-            parquet = ParquetParser(new_file)
-            parquet.create()
-
         schema = pa.schema(
             [
                 ("Cluster number", pa.int64()),
@@ -246,83 +285,44 @@ def make_cluster_file(new_file: str, cluster_csv: str) -> None:
                 ),
             ]
         )
-
-        # loop through the cluster file and write the data to the new file
-        with open(cluster_csv, "r", encoding="utf-8") as file:
-            lines = file.readlines()
-        cluster_number = 0
-        representatives = []
-        members = []
-        tmp = []
-        for line in lines:
-            if line.startswith("Cluster"):
-                if tmp != []:
-                    members.append(tmp)
-                    tmp = []
-                # split the line by : and append the value to the representatives
-                cluster_number += 1
-                representatives.append(line.split(":")[1].strip())
-                continue
-            else:
-                tmp.append(line.strip())
-        # write the data to the new file by
-        # making a dictionary following the schema and writing it to the new file
-        original_data_list = []
-        # loop through the representatives and members list
-        i = 1
-        for rep, mem in zip(representatives, members):
-            cluster_data = {
-                "Cluster number": i,
-                "Represenatives": {
-                    "name": rep,
-                    "attributes": {"smiles": [], "cluster no": []},
-                },
-                "members": {
-                    "name": mem,
-                    "attributes": {"smiles": [], "cluster no": []},
-                },
-            }
-            original_data_list.append(cluster_data)
-            i += 1
+        clusters = get_clusters(cluster_csv)
+        logger.info(f"Number of clusters: {len(clusters)}")
+        # Prepare data for the table
         data = []
-        # Process each dictionary in the original data list
-        for idx, original_data in enumerate(original_data_list, start=1):
-            # Process representatives
-            rep_data = {
-                "name": original_data["Represenatives"]["name"],
-                "attributes": {
-                    key: value
-                    for key, value in original_data["Represenatives"][
-                        "attributes"
-                    ].items()
-                },
+        for i, (rep_name, members) in enumerate(clusters.items(), start=1):
+            logger.info(f"Cluster {i}")
+            logger.debug(f"Representative: {rep_name}")
+            logger.debug(f"Members: {members}")
+            cluster_number = i  # Assign arbitrary cluster number
+            represenatives = {
+                "name": rep_name,
+                "attributes": {"smiles": [], "cluster no": []},
             }
-            # Process members
-            members = original_data["members"]["name"]
-            mem_attributes = original_data["members"]["attributes"]
-            mem_data = []
-            for member, attributes in zip(members, zip(*mem_attributes.values())):
-                mem_data.append(
-                    {
-                        "name": member,
-                        "attributes": {
-                            key: [value]
-                            for key, value in zip(mem_attributes.keys(), attributes)
-                        },
-                    }
-                )
-
-            # Combine data
-            cluster_data = {
-                "Cluster number": idx,
-                "Represenatives": rep_data,
-                "members": mem_data,
+            members_list = [
+                {
+                    "name": member,
+                    "attributes": {"smiles": "", "cluster no": None},
+                }
+                for member in members
+            ]
+            data.append((cluster_number, represenatives, members_list))
+        logger.debug(data[:2])
+        # make my data a list of dictionaries
+        data = [
+            {
+                "Cluster number": cluster_number,
+                "Represenatives": represenatives,
+                "members": members_list,
             }
-
-            data.append(cluster_data)
+            for cluster_number, represenatives, members_list in data
+        ]
+        data = pd.DataFrame(
+            data, columns=["Cluster number", "Represenatives", "members"]
+        )
         parquet = ParquetParser(new_file)
+        if not os.path.exists(new_file):
+            parquet.create()
         parquet.write(data, schema)
-
     else:
         raise ValueError(f"Invalid file extension {new_file}")
 
@@ -452,7 +452,6 @@ if __name__ == "__main__":
     logger.info("Length of gene ids after parsing: {}", len(new_lines))
     """
     make_cluster_file("trial.parquet", "../new_clusters_cluster_parsed.csv")
-    make_cluster_file("trial.hdf5", "../new_clusters_cluster_parsed.csv")
     # read the parquet file
     schema = pa.schema(
         [
@@ -497,4 +496,37 @@ if __name__ == "__main__":
     )
     parquet = ParquetParser("trial.parquet")
     data = parquet.read(schema)
-    logger.info(data[2])
+    table = pq.read_table(parquet.file_path)
+    # Convert the table to a Pandas DataFrame
+    df = table.to_pandas()
+    print(df.head())
+
+    # Filter rows where Cluster number is 1
+    cluster_1_df = df[df["Cluster number"] == 1]
+
+    # Extract the names in members
+    members_names = []
+    for members in cluster_1_df["members"]:
+        logger.info(members)
+        for member in members:
+            members_names.append(member["name"])
+
+    print(members_names)
+    """
+    #read the hdf5 file
+    HDF5_FILE = "../PubChem_data_edited_400k.hdf5"
+    hdf5 = HDF5Parser(HDF5_FILE)
+    aids = hdf5.read("aids")
+    aid_2_target={}
+    aid_2_cids = {}
+    logger.info(f"Number of aids: {len(aids)}")
+    for aid in aids:
+        logger.info(f"aid: {aid}")
+        gene_id = hdf5.read(f"aids/{aid}/targets_gene_id")
+        cids=hdf5.read(f"aids/{aid}/cids")
+        aid_2_target[aid] = gene_id[0]
+        aid_2_cids[aid] = cids
+        
+    logger.debug(f"Number of aids: {len(aid_2_target)}")
+    logger.debug(f'Number of cids: {len((aid_2_cids.values()))}')
+    """

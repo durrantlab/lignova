@@ -1,5 +1,7 @@
 r"""Implementation of the parquet class ."""
 
+from typing import Optional
+
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -19,9 +21,8 @@ class ParquetParser(FormatManager):
     def create(self) -> None:
         r"""Create a Parquet file using PyArrow."""
         # Create an empty parquet nested structure
-        schema = pa.schema([])
         # Create an empty table
-        table = pa.Table.from_pandas(pd.DataFrame(), schema=schema)
+        table = pa.Table.from_pandas(pd.DataFrame())
         # Write the table to a Parquet file
         pq.write_table(table, self.file_path)
         logger.info(f"Parquet file created at {self.file_path}")
@@ -54,12 +55,12 @@ class ParquetParser(FormatManager):
                 Schema of the data to write.
         """
         if isinstance(data, list):
-            data = pd.DataFrame(data)
+            logger.debug("Converting list of dictionaries to pandas DataFrame")
+            data = pd.DataFrame(data, columns=data_scheme.names)
         elif not isinstance(data, pd.DataFrame):
             raise ValueError(
                 "Data must be a pandas DataFrame or a list of dictionaries"
             )
-
         # Create a table from the pandas DataFrame
         table = pa.Table.from_pandas(data, schema=data_scheme)
         # Write the table to a Parquet file
