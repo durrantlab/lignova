@@ -32,7 +32,7 @@ class FormatManager(ABC):
     @abstractmethod
     def read(
         self,
-        dataset: Optional[str] = None,
+        path: Optional[str] = None,
         schema: Optional[pa.schema] = None,
         columns: Optional[Union[str, list]] = None,
     ) -> Iterable:

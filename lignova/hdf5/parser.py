@@ -26,30 +26,29 @@ class HDF5Parser(FormatManager):
         r"""Create an HDF5 file."""
         h5py.File(self.file_path, "w")
 
-    def read(self, dataset: str) -> np.ndarray | List[np.ndarray]:
-        r"""Read a dataset from the HDF5 file.
-
-        Parameters:
+    def read(self, path: str) -> np.ndarray | List[np.ndarray]:
+        r"""Read a dataset or a group from the HDF5 file.
+            Parameters:
         ----------
-            dataset:str
-                Path to the dataset to read.
-
+            path: str
+                Path to the dataset or group to read.
         Returns:
         ----------
-            np.ndarray | List[np.ndarray]: Data from the dataset.
+            np.ndarray | List[np.ndarray]: Data from the dataset or group.
         """
+
         # check if the file exists
         if not os.path.exists(self.file_path):
             raise FileNotFoundError(f"File {self.file_path} not found.")
         try:
             with h5py.File(self.file_path, "r") as hdf5_file:
-                logger.debug(f"File keys {list(hdf5_file.keys())}.")
-                if dataset not in list(hdf5_file.keys()):
-                    raise KeyError(f"Dataset {dataset} not found.")
-                data = hdf5_file[dataset][()]
+                data = hdf5_file[path]
+                if isinstance(data, h5py.Dataset):
+                    return data[()]
+                elif isinstance(data, h5py.Group):
+                    return list(data.keys())
         except Exception as e:
             raise e
-        return data
 
     def write(self, data: np.ndarray | List[np.ndarray], data_scheme: str) -> None:
         r"""Write data to the HDF5 file.
@@ -145,3 +144,25 @@ class HDF5Parser(FormatManager):
                         txt_file.write(f"Shape: {hdf5_file[dataset].shape}\n")
         except Exception as e:
             raise e
+
+    def is_path_valid(self, path):
+        r"""Check if the path exists in the HDF5 file.
+        Note that this is a recursive function. Thus takes a long time to run on large files.
+        Parameters:
+        ----------
+            path: str
+                Path to check in the HDF5 file.
+        Returns:
+        ----------
+            bool: True if the path exists in the HDF5 file, False otherwise.
+        """
+        valid_path = False
+
+        def valid_visitor(name, node):
+            nonlocal valid_path
+            if name == path:
+                valid_path = True
+
+        with h5py.File(self.file_path, "r") as hdf5_file:
+            hdf5_file.visititems(valid_visitor)
+            return valid_path
