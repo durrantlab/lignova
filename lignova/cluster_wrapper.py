@@ -249,19 +249,21 @@ def make_cluster_file(new_file: str, cluster_csv: str) -> None:
                 ("Cluster number", pa.int64()),
                 (
                     "Represenatives",
-                    pa.struct(
-                        [
-                            ("name", pa.string()),
-                            (
-                                "attributes",
-                                pa.struct(
-                                    [
-                                        ("smiles", pa.list_(pa.string())),
-                                        ("cluster no", pa.list_(pa.int64())),
-                                    ]
+                    pa.list_(
+                        pa.struct(
+                            [
+                                ("name", pa.string()),
+                                (
+                                    "attributes",
+                                    pa.struct(
+                                        [
+                                            ("smiles", pa.string()),
+                                            ("cluster no", pa.int64()),
+                                        ]
+                                    ),
                                 ),
-                            ),
-                        ]
+                            ]
+                        ),
                     ),
                 ),
                 (
@@ -294,20 +296,22 @@ def make_cluster_file(new_file: str, cluster_csv: str) -> None:
             logger.debug(f"Representative: {rep_name}")
             logger.debug(f"Members: {members}")
             cluster_number = i  # Assign arbitrary cluster number
-            represenatives = {
-                "name": rep_name,
-                "attributes": {"smiles": [], "cluster no": []},
-            }
+            # make the representatives list of dictionaries for every item in the rep_name
+            represenatives = [
+                {
+                    "name": rep,
+                    "attributes": {"smiles": "", "cluster no": None},
+                }
+                for rep in ast.literal_eval(rep_name)
+            ]
             members_list = [
                 {
                     "name": member,
                     "attributes": {"smiles": "", "cluster no": None},
                 }
-                for member in members
+                for member in members[0]
             ]
             data.append((cluster_number, represenatives, members_list))
-        logger.debug(data[:2])
-        # make my data a list of dictionaries
         data = [
             {
                 "Cluster number": cluster_number,
@@ -316,9 +320,6 @@ def make_cluster_file(new_file: str, cluster_csv: str) -> None:
             }
             for cluster_number, represenatives, members_list in data
         ]
-        data = pd.DataFrame(
-            data, columns=["Cluster number", "Represenatives", "members"]
-        )
         parquet = ParquetParser(new_file)
         if not os.path.exists(new_file):
             parquet.create()
@@ -451,26 +452,28 @@ if __name__ == "__main__":
     # find length of new_lines
     logger.info("Length of gene ids after parsing: {}", len(new_lines))
     """
-    make_cluster_file("trial.parquet", "../new_clusters_cluster_parsed.csv")
+    # make_cluster_file("../clustered_pubchem.parquet", "../new_clusters_cluster_parsed.csv")
     # read the parquet file
     schema = pa.schema(
         [
             ("Cluster number", pa.int64()),
             (
                 "Represenatives",
-                pa.struct(
-                    [
-                        ("name", pa.string()),
-                        (
-                            "attributes",
-                            pa.struct(
-                                [
-                                    ("smiles", pa.list_(pa.string())),
-                                    ("cluster no", pa.list_(pa.int64())),
-                                ]
+                pa.list_(
+                    pa.struct(
+                        [
+                            ("name", pa.string()),
+                            (
+                                "attributes",
+                                pa.struct(
+                                    [
+                                        ("smiles", pa.string()),
+                                        ("cluster no", pa.int64()),
+                                    ]
+                                ),
                             ),
-                        ),
-                    ]
+                        ]
+                    ),
                 ),
             ),
             (
@@ -494,7 +497,8 @@ if __name__ == "__main__":
             ),
         ]
     )
-    parquet = ParquetParser("trial.parquet")
+
+    parquet = ParquetParser("../clustered_pubchem.parquet")
     data = parquet.read(schema)
     table = pq.read_table(parquet.file_path)
     # Convert the table to a Pandas DataFrame
@@ -502,11 +506,18 @@ if __name__ == "__main__":
     print(df.head())
 
     # Filter rows where Cluster number is 1
+    cluster_10_df = df[df["Cluster number"] == 10]
     cluster_1_df = df[df["Cluster number"] == 1]
-
+    # get the names in the representatives
+    representatives_names = []
+    for representatives in cluster_1_df["Represenatives"]:
+        logger.info(representatives)
+        for representative in representatives:
+            representatives_names.append(representative["name"])
+    print(representatives_names)
     # Extract the names in members
     members_names = []
-    for members in cluster_1_df["members"]:
+    for members in cluster_10_df["members"]:
         logger.info(members)
         for member in members:
             members_names.append(member["name"])
@@ -524,7 +535,7 @@ if __name__ == "__main__":
         logger.info(f"aid: {aid}")
         gene_id = hdf5.read(f"aids/{aid}/targets_gene_id")
         cids=hdf5.read(f"aids/{aid}/cids")
-        aid_2_target[aid] = gene_id[0]
+        aid_2_target[gene_id[0]] = aid
         aid_2_cids[aid] = cids
         
     logger.debug(f"Number of aids: {len(aid_2_target)}")
