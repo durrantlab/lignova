@@ -7,6 +7,7 @@ import time
 
 import pandas as pd
 import pyarrow as pa
+import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 from loguru import logger
 
@@ -182,7 +183,7 @@ def clean_cluster_files(file_path: str, delim: list = ["[", "]"]) -> list:
         return pdb_ids
 
 
-def get_clusters(cluster_file: str) -> dict[tuple | list]:
+def get_protein_clusters(cluster_file: str) -> dict[tuple | list]:
     r"""Get the clusters from the cluster file.
     Parameters
     ----------
@@ -224,7 +225,8 @@ def get_clusters(cluster_file: str) -> dict[tuple | list]:
     return cluster_dict
 
 
-def make_cluster_file(new_file: str, cluster_csv: str) -> None:
+# NOTE:THIS FUNCTION IS ONLY IMPLEMENTED FOR PARQUET FILES
+def make_protein_cluster_file(new_file: str, cluster_csv: str) -> None:
     r"""Make a new cluster file with the new lines.
     Parameters
     ----------
@@ -247,79 +249,25 @@ def make_cluster_file(new_file: str, cluster_csv: str) -> None:
         schema = pa.schema(
             [
                 ("Cluster number", pa.int64()),
-                (
-                    "Represenatives",
-                    pa.list_(
-                        pa.struct(
-                            [
-                                ("name", pa.string()),
-                                (
-                                    "attributes",
-                                    pa.struct(
-                                        [
-                                            ("smiles", pa.string()),
-                                            ("cluster no", pa.int64()),
-                                        ]
-                                    ),
-                                ),
-                            ]
-                        ),
-                    ),
-                ),
-                (
-                    "members",
-                    pa.list_(
-                        pa.struct(
-                            [
-                                ("name", pa.string()),
-                                (
-                                    "attributes",
-                                    pa.struct(
-                                        [
-                                            ("smiles", pa.string()),
-                                            ("cluster no", pa.int64()),
-                                        ]
-                                    ),
-                                ),
-                            ]
-                        )
-                    ),
-                ),
+                ("Represenatives", pa.string()),
+                ("members", pa.string()),
+                ("member_compound", pa.list_(pa.string())),
             ]
         )
-        clusters = get_clusters(cluster_csv)
+        clusters = get_protein_clusters(cluster_csv)
         logger.info(f"Number of clusters: {len(clusters)}")
-        # Prepare data for the table
         data = []
-        for i, (rep_name, members) in enumerate(clusters.items(), start=1):
-            logger.info(f"Cluster {i}")
-            logger.debug(f"Representative: {rep_name}")
-            logger.debug(f"Members: {members}")
-            cluster_number = i  # Assign arbitrary cluster number
-            # make the representatives list of dictionaries for every item in the rep_name
-            represenatives = [
-                {
-                    "name": rep,
-                    "attributes": {"smiles": "", "cluster no": None},
-                }
-                for rep in ast.literal_eval(rep_name)
-            ]
-            members_list = [
-                {
-                    "name": member,
-                    "attributes": {"smiles": "", "cluster no": None},
-                }
-                for member in members[0]
-            ]
-            data.append((cluster_number, represenatives, members_list))
-        data = [
-            {
-                "Cluster number": cluster_number,
-                "Represenatives": represenatives,
-                "members": members_list,
-            }
-            for cluster_number, represenatives, members_list in data
-        ]
+        for cluster_number, (representatives, members_list) in enumerate(
+            clusters.items(), start=1
+        ):
+            for rep in ast.literal_eval(representatives):
+                for member in members_list[0]:
+                    data.append(
+                        (cluster_number, rep, member, [])
+                    )  # Add empty list for member_compound
+
+        logger.debug(data[:5])
+        logger.debug(data[25])
         parquet = ParquetParser(new_file)
         if not os.path.exists(new_file):
             parquet.create()
@@ -451,79 +399,6 @@ if __name__ == "__main__":
             new_lines.append(line.strip())
     # find length of new_lines
     logger.info("Length of gene ids after parsing: {}", len(new_lines))
-    """
-    # make_cluster_file("../clustered_pubchem.parquet", "../new_clusters_cluster_parsed.csv")
-    # read the parquet file
-    schema = pa.schema(
-        [
-            ("Cluster number", pa.int64()),
-            (
-                "Represenatives",
-                pa.list_(
-                    pa.struct(
-                        [
-                            ("name", pa.string()),
-                            (
-                                "attributes",
-                                pa.struct(
-                                    [
-                                        ("smiles", pa.string()),
-                                        ("cluster no", pa.int64()),
-                                    ]
-                                ),
-                            ),
-                        ]
-                    ),
-                ),
-            ),
-            (
-                "members",
-                pa.list_(
-                    pa.struct(
-                        [
-                            ("name", pa.string()),
-                            (
-                                "attributes",
-                                pa.struct(
-                                    [
-                                        ("smiles", pa.string()),
-                                        ("cluster no", pa.int64()),
-                                    ]
-                                ),
-                            ),
-                        ]
-                    )
-                ),
-            ),
-        ]
-    )
-
-    parquet = ParquetParser("../clustered_pubchem.parquet")
-    data = parquet.read(schema)
-    table = pq.read_table(parquet.file_path)
-    # Convert the table to a Pandas DataFrame
-    df = table.to_pandas()
-    print(df.head())
-
-    # Filter rows where Cluster number is 1
-    cluster_10_df = df[df["Cluster number"] == 10]
-    cluster_1_df = df[df["Cluster number"] == 1]
-    # get the names in the representatives
-    representatives_names = []
-    for representatives in cluster_1_df["Represenatives"]:
-        logger.info(representatives)
-        for representative in representatives:
-            representatives_names.append(representative["name"])
-    print(representatives_names)
-    # Extract the names in members
-    members_names = []
-    for members in cluster_10_df["members"]:
-        logger.info(members)
-        for member in members:
-            members_names.append(member["name"])
-
-    print(members_names)
-    """
     #read the hdf5 file
     HDF5_FILE = "../PubChem_data_edited_400k.hdf5"
     hdf5 = HDF5Parser(HDF5_FILE)
@@ -532,12 +407,47 @@ if __name__ == "__main__":
     aid_2_cids = {}
     logger.info(f"Number of aids: {len(aids)}")
     for aid in aids:
-        logger.info(f"aid: {aid}")
-        gene_id = hdf5.read(f"aids/{aid}/targets_gene_id")
-        cids=hdf5.read(f"aids/{aid}/cids")
-        aid_2_target[gene_id[0]] = aid
+        gene_id = hdf5.read(f"/aids/{aid}/targets_gene_id")
+        cids= hdf5.read(f"/aids/{aid}/cids")
+        logger.debug(f'cids: {cids}')
+        aid_2_target[aid] = gene_id[0]
         aid_2_cids[aid] = cids
-        
     logger.debug(f"Number of aids: {len(aid_2_target)}")
-    logger.debug(f'Number of cids: {len((aid_2_cids.values()))}')
+    logger.debug(f"Number of aids: {len(aid_2_cids)}")
+    #save this dictionary to a csv file
+    df = pd.DataFrame(aid_2_target.items(), columns=["AID", "Gene_id"])
+    df.to_csv("../aid_2_target.csv", index=False)
+    df = pd.DataFrame(aid_2_cids.items(), columns=["AID", "CIDs"])
+    df.to_csv("../aid_2_cids.csv", index=False)
+    #make_protein_cluster_file("../clustered_pubchem.parquet", "../new_clusters_cluster_parsed.csv")
+    # read the parquet file
     """
+    # NOTE:THIS IS A WORK IN PROGRESS
+    parquet = ParquetParser("../clustered_pubchem.parquet")
+    schema = pa.schema(
+        [
+            ("Cluster number", pa.int64()),
+            ("Represenatives", pa.string()),
+            ("members", pa.string()),
+            ("member_compound", pa.list_(pa.string())),
+        ]
+    )
+    data = parquet.read(schema)
+    logger.info(data)
+    logger.debug(data.scanner(filter=ds.field("Cluster number") == 1).to_table())
+    # get the members from the parquet file
+    members = data.scanner(columns=["members", "member_compound"]).to_table()
+    logger.info(members)
+    # read the csv files
+    aid_2_target = pd.read_csv("../aid_2_target.csv")
+    aid_2_cids = pd.read_csv("../aid_2_cids.csv")
+    # loop through the members and get the aids for each member
+    for gene_id, member in zip(members["members"], members["member_compound"]):
+        # get the aids for each gene_id
+        logger.debug(gene_id)
+        aids = aid_2_target[aid_2_target["Gene_id"].astype(str) == "25"]
+        logger.debug(aids)
+        member.extend(cids)
+        logger.debug(member)
+    # write the new members to the parquet file
+    parquet.write(data, schema)

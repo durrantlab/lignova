@@ -43,6 +43,7 @@ class HDF5Parser(FormatManager):
         try:
             with h5py.File(self.file_path, "r") as hdf5_file:
                 data = hdf5_file[path]
+                logger.debug(f"data: {data}")
                 if isinstance(data, h5py.Dataset):
                     return data[()]
                 elif isinstance(data, h5py.Group):

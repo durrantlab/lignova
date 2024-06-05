@@ -4,6 +4,7 @@ from typing import Optional
 
 import pandas as pd
 import pyarrow as pa
+import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 from loguru import logger
 
@@ -27,7 +28,7 @@ class ParquetParser(FormatManager):
         pq.write_table(table, self.file_path)
         logger.info(f"Parquet file created at {self.file_path}")
 
-    def read(self, schema: pa.schema, columns: str | list | None = None) -> pa.Table:
+    def read(self, schema: pa.schema) -> ds.Dataset:
         r"""Read a Parquet file using PyArrow.
         parameters:
         ----------
@@ -37,12 +38,12 @@ class ParquetParser(FormatManager):
                 Columns to read from the Parquet file.
         Returns:
         ----------
-            table: pyarrow.Table
+            dataset: pyarrow.Dataset
         """
         # Read the Parquet file
-        table = pq.read_table(self.file_path, schema=schema, columns=columns)
+        dataset = ds.dataset(self.file_path, format="parquet", schema=schema)
         logger.info(f"Data read from Parquet file at {self.file_path}")
-        return table
+        return dataset
 
     def write(self, data: pd.DataFrame | list, data_scheme: pa.Schema) -> None:
         r"""Write data to a Parquet file using PyArrow
