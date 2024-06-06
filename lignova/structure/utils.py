@@ -52,6 +52,59 @@ def is_xray_structure(pdb: str | TextIO) -> bool:
             return False
 
 
+from typing import TextIO
+
+import os
+
+import MDAnalysis as mda
+import pandas as pd
+import requests
+from loguru import logger
+
+from ..docking.contexts import ProteinContext
+from .editing import *
+
+
+def is_xray_structure(pdb: str | TextIO) -> bool:
+    """
+    Check if the PDB file was generated from X-ray diffraction data.
+
+    Parameters:
+    -----------
+    pdb : str or file-like
+        Path to the PDB file. or file-like object. or just pdb id
+    Returns:
+    --------
+    bool
+        True if the PDB was generated from X-ray data, False otherwise.
+    """
+    # check if the pdb is a file or a pdb id
+    if os.path.isfile(pdb) and os.path.exists(pdb):
+        with open(pdb, "r", encoding="utf-8") as file:
+            lines = file.readlines()
+        ext = os.path.splitext(pdb)[-1].lower()
+        if ext == ".pdb":
+            expdta_line = [line for line in lines if line.startswith("EXPDTA")]
+            if expdta_line:
+                return "X-RAY" in expdta_line[0]
+            else:
+                remark_200_line = [
+                    line for line in lines if line.startswith("REMARK 200")
+                ]
+                return bool(remark_200_line)
+        elif ext == ".cif":
+            # find the _exptl.method line
+            exptl_line = [line for line in lines if line.startswith("_exptl.method")]
+            if exptl_line:
+                return "X-RAY" in exptl_line[0]
+    elif isinstance(pdb, str):
+        raw_data = get_rcsb_data(pdb)
+        if raw_data["exptl"][0]["method"] == "X-RAY DIFFRACTION":
+            return True
+        else:
+            return False
+
+
 def separate_protein_ligand(
     pdb: str | TextIO,
     reference: str | TextIO = None,
@@ -63,6 +116,13 @@ def separate_protein_ligand(
     ----------
     pdb : str or file-like
         Path to the PDB file or file-like object.
+    reference : str or file-like
+        Path to the Reference file or file-like object.
+    remove_water : bool
+        Remove crystallographic waters from the protein structures. Default is True.
+    keep_het_chain : str or list
+        Chain(s) to keep their HETATM in the protein structure.
+        Default is None. If None, all HETATM will be kept.
     reference : str or file-like
         Path to the Reference file or file-like object.
     remove_water : bool
