@@ -26,26 +26,29 @@ class CombindContext:
     ):
         """Initialize the combind context."""
         self.work_dir = work_dir
-        # Check if Schrödinger is installed or the $SCHRODINGER environment variable is set
-        if not os.environ.get("SCHRODINGER") and schrodinger is None:
-            error_message = "Schrödinger is not installed"
-            "or the $SCHRODINGER environment variable is not set."
-            logger.critical(error_message)
-            raise NotImplementedError(error_message)
-
         self.schrodinger = schrodinger
+        self.command = command
+        self.schrodinger_env = schrodinger_env
+
+    def validate(self) -> bool:
+        """Validate the combind context parameters."""
+        # Check if Schrödinger is installed or the $SCHRODINGER environment variable is set
+        if not os.environ.get("SCHRODINGER") and self.schrodinger is None:
+            logger.critical(
+                "Schrödinger is not installed or the $SCHRODINGER environment variable is not set."
+            )
+            return False
+
         current_directory = os.getcwd()
-        logger.debug(f"Current working directory before: {os.getcwd()}")
-        os.chdir(work_dir)
-        if not os.path.isdir(schrodinger_env):
+        os.chdir(self.work_dir)
+        if not os.path.isdir(self.schrodinger_env):
             logger.debug(
                 "Schrodinger virtual environment is not found. Creating in work directory..."
             )
-            logger.debug(f"Current working directory after: {os.getcwd()}")
             command_run = [
                 self.schrodinger + "/run",
                 "schrodinger_virtualenv.py",
-                schrodinger_env,
+                self.schrodinger_env,
             ]
             process = subprocess.Popen(
                 command_run,
@@ -55,52 +58,53 @@ class CombindContext:
             stderr = process.communicate()
             if process.returncode == 0:
                 logger.info("Schrodinger virtual environment created.")
-                self.schrodinger_env = os.path.join(os.getcwd(), schrodinger_env)
+                self.schrodinger_env = os.path.join(os.getcwd(), self.schrodinger_env)
                 os.chdir(path=current_directory)
             else:
-                error_message = (
+                logger.critical(
                     f"Schrodinger virtual environment failed\n{stderr[1].decode()}."
                 )
-                logger.critical(error_message)
-                raise NotImplementedError(error_message)
+                return False
         else:
             logger.info("Schrodinger virtual environment found.")
-            self.schrodinger_env = os.path.join(self.work_dir, schrodinger_env)
+            self.schrodinger_env = os.path.join(self.work_dir, self.schrodinger_env)
             os.chdir(path=current_directory)
-        if command is None:
-            error_message = (
-                "Please provide the path to combind. If you have not installed combind,"
-                "please clone this repository:https://github.com/drorlab/combind.git"
+
+        if self.command is None:
+            logger.critical(
+                "Please provide the path to combind. If you have not installed combind, "
+                "please clone this repository: https://github.com/drorlab/combind.git"
             )
-            logger.critical(error_message)
-            raise NotImplementedError(error_message)
+            return False
+
         logger.info("Setting up combind specific variables.")
         combind_variables = {
-            "COMBINDHOME": command,
-            "PATH": os.pathsep.join([os.environ.get("PATH"), command]),
+            "COMBINDHOME": self.command,
+            "PATH": os.pathsep.join([os.environ.get("PATH"), self.command]),
         }
+
         for key, value in combind_variables.items():
             os.environ[key] = value
-            # Get the value of COMBINDHOME from the environment
             combind_home = os.environ.get("COMBINDHOME")
             if combind_home not in os.environ.get("PATH"):
                 os.environ["PATH"] += os.pathsep + combind_home
+
         # Activate Combind environment
         if os.environ.get("COMBINDHOME"):
             logger.info("Combind environment activated.")
             os.chdir(current_directory)
-            logger.debug(os.getcwd())
             self.command = os.environ.get("COMBINDHOME")
             logger.info(f"Combind command: {self.command}")
         else:
-            error_message = f"Combind environment activation failed\n{stderr[1]}."
-            logger.critical(error_message)
-            raise NotImplementedError(error_message)
+            logger.critical(f"Combind environment activation failed\n{stderr[1]}.")
+            return False
+
+        return True
 
     @staticmethod
     def get_current() -> "CombindContext":
         r"""Get or create a singleton context."""
-
+        # pylint: disable-next=global-statement
         global _default_combind_context
 
         if _default_combind_context is None:

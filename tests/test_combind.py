@@ -161,3 +161,21 @@ def test_apply_combind_score():
     assert os.path.exists(
         os.path.join(context_protein_6Oav["write_dir"], "6oav_m3a_combind.maegz")
     )
+
+
+def test_extract_data_csv():
+    context = CombindContext.get_current()
+    combind = Combind(
+        command=context.command,
+        work_dir=context.work_dir,
+        schrodinger=context.schrodinger,
+        schrodinger_env=context.schrodinger_env,
+    )
+    combind.extract_data_csv(
+        docking_file=context_protein_6Oav["docking_results_path"],
+        filename="6oav_m3a_filter",
+        filter_data=False,
+    )
+    assert os.path.exists(
+        os.path.join(context_protein_6Oav["write_dir"], "6oav_m3a_filter.csv")
+    )

@@ -35,7 +35,7 @@ def select_chains(
         chains = [chains]
     if chains is None:
         chains = ["A"]
-    selection = " and ".join([f"segid {c}" for c in chains])
+    selection = " or ".join([f"segid {c}" for c in chains])
     return mda_univ.select_atoms(selection)
 
 
@@ -58,6 +58,53 @@ def remove_residues(
     return mda_univ.select_atoms(selection)
 
 
+def merge_universes(mda_univs: list) -> mda.Universe:
+    r"""Merge multiple MDAnalysis universes.
+
+    Parameters
+    ----------
+    u
+        list of MDAnalysis universes to merge.
+    """
+
+    if isinstance(mda_univs, list) and len(mda_univs) > 1:
+        logger.info(f"Merging {len(mda_univs)} MDAnalysis universes")
+        merge_list = []
+        for i in mda_univs:
+            # get the atoms from each universe and merge them
+            merge_list.append(i.atoms)
+        merged = mda.Merge(*merge_list)
+    else:
+        logger.warning("Only one MDAnalysis universe to merge")
+        merged = mda_univs
+    return merged.atoms
+
+
+def select_residues(
+    mda_univ: mda.Universe, residues: Union[str, Iterable[str], int, Iterable[int]]
+) -> mda.Universe:
+    r"""Select residues from structure.
+
+    Parameters
+    ----------
+    u
+        MDAnalysis universe to process.
+    residues
+        Names of residues or the residues id to select.
+    """
+    if isinstance(residues, str):
+        residues = [residues]
+    # check if residues is a list of strings
+    if all(residue.isdigit() and residue for residue in residues):
+        residues = [int(residue) for residue in residues]
+        selection = " or ".join([f"resid {r}" for r in residues])
+    elif all(isinstance(residue, str) for residue in residues):
+        selection = " or ".join([f"resname {r}" for r in residues])
+
+    logger.info("MDAnalysis selection: {}", selection)
+    return mda_univ.select_atoms(selection)
+
+
 def remove_hetatoms(mda_univ: mda.Universe) -> mda.Universe:
     r"""Remove hetero atoms.
 
@@ -69,15 +116,60 @@ def remove_hetatoms(mda_univ: mda.Universe) -> mda.Universe:
     return mda_univ.select_atoms("not record_type HETATM")
 
 
-def filter_hetatoms(mda_univ: mda.Universe) -> mda.Universe:
+def filter_hetatoms(
+    mda_univ: mda.Universe, keep_het_chain: Union[list, str, None] = None
+) -> mda.Universe:
     r"""Filter hetero atoms.
 
     Parameters
     ----------
     u
         MDAnalysis universe to process.
+    keep_het_chain
+        Chains to keep their HETATM and remove other HETATMs. Default is None.
     """
-    return mda_univ.select_atoms("record_type HETATM")
+    if keep_het_chain is None:
+        return mda_univ.select_atoms("record_type HETATM")
+    elif isinstance(keep_het_chain, str):
+        keep_het_chain = [keep_het_chain]
+    selection = " or ".join(
+        [f"segid {c} and record_type HETATM" for c in keep_het_chain]
+    )
+    return mda_univ.select_atoms(selection)
+
+
+def find_common_atoms(mda_univ1: mda.Universe, mda_univ2: mda.Universe) -> Iterable:
+    r"""Find common atoms between two MDAnalysis universes.
+
+    Parameters
+    ----------
+    u1
+        MDAnalysis universe to process.
+    u2
+        MDAnalysis universe to process.
+
+    """
+    # Get the atom names for each ligand
+    ref_atom_names = [atom.name for atom in mda_univ1.atoms]
+    dock_atom_names = [atom.name for atom in mda_univ2.atoms]
+
+    # Find the common atoms
+    common_atoms = list(set(ref_atom_names) & set(dock_atom_names))
+    return common_atoms
+
+
+def select_common_atoms(mda_univ: mda.Universe, common_atoms: Iterable) -> mda.Universe:
+    r"""Select common atoms.
+
+    Parameters
+    ----------
+    u
+        MDAnalysis universe to process.
+    common_atoms
+        Names of atoms to select.
+    """
+    selection = " or ".join([f"name {atom}" for atom in common_atoms])
+    return mda_univ.select_atoms(selection)
 
 
 def write_mda_universe(mda_univ: mda.Universe, file_path: str) -> TextIO:

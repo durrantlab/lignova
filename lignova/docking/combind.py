@@ -5,6 +5,7 @@ import glob
 import os
 import subprocess
 
+import pandas as pd
 from loguru import logger
 
 from .contexts.combind import CombindContext
@@ -15,6 +16,8 @@ class Combind(CombindContext):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if not self.validate():
+            raise ValueError("Validation failed. Combind intialization aborted")
         self.activate = f'source {self.schrodinger_env +"/bin/activate"} && '
 
     def featurize(
@@ -30,28 +33,26 @@ class Combind(CombindContext):
         file_name : str,
             Name of the output file.
         """
-        if docking_filepath is None or not os.path.exists(
-            os.path.join(self.work_dir, docking_filepath)
-        ):
-            logger.error("Docking file is not found.")
-            # find files with _pv.maegz extension in the work_dir using glob
-            files = glob.glob(os.path.join(self.work_dir, "*_pv.maegz"))
-            if len(files) == 0 or len(files) > 1:
-                logger.error(
-                    "No files or Multiple docking files found in the work_dir."
-                )
-                raise OSError(
-                    "No files or Multiple docking files found in the work_dir."
-                )
-            docking_file = os.path.join(self.work_dir, str(files[0]))
-        else:
-            docking_file = os.path.join(self.work_dir, docking_filepath)
+        if docking_filepath is None:
+            if not os.path.exists(os.path.join(self.work_dir, docking_filepath)):
+                logger.error("Docking file is not found.")
+                # find files with _pv.maegz extension in the work_dir using glob
+                files = glob.glob(os.path.join(self.work_dir, "*_pv.maegz"))
+                if len(files) == 0 or len(files) > 1:
+                    logger.error(
+                        "No files or Multiple docking files found in the work_dir."
+                    )
+                    raise OSError(
+                        "No files or Multiple docking files found in the work_dir."
+                    )
+            else:
+                docking_file = os.path.join(self.work_dir, docking_filepath)
         command1 = [
             self.activate,
             self.command + "/combind",
             "featurize",
             os.path.join(self.work_dir, f"{file_name}_features"),
-            docking_file,
+            docking_filepath,
         ]
         command = " ".join(command1)
         try:
@@ -262,7 +263,6 @@ class Combind(CombindContext):
                 if sort:
                     command = [
                         self.schrodinger + "/utilities/glide_sort",
-                        "-best_by_title",
                         "-use_prop_d",
                         "r_i_combind_score",
                         "-o",
@@ -302,3 +302,57 @@ class Combind(CombindContext):
         except Exception as e:
             logger.error(f"Combind score application failed.\n {str(e)}")
             raise e
+
+    def extract_data_csv(
+        self, docking_file: Union[str, TextIO], filename: str, filter_data: bool = True
+    ):
+        r"""To extract the scores from schrodinger docking file including
+        combind if run after apply_combind_score function.
+        Parameters
+        ----------
+        docking_file : str, file-like object
+            Path to the docking file from GLIDE.
+        filename : str, file-like object
+            name of the output file.
+        filter_data : bool, optional, default=True
+            filter_data the docking file to include only scores.
+        """
+        # check if the docking file exists
+        if not os.path.exists(docking_file):
+            raise FileNotFoundError(f"{docking_file} does not exist.")
+        command = [
+            self.schrodinger + "/utilities/proplister",
+            "-a",
+            "-c",
+            docking_file,
+            "-o",
+            os.path.join(self.work_dir, f"{filename}.csv"),
+        ]
+        process = subprocess.Popen(
+            command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        stdout, stderr = process.communicate()
+        if process.returncode == 0:
+            logger.info("Data extraction completed.")
+            if filter_data:
+                # read the csv file and filter_data the scores
+                data = pd.read_csv(os.path.join(self.work_dir, f"{filename}.csv"))
+                data = data[
+                    [
+                        "s_m_title",
+                        "i_i_glide_posenum",
+                        "r_i_docking_score",
+                        "r_i_combind_score",
+                        "r_i_glide_emodel",
+                        "r_i_glide_energy",
+                        "r_i_glide_gscore",
+                        "r_i_glide_ligand_efficiency",
+                    ]
+                ]
+                # save it with the same name
+                data.to_csv(os.path.join(self.work_dir, f"{filename}.csv"), index=False)
+                logger.info("Data filter_dataation completed.")
+        else:
+            error_message = "Failed to extract the data" + f"\n{stderr.decode()}."
+            logger.critical(error_message)
+            raise NotImplementedError(error_message)

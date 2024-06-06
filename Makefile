@@ -32,12 +32,14 @@ conda-setup:
 	$(CONDA) conda install -y -c conda-forge pre-commit
 	$(CONDA) conda install -y -c conda-forge tomli tomli-w
 	$(CONDA) conda install -y -c conda-forge conda-poetry-liaison
+	$(CONDA) conda install -c conda-forge openbabel
+
 
 # Conda-only packages specific to this project.
 .PHONY: conda-dependencies
 conda-dependencies:
-	echo "No conda-only packages are required."
-
+	$(CONDA) conda install -y -c conda-forge -c bioconda mmseqs2
+	$(CONDA) conda install pydantic -c conda-forge
 .PHONY: conda-lock
 conda-lock:
 	- rm $(REPO_PATH)/conda-lock.yml

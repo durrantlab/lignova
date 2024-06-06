@@ -625,11 +625,18 @@ docs/source/autoapi
 # psi4
 timer.dat
 psi.*.clean
-
-tests/tmp/*
-!tests/tmp/.gitkeep
-
+parsed/
 jdd_tests/cluster*.txt
 jdd_tests/ligand*.pk
 jdd_tests/cache
 jdd_tests/__pycache__
+prepped/
+combind/
+docked/
+parsed_docked/
+*-001/
+tests/tmp/*
+!tests/tmp/.gitkeep
+trial/
+water/
+nt_water/

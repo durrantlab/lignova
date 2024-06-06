@@ -25,7 +25,16 @@ class Glide(Docking):
         pass
 
     def run(self, target, ligand, context):
-        r"""Dock ligand into protein grid."""
+        r"""Dock ligand into protein grid.
+        Parameters
+        ----------
+        target : PreparedProtein
+            The protein structure to dock the ligand into
+        ligand : PreparedLigand
+            The ligand structure to dock into the protein
+        context : GlideContext
+            The context for the glide docking
+        """
         # ensure that prepped_ligand and grid_file are defined and if not raise an error and exit
         logger.info(ligand.file_path, ligand.file_id)
         jobname = str(ligand.file_id.split("_prepared")[0]) + "_docking"
@@ -59,11 +68,11 @@ class Glide(Docking):
             stdout, stderr = process.communicate()
             if process.returncode == 0:
                 logger.info(
-                    f"Docking completed for {target.file_id} and {ligand.file_id}"
+                    f"Docking jobname file created for {target.file_id} and {ligand.file_id}"
                 )
             else:
                 logger.error(
-                    f"Docking failed for {target.file_id} and {ligand.file_id}"
+                    f"Docking jobname file failed for {target.file_id} and {ligand.file_id}"
                 )
                 logger.error(f"Error Output:\n{stderr}")
         except Exception as e:
@@ -110,7 +119,14 @@ class Glide(Docking):
 
     @staticmethod
     def convert_to_mae(input_object, context):
-        r"""Convert from the pdb format to mae format needed for Schrodinger"""
+        r"""Convert from the pdb format to mae format needed for Schrodinger
+        Parameters
+        ----------
+        input_object : Ligand or Protein object
+            The object to be converted to mae format
+        context : GlideContext
+            The context for the glide docking
+        """
         command = [
             context.command + "/utilities/structconvert",
             input_object.file_path,
@@ -126,8 +142,7 @@ class Glide(Docking):
             stdout, stderr = process.communicate()
             if process.returncode == 0:
                 logger.info("Conversion completed successfully.")
-            else:
-                logger.error(f"Conversion failed with error:\n{stderr}")
+
         except Exception as e:
             logger.error(f"An error occurred during conversion: {str(e)}")
             raise e
@@ -135,7 +150,14 @@ class Glide(Docking):
     @staticmethod
     def PrepLigand(ligand, context):
         r"""Check the extension of the ligand file using the split function and
-        Prepare ligands for docking using Schrödinger's LigPrep"""
+        Prepare ligands for docking using Schrödinger's LigPrep
+        Parameters
+        ----------
+        ligand : Ligand object
+            The ligand structure to be prepared for docking as a Ligand object
+        context : GlideContext
+            The context for the glide docking
+        """
         if ligand.file_ext == "pdb":
             Glide().convert_to_mae(ligand, context)
             ligand = Ligand(
@@ -172,6 +194,17 @@ class Glide(Docking):
                 stdout, stderr = process.communicate()
                 if process.returncode == 0:
                     logger.info(f"Ligand preparation completed for {ligand.file_id}")
+                    # check if the prepared ligand file exists
+                    if not os.path.exists(
+                        os.path.join(
+                            context.write_dir, f"{ligand.file_id}_prepared.mae"
+                        )
+                    ):
+                        logger.error(f"Ligand preparation failed for {ligand.file_id}")
+                        logger.error(f"Error Output:\n{stderr}")
+                        raise subprocess.CalledProcessError(
+                            process.returncode, " ".join(command)
+                        )
                     prep = PreparedLigand(
                         file_path=os.path.join(
                             context.write_dir, f"{ligand.file_id}_prepared.mae"
@@ -195,7 +228,14 @@ class Glide(Docking):
 
     @staticmethod
     def PrepProtein(protein, context):
-        r"""Prepare protein structures using Schrödinger's Protein Wizard"""
+        r"""Prepare protein structures using Schrödinger's Protein Wizard
+        Parameters
+        ----------
+        protein : Protein object
+            The protein structure to be prepared for docking as a Protein object
+        context : GlideContext
+            The context for the glide docking
+        """
         command = [
             context.command + "/utilities/prepwizard",
             protein.file_path,
@@ -204,7 +244,6 @@ class Glide(Docking):
             "-fillsidechains" if context.fillsidechains else "",
             "-disulfides" if context.disulfides else "",
             "-rehtreat" if context.rehtreat else "",
-            "-samplewater" if context.samplewater else "",
             "-minimize_adj_h" if context.minimize_adj_h else "",
             "-epik_pH",
             context.epik_ph,
@@ -218,6 +257,8 @@ class Glide(Docking):
             "-watdist",
             context.prot_watdist,
         ]
+        if context.samplewater:
+            command.extend(["-samplewater"])
         logger.info(f"Preparing protein for PDB ID {protein.file_id}")
         try:
             process = subprocess.Popen(
@@ -289,3 +330,40 @@ class Glide(Docking):
             )
             raise e
         return prep
+
+    @staticmethod
+    def sort_docking_results(docking_results, context):
+        r"""Sort the docking maegz output based on the glide score
+        Parameters
+        ----------
+        docking_results : str
+            The path to the docking results file
+        context : GlideContext
+            The context for the glide docking
+        """
+        command = [
+            context.command + "/utilities/glide_sort",
+            "-use_dscore",
+            "-o",
+            docking_results.replace(".maegz", "_sorted.maegz"),
+            docking_results,
+        ]
+        try:
+            process = subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+            )
+            stdout, stderr = process.communicate()
+            if process.returncode == 0:
+                logger.info(f"Sorting completed for {docking_results}")
+            else:
+                logger.error(f"Sorting failed for {docking_results}")
+                logger.error(f"Error Output:\n{stderr}")
+                raise subprocess.CalledProcessError(
+                    process.returncode, " ".join(command)
+                )
+        except Exception as e:
+            logger.error(f"An error occurred during sorting: {str(e)}")
+            raise e
