@@ -19,6 +19,10 @@ class ParquetParser(FormatManager):
         file_path (str): Path to the Parquet file.
     """
 
+    def __init__(self, file_path: str, schema: pa.schema) -> None:
+        super().__init__(file_path)
+        self.schema = schema
+
     def create(self) -> None:
         r"""Create a Parquet file using PyArrow."""
         # Create an empty parquet nested structure
@@ -28,12 +32,11 @@ class ParquetParser(FormatManager):
         pq.write_table(table, self.file_path)
         logger.info(f"Parquet file created at {self.file_path}")
 
-    def read(self, schema: pa.schema) -> ds.Dataset:
+    def read(self, column: str | list | None = None) -> ds.Dataset:
         r"""Read a Parquet file using PyArrow.
         parameters:
         ----------
-            schema: pa.schema
-                Schema of the data to read.
+
             columns: str | list | None
                 Columns to read from the Parquet file.
         Returns:
@@ -41,7 +44,9 @@ class ParquetParser(FormatManager):
             dataset: pyarrow.Dataset
         """
         # Read the Parquet file
-        dataset = ds.dataset(self.file_path, format="parquet", schema=schema)
+        dataset = ds.dataset(self.file_path, format="parquet", schema=self.schema)
+        if column is not None:
+            dataset = dataset.scanner(columns=column)
         logger.info(f"Data read from Parquet file at {self.file_path}")
         return dataset
 
@@ -67,3 +72,39 @@ class ParquetParser(FormatManager):
         # Write the table to a Parquet file
         pq.write_table(table, self.file_path)
         logger.info(f"Data written to Parquet file at {self.file_path}")
+
+    def convert_to_table(self, column_names: str | list | None = None) -> pa.Table:
+        r"""Convert data to a PyArrow Table.
+
+        Parameters:
+        ----------
+            column_names: str | list | None
+                Columns to convert to a PyArrow Table.
+        Returns:
+        ----------
+            table: pa.Table
+        """
+        if column_names is None:
+            data = self.read(schema=self.schema)
+            data = data.scanner()
+        else:
+            data = self.read(schema=self.schema, column=column_names)
+        return data.to_table()
+
+    def convert_to_pandas(self, column_names: str | list | None = None) -> pd.DataFrame:
+        r"""Convert data to a pandas DataFrame.
+
+        Parameters:
+        ----------
+            column_names: str | list | None
+                Columns to convert to a pandas DataFrame.
+        Returns:
+        ----------
+            df: pd.DataFrame
+        """
+        if column_names is None:
+            data = self.read()
+            data = data.scanner().to_table()
+        else:
+            data = self.read(column=column_names).to_table()
+        return data.to_pandas()

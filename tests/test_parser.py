@@ -84,13 +84,12 @@ def test_find_file_stats():
 
 
 def test_parquet_create():
-    parser = ParquetParser(parquet_file_path)
+    parser = ParquetParser(parquet_file_path, pa.schema([]))
     parser.create()
     assert os.path.exists(parquet_file_path)
 
 
 def test_parquet_write():
-    parser = ParquetParser(parquet_file_path)
     # Define the schema for the nested structure
     schema = pa.schema(
         [
@@ -116,6 +115,7 @@ def test_parquet_write():
             ),
         ]
     )
+    parser = ParquetParser(parquet_file_path, schema)
     data = [
         {
             "id": 2,
@@ -130,15 +130,14 @@ def test_parquet_write():
             },
         },
     ]
-    parser.write(pd.DataFrame(data), schema)
+    parser.write(pd.DataFrame(data), parser.schema)
     assert os.path.exists(parquet_file_path)
-    result = parser.read(schema=schema)
-    assert result.column_names == ["id", "name", "attributes"]
-    assert result.to_pandas().equals(pd.DataFrame(data))
+    result = parser.read()
+    assert result.schema.names == ["id", "name", "attributes"]
+    assert parser.convert_to_pandas().equals(pd.DataFrame(data))
 
 
 def test_parquet_read():
-    parser = ParquetParser(parquet_file_path)
     schema = pa.schema(
         [
             ("id", pa.int64()),
@@ -163,6 +162,7 @@ def test_parquet_read():
             ),
         ]
     )
+    parser = ParquetParser(parquet_file_path, schema)
     data = [
         {
             "id": 2,
@@ -177,6 +177,6 @@ def test_parquet_read():
             },
         },
     ]
-    result = parser.read(schema=schema)
-    assert result.column_names == ["id", "name", "attributes"]
-    assert result.to_pandas().equals(pd.DataFrame(data))
+    result = parser.read()
+    assert result.schema.names == ["id", "name", "attributes"]
+    assert parser.convert_to_pandas().equals(pd.DataFrame(data))
