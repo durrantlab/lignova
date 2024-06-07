@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install miniconda
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
           miniconda-version: "latest"
           auto-update-conda: true
@@ -33,7 +33,7 @@ jobs:
         run: make test
 
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           env_vars: OS,PYTHON
           fail_ci_if_error: true

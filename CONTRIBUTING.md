@@ -34,11 +34,11 @@ Command `make lint` applies all checks.
 
 Before submitting your code please do the following steps:
 
-1. Add any changes you want
-2. Add tests for the new changes
-3. Edit documentation if you have changed something significant
-4. Run `make codestyle` to format your changes.
-5. Run `make lint` to ensure that types, security and docstrings are okay.
+1.  Add any changes you want
+2.  Add tests for the new changes
+3.  Edit documentation if you have changed something significant
+4.  Run `make codestyle` to format your changes.
+5.  Run `make lint` to ensure that types, security and docstrings are okay.
 
 ## Other help
 
