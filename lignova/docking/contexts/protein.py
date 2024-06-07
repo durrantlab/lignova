@@ -1,9 +1,11 @@
 r""" Implementation of the ProteinContext class containing the configuration for PDB/protein validation."""
+
 from typing import Optional
 
 _default_glide_context: "Optional[ProteinContext]" = None
 
 DEFAULT_IMPURITIES = [
+    "2PE",
     "TUN",
     "HC3",
     "DMS",

@@ -180,3 +180,60 @@ def test_parquet_read():
     result = parser.read()
     assert result.schema.names == ["id", "name", "attributes"]
     assert parser.convert_to_pandas().equals(pd.DataFrame(data))
+
+
+def test_filter_data():
+    schema = pa.schema(
+        [
+            ("id", pa.int64()),
+            ("name", pa.string()),
+            (
+                "attributes",
+                pa.struct(
+                    [
+                        ("age", pa.int64()),
+                        (
+                            "address",
+                            pa.struct(
+                                [
+                                    ("street", pa.string()),
+                                    ("city", pa.string()),
+                                    ("zip", pa.int64()),
+                                ]
+                            ),
+                        ),
+                    ]
+                ),
+            ),
+        ]
+    )
+    parser = ParquetParser(parquet_file_path, schema)
+    data = [
+        {
+            "id": 2,
+            "name": "Jane Smith",
+            "attributes": {
+                "age": 25,
+                "address": {
+                    "street": "456 Maple Ave",
+                    "city": "Othertown",
+                    "zip": 67890,
+                },
+            },
+        },
+        {
+            "id": 3,
+            "name": "John Doe",
+            "attributes": {
+                "age": 30,
+                "address": {
+                    "street": "123 Elm St",
+                    "city": "Anytown",
+                    "zip": 12345,
+                },
+            },
+        },
+    ]
+    parser.write(pd.DataFrame(data), parser.schema)
+    result = parser.filter_data(lambda x: (x == "John Doe"), "name")
+    assert result.equals(pd.DataFrame([data[1]]))

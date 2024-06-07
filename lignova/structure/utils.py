@@ -1,4 +1,5 @@
 r""" Utility functions for structure module. """
+
 from typing import TextIO
 
 import os
@@ -417,6 +418,9 @@ def pdb_has_mutation(pdb_id: str) -> bool:
     if len(polymer_ids) == 1:
         response = requests.get(url + polymer_ids[0], timeout=5)
         data = response.json()
+        logger.debug(
+            f"Mutations in {pdb_id}: {data['entity_poly']['rcsb_mutation_count']}"
+        )
         if data["entity_poly"]["rcsb_mutation_count"] > 0:
             return True
         else:
@@ -428,6 +432,7 @@ def pdb_has_mutation(pdb_id: str) -> bool:
             list_of_mutations.append(data["entity_poly"]["rcsb_mutation_count"])
     # check if the values of the list are 0
     if all(i == 0 for i in list_of_mutations):
+        logger.debug(f"Mutations in {pdb_id}: {list_of_mutations}")
         return False
     else:
         return True
@@ -523,16 +528,16 @@ def validate_pdb(pdb_id: str) -> bool:
         return False
 
 
-def get_smiles(pdb: str | TextIO) -> dict[str, str]:
-    r"""Get the SMILES string of a ligand from a PDB file.
+def get_ligand_names(pdb: str | TextIO) -> list:
+    r"""Get the names of the ligands in a PDB file.
     Parameters
     ----------
     pdb : str or file-like
         Path to the PDB file or file-like object.
     Returns
     -------
-    str
-        The SMILES string of the ligand.
+    list
+        The names of the ligands in the PDB file.
     """
     ligand = separate_protein_ligand(pdb)[1]
     # get the residue name of the ligand
@@ -541,12 +546,25 @@ def get_smiles(pdb: str | TextIO) -> dict[str, str]:
         logger.warning("The ligand has more than one residue.")
         impurities = ProteinContext.get_current().impurities
         # delete ant values with less than 3 characters from the list
-        ligand_resname = [
-            i for i in ligand_resname if len(i) == 3 and i not in impurities
-        ]
-    else:
-        ligand_resname = ligand_resname[0]
-    url = f"https://data.rcsb.org/rest/v1/core/chemcomp/{str(ligand_resname)}"
+        ligand_resname = list(
+            set([i for i in ligand_resname if len(i) == 3 and i not in impurities])
+        )
+    logger.debug(f"Ligand residue name: {ligand_resname}")
+    return ligand_resname
+
+
+def get_smiles(ligand_resname: str | TextIO) -> dict[str, str]:
+    r"""Get the SMILES string of a ligand from a PDB file.
+    Parameters
+    ----------
+    ligand_resname : str or file-like
+        The residue name of the ligand.
+    Returns
+    -------
+    str
+        The SMILES string of the ligand.
+    """
+    url = f"https://data.rcsb.org/rest/v1/core/chemcomp/{ligand_resname}"
     response = requests.get(url)
     data = response.json()
     smiles = data["rcsb_chem_comp_descriptor"]["smiles"]

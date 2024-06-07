@@ -158,6 +158,17 @@ def test_validate_ligands():
     assert validate_ligands("4uxl")
 
 
+def test_get_ligand_names():
+    protein = Protein()
+    protein._load_from_pdb_id(
+        pdb_id="6OAV",
+        write=True,
+        write_path=context_protein_6Oav["write_dir"] + "/6oav.pdb",
+    )
+    ligands = get_ligand_names(protein._pdb_file_path)
+    assert ligands == ["M3A"]
+
+
 def test_get_smiles():
     protein = Protein()
     protein._load_from_pdb_id(
@@ -165,7 +176,8 @@ def test_get_smiles():
         write=True,
         write_path=context_protein_6Oav["write_dir"] + "/6oav.pdb",
     )
-    smiles = get_smiles(protein._pdb_file_path)
+    ligand = get_ligand_names(protein._pdb_file_path)[0]
+    smiles = get_smiles(ligand)
     assert isinstance(smiles, dict)
     assert smiles["smiles"] == "c1ccc(cc1)NC(=O)n2c(nc(n2)Nc3ccc(cc3)C#N)N"
     assert smiles["stereo_smiles"] == "c1ccc(cc1)NC(=O)n2c(nc(n2)Nc3ccc(cc3)C#N)N"

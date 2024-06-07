@@ -85,10 +85,10 @@ class ParquetParser(FormatManager):
             table: pa.Table
         """
         if column_names is None:
-            data = self.read(schema=self.schema)
+            data = self.read()
             data = data.scanner()
         else:
-            data = self.read(schema=self.schema, column=column_names)
+            data = self.read(column=column_names)
         return data.to_table()
 
     def convert_to_pandas(self, column_names: str | list | None = None) -> pd.DataFrame:
@@ -107,4 +107,24 @@ class ParquetParser(FormatManager):
             data = data.scanner().to_table()
         else:
             data = self.read(column=column_names).to_table()
+        return data.to_pandas()
+
+    def filter_data(self, condition: callable, column: str) -> pd.DataFrame:
+        r"""Filter data based on a column value.
+
+        Parameters:
+        ----------
+            condition: callable
+                Condition to filter the data.
+            column: str
+                Column to filter the data.
+        Returns:
+        ----------
+            df: pd.DataFrame
+        """
+        data = self.read()
+        field = ds.field(column)
+        filter_expr = condition(field)
+        logger.debug(filter_expr)
+        data = data.scanner(filter=filter_expr).to_table()
         return data.to_pandas()
