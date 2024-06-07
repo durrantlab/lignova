@@ -1,0 +1,14 @@
+name: lignova-dev
+channels:
+  - defaults
+dependencies:
+  - python=3.11
+  - conda-lock
+  - poetry
+  - pre-commit
+  - tomli
+  - tomli-w
+  - conda-poetry-liaison
+  - openbabel
+  - mmseqs2
+  - nodejs
