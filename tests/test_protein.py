@@ -26,6 +26,10 @@ if not os.path.exists(context_protein_6Oav["write_dir"]):
     prep_dirs()
 
 
+if not os.path.exists(context_protein_6Oav["write_dir"]):
+    prep_dirs()
+
+
 def test_get_pdb_6oav():
     r"""Retrieve PDB from RCSB"""
     pdb_test = Protein.get_pdb_from_rcsb("6OAV")
@@ -66,6 +70,16 @@ def test_select_chains():
     protein_p = get_mda_universe(protein._pdb_file_path)
     protein_p = select_chains(protein_p)
     assert set(protein_p.segments.segids) == set("A")
+
+
+def test_is_xray_structure():
+    protein = Protein()
+    protein._load_from_pdb_id(
+        pdb_id="6OAV",
+        write=True,
+        write_path=context_protein_6Oav["write_dir"] + "/6oav.pdb",
+    )
+    assert is_xray_structure(protein._pdb_file_path)
 
 
 def test_is_xray_structure():
@@ -142,3 +156,16 @@ def test_validate_pdb():
 def test_validate_ligands():
     assert not validate_ligands(context_protein_6Oav["id"])
     assert validate_ligands("4uxl")
+
+
+def test_get_smiles():
+    protein = Protein()
+    protein._load_from_pdb_id(
+        pdb_id="6OAV",
+        write=True,
+        write_path=context_protein_6Oav["write_dir"] + "/6oav.pdb",
+    )
+    smiles = get_smiles(protein._pdb_file_path)
+    assert isinstance(smiles, dict)
+    assert smiles["smiles"] == "c1ccc(cc1)NC(=O)n2c(nc(n2)Nc3ccc(cc3)C#N)N"
+    assert smiles["stereo_smiles"] == "c1ccc(cc1)NC(=O)n2c(nc(n2)Nc3ccc(cc3)C#N)N"
