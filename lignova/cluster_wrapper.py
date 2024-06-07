@@ -535,14 +535,3 @@ if __name__ == "__main__":
     # make_protein_cluster_file("clustered_pubchem.parquet", "../new_clusters_cluster_parsed.csv")
     # hdf5_result=hdf5_raw_file_parser('../PubChem_data_edited_400k.hdf5')
     # add_compounds(ParquetParser("clustered_pubchem.parquet",schema=schema), hdf5_result,overwrite=False)
-
-    new_clustered = pd.read_parquet("new_clustered_pubchem.parquet")
-    full_clustered = pd.read_parquet("../full_clustered_pubchem.parquet")
-
-    # Compare the two dataframes
-    comparison = new_clustered.equals(full_clustered)
-
-    if comparison:
-        print("The two parquet files are identical.")
-    else:
-        print("The two parquet files are different.")
