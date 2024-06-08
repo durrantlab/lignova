@@ -14,7 +14,14 @@ from loguru import logger
 from lignova.clustering.mmseq import mmseqs_cluster, mmseqs_parser
 from lignova.hdf5.parquet import ParquetParser
 from lignova.hdf5.parser import HDF5Parser
-from lignova.structure.utils import get_rcsb_data, validate_ligands, validate_pdb
+from lignova.structure import Protein
+from lignova.structure.utils import (
+    get_ligand_names,
+    get_rcsb_data,
+    get_smiles,
+    validate_ligands,
+    validate_pdb,
+)
 
 
 def fasta_parser(fasta: str | TextIO, delimiter: str | None = None) -> list:
@@ -532,6 +539,86 @@ if __name__ == "__main__":
             ("member_compound", pa.list_(pa.string())),
         ]
     )
+
     # make_protein_cluster_file("clustered_pubchem.parquet", "../new_clusters_cluster_parsed.csv")
     # hdf5_result=hdf5_raw_file_parser('../PubChem_data_edited_400k.hdf5')
     # add_compounds(ParquetParser("clustered_pubchem.parquet",schema=schema), hdf5_result,overwrite=False)
+    # read aid_2_target and aid_2_cids from the csv files
+    aid_2_target = pd.read_csv("../aid_2_target.csv")
+    aid_2_cids = pd.read_csv("../aid_2_cids.csv")
+    hdf5 = HDF5Parser("../PubChem_data_edited_400k.hdf5")
+
+    # read the parquet file
+    schema = pa.schema(
+        [
+            ("Cluster number", pa.int64()),
+            ("Represenatives", pa.string()),
+            ("members", pa.string()),
+            ("member_compound", pa.list_(pa.string())),
+        ]
+    )
+    parquet = ParquetParser("../protein_clustered_data.parquet", schema)
+    # get cluster number 1
+    # data=parquet.convert_to_table().group_by("Cluster number")
+    condition = lambda x: x < 6
+    # get the 1st 5 clusters from the parquet file i.e cluster number 1 to 5
+    logger.info(
+        f"The first 5 clusters: {parquet.filter_data(condition,column='Cluster number')}"
+    )
+    trial_data = parquet.filter_data(condition, column="Cluster number")
+    new_schema = pa.schema(
+        [
+            ("Protein Cluster number", pa.int64()),
+            ("PDB/Gene ID", pa.string()),
+            ("Compound ID", pa.string()),
+            ("Smiles", pa.string()),
+            ("Ligand Cluster number", pa.int64()),
+        ]
+    )
+    # make a new parquet file with the new schema and the data from the trial_data
+    new_parquet = ParquetParser("../compounds_clustered_pubchem.parquet", new_schema)
+    # group the data by the cluster number
+    initial_data = []
+    trial_data = trial_data.groupby("Cluster number")
+    # loop through the data and get the gene ids and the cids
+    for cluster_number, data in trial_data:
+        for pdb_id in data["Represenatives"]:
+            protein = Protein()
+            protein.load(file_path=f"../representatives/{pdb_id.lower()}.pdb")
+            logger.debug(protein._pdb_file_path)
+            ligands = get_ligand_names(protein._pdb_file_path)
+            if len(ligands) > 1:
+                for ligand in ligands:
+                    smiles = get_smiles(ligand)
+                    initial_data.append(
+                        (cluster_number, pdb_id, ligand, smiles["stereo_smiles"], None)
+                    )
+            else:
+                smiles = get_smiles(ligands[0])
+                initial_data.append(
+                    (cluster_number, pdb_id, ligands[0], smiles["stereo_smiles"], None)
+                )
+        for member in data["members"]:
+            # find the aids for each gene id
+            aids = list(
+                aid_2_target[aid_2_target["Gene_id"].astype(str) == str(member)]["AID"]
+            )
+            # loop through the aids and get their cids from the aid_2_cids dataframe
+            for aid in aids:
+                logger.debug(f"aid: {aid}")
+                cids = ast.literal_eval(
+                    aid_2_cids[aid_2_cids["AID"] == aid]["CIDs"].to_list()[0]
+                )
+                for cid in cids:
+                    # get the smiles for each cid using hdf5.read(f'aids/{aid}/cids/{cid}/smiles')
+                    try:
+                        smiles = hdf5.read(f"aids/{aid}/cids/{cid}/smiles").astype(str)
+                        logger.debug(f"smiles: {smiles}")
+                        initial_data.append(
+                            (cluster_number, member, cid, smiles[0], None)
+                        )
+                        logger.info(f"Data: {initial_data}")
+                    except Exception as e:
+                        logger.error(f"Error: {e}")
+                        continue
+    new_parquet.write(initial_data, new_schema)
