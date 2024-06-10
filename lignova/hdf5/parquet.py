@@ -51,8 +51,7 @@ class ParquetParser(FormatManager):
         return dataset
 
     def write(self, data: pd.DataFrame | list, data_scheme: pa.Schema) -> None:
-        r"""Write data to a Parquet file using PyArrow
-
+        r"""Write data to a Parquet file using PyArrow.
         Parameters:
         ----------
             data : pd.DataFrame
@@ -67,6 +66,8 @@ class ParquetParser(FormatManager):
             raise ValueError(
                 "Data must be a pandas DataFrame or a list of dictionaries"
             )
+        # Remove duplicate rows
+        data = data.drop_duplicates()
         # Create a table from the pandas DataFrame
         table = pa.Table.from_pandas(data, schema=data_scheme)
         # Write the table to a Parquet file

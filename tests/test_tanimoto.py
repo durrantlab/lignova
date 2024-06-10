@@ -27,9 +27,7 @@ def prep_dirs():
 if not os.path.exists(context_pubchem["write_dir"]):
     prep_dirs()
 
-TanimotoClustering = TanimotoClustering(0.5)
-# saparate protein and ligand
-smiles = get_smiles(context_pubchem["pdb_file"])
+TanimotoClustering = TanimotoClustering()
 
 
 def test_get_morgan_fingerprint():
@@ -106,7 +104,7 @@ def test_cluster_tanimoto():
     logger.info(f"Similarity {similarity}")
 
     # Cluster the molecules using cluster_tanimoto
-    clusters = TanimotoClustering.cluster_tanimoto(similarity, smiles)
+    clusters = TanimotoClustering.cluster_tanimoto(similarity, smiles, 0.5)
     assert len(clusters) == 2
     assert len(clusters[0]) == 3
     assert len(clusters[1]) == 1
