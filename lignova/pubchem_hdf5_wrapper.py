@@ -1,4 +1,5 @@
 r""" Implementation of the PubChem wrapper."""
+
 import time
 
 import h5py
@@ -60,7 +61,7 @@ def process_hdf5_file(hdf5_file_path: str):
                     no_smiles.append(i)
         else:
             no_cids.append(aid)
-    a = list(hdf5_file["/aids"].keys())
+    aids = list(hdf5_file["/aids"].keys())
     hdf5_file.close()
     logger.info(f"aids with no targets_gene_id: {len(list(set(no_targets)))}")
     logger.info(f"aids with targets_gene_id: {len(list(set(yes_targets)))}")
@@ -68,7 +69,7 @@ def process_hdf5_file(hdf5_file_path: str):
     logger.info(f"aids with protein sequence: {len(list(set(yes_seq)))}")
     logger.info(f"aids with no uniprot_pdb_alphafold: {len(list(set(no_uniprot)))}")
     logger.info(f"aids with uniprot_pdb_alphafold: {len(list(set(yes_uniprot)))}")
-    logger.info(f"aids: {len(list(set(a)))}")
+    logger.info(f"aids: {len(list(set(aids)))}")
     logger.info(f"cids: {len(total_cids)}")
     logger.info(f"aids with cids: {len(list(set(yes_cids)))}")
     logger.info(f"aids with no cids: {len(list(no_cids))}")
