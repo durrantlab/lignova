@@ -53,19 +53,6 @@ def is_xray_structure(pdb: str | TextIO) -> bool:
             return False
 
 
-from typing import TextIO
-
-import os
-
-import MDAnalysis as mda
-import pandas as pd
-import requests
-from loguru import logger
-
-from ..docking.contexts import ProteinContext
-from .editing import *
-
-
 def is_xray_structure(pdb: str | TextIO) -> bool:
     """
     Check if the PDB file was generated from X-ray diffraction data.
@@ -565,7 +552,7 @@ def get_smiles(ligand_resname: str | TextIO) -> dict[str, str]:
         The SMILES string of the ligand.
     """
     url = f"https://data.rcsb.org/rest/v1/core/chemcomp/{ligand_resname}"
-    response = requests.get(url)
+    response = requests.get(url, timeout=5)
     data = response.json()
     smiles = data["rcsb_chem_comp_descriptor"]["smiles"]
     stereo_smiles = data["rcsb_chem_comp_descriptor"]["smilesstereo"]

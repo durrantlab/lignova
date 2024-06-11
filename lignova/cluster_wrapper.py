@@ -14,12 +14,14 @@ import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 from loguru import logger
 
+from lignova.analysis.utils import obabel_convert
 from lignova.clustering.mmseq import mmseqs_cluster, mmseqs_parser
 from lignova.clustering.tanimoto import TanimotoClustering
 from lignova.hdf5.parquet import ParquetParser
 from lignova.hdf5.parser import HDF5Parser
 from lignova.structure import Protein
 from lignova.structure.utils import (
+    convert_cif2pdb,
     get_ligand_names,
     get_rcsb_data,
     get_smiles,
@@ -428,8 +430,68 @@ def make_ligand_cluster_file(
                         )
                     except Exception as e:
                         logger.error(f"Error: {e}")
+                        initial_data.append((cluster_number, member, cid, None, None))
                         continue
     new_parquet.write(initial_data, new_schema)
+
+
+def add_smiles_cluster(
+    old_parquet: ParquetParser, similarity_cutoff: float, new_parquet: ParquetParser
+):
+    r"""Clustering smiles and Adding the smiles cluster to the parquet file.
+    Parameters
+    ----------
+    old_parquet : ParquetParser
+        ParquetParser object of the old file.
+    similarity_cutoff : float
+        The cutoff value for the tanimoto clustering similarity.
+    new_parquet : ParquetParser
+        ParquetParser object of the new file.
+    """
+    # READ THE DATA FROM THE compound_clustered_pubchem.parquet file
+    data = parquet.convert_to_pandas().groupby("Protein Cluster number")
+    TanimotoClustering = TanimotoClustering()
+    for cluster, rest in data:
+        compounds_count = []
+        logger.debug(f"Length of compounds with duplication: {len(rest)}")
+        cluster_number = cluster
+        # get the rows with unique values in the compound id column
+        unique_rows = rest.drop_duplicates(
+            subset="Compound ID", ignore_index=True
+        ).dropna()
+        logger.debug(f"unique rows: {unique_rows}")
+        logger.debug(f"Length of unique rows: {len(unique_rows)}")
+        smiles = unique_rows["Smiles"]
+        compound_ids = unique_rows["Compound ID"]
+        logger.debug(f"Length of smiles: {len(smiles)}")
+        original_length = len(smiles)
+        # Get fingerprints for each molecule and tanimoto similarity as one liner
+        fingerprints = [
+            TanimotoClustering.get_morgan_fingerprint(smile) for smile in smiles
+        ]
+        logger.debug(f"unique fingerprints: {len(fingerprints)}")
+        similarity = []
+        # loop over the fingerprints to get the similarity for each molecule with the previous molecules
+        for i in range(1, len(fingerprints)):
+            similarity.append(
+                TanimotoClustering.tanimoto_similarity(
+                    fingerprints[:i], fingerprints[i]
+                )
+            )
+        logger.debug(f"Length of similarity: {len(similarity)}")
+        # run TanimotoClustering.cluster_tanimoto(similarity, compound_ids, cutoff)
+        clusters = TanimotoClustering.cluster_tanimoto(
+            similarity, compound_ids, similarity_cutoff
+        )
+        # loop through the clusters and add the cluster number to the dataframe Ligand Cluster number
+        for cluster_number, cluster in enumerate(clusters, start=1):
+            for compound in cluster:
+                rest.loc[rest["Compound ID"] == compound][
+                    "Ligand Cluster number"
+                ] = cluster_number
+
+        # save the data to the new parquet file
+        new_parquet.write(rest, new_parquet.schema)
 
 
 if __name__ == "__main__":
@@ -615,6 +677,20 @@ if __name__ == "__main__":
     hdf5_result=hdf5_raw_file_parser('../PubChem_data_edited_400k.hdf5')
     add_compounds(ParquetParser("clustered_pubchem.parquet",schema=schema), hdf5_result,overwrite=False)
     """
+    # read all .cif files in the ../representatives folder and convert them to .pdb files
+    cif_files = [
+        file for file in os.listdir("../representatives") if file.endswith(".cif")
+    ]
+    logger.info(f"Number of cif files: {len(cif_files)}")
+    for file in cif_files:
+        if os.path.exists(f"../representatives/{file.replace('.cif','.pdb')}"):
+            continue
+        logger.info(f"Converting {file} to .pdb file")
+        convert_cif2pdb(
+            f"../representatives/{file}",
+            f"../representatives/{file.replace('.cif','.pdb')}",
+        )
+        logger.info(f"Converted {file} to .pdb file")
     # read aid_2_target and aid_2_cids from the csv files
     aid_2_target = pd.read_csv("../aid_2_target.csv")
     aid_2_cids = pd.read_csv("../aid_2_cids.csv")
@@ -631,14 +707,6 @@ if __name__ == "__main__":
     old_parquet = ParquetParser("../protein_clustered_data.parquet", schema)
     # get cluster number 1
     # data=parquet.convert_to_table().group_by("Cluster number")
-    """
-    condition = lambda x: x == 2
-    # get the 1st 5 clusters from the parquet file i.e cluster number 1 to 5
-    logger.info(
-        f"The first 5 clusters: {parquet.filter_data(condition,column='Cluster number')}"
-    )
-    trial_data = parquet.filter_data(condition, column="Cluster number")
-    """
     new_schema = pa.schema(
         [
             ("Protein Cluster number", pa.int64()),

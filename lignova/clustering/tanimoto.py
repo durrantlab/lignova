@@ -1,9 +1,6 @@
 r" Implementation of the tanimoto clustering algorithm."
 
-from typing import Dict, List
-
-import os
-import subprocess
+from typing import List
 
 import rdkit
 from loguru import logger
@@ -35,6 +32,7 @@ class TanimotoClustering:
         else:
             return rdkit.Chem.AllChem.GetMorganFingerprintAsBitVect(mol, radius)
 
+    # pylint: disable=c-extension-no-member
     def tanimoto_similarity(
         self,
         mol1: (
