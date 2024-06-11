@@ -15,6 +15,7 @@ context_protein_6Oav = {
     "id": "6OAV",
     "file_path": "./files/6oav/6oav.pdb",
     "write_dir": "./tmp/6oav",
+    "cif_file": "./files/6qsw.cif",
 }
 
 
@@ -184,17 +185,17 @@ def test_get_smiles():
 
 
 def test_read_cif():
-    protein = Protein("../6qsw.cif")
+    protein = Protein(context_protein_6Oav["cif_file"])
     protein.load()
     data = read_cif(protein.file_path)
-    assert protein.file_path == "../6qsw.cif"
+    assert protein.file_path == context_protein_6Oav["cif_file"]
     assert protein.file_id == "6qsw"
     assert protein.file_ext == "cif"
     assert data.resolution == 1.64
 
 
 def test_convert_cif2pdb():
-    protein = Protein("../6qsw.cif")
+    protein = Protein(context_protein_6Oav["cif_file"])
     protein.load()
     convert_cif2pdb(
         protein.file_path, os.path.join(context_protein_6Oav["write_dir"], "6qsw.pdb")
