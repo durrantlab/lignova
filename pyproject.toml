@@ -30,6 +30,7 @@ scipy = "^1.11.3"
 isort = "^5.13.2"
 spyrmsd = "^0.7.0"
 pyarrow = "^16.1.0"
+gemmi = "^0.6.6"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.9.0"

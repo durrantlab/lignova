@@ -181,3 +181,22 @@ def test_get_smiles():
     assert isinstance(smiles, dict)
     assert smiles["smiles"] == "c1ccc(cc1)NC(=O)n2c(nc(n2)Nc3ccc(cc3)C#N)N"
     assert smiles["stereo_smiles"] == "c1ccc(cc1)NC(=O)n2c(nc(n2)Nc3ccc(cc3)C#N)N"
+
+
+def test_read_cif():
+    protein = Protein("../6qsw.cif")
+    protein.load()
+    data = read_cif(protein.file_path)
+    assert protein.file_path == "../6qsw.cif"
+    assert protein.file_id == "6qsw"
+    assert protein.file_ext == "cif"
+    assert data.resolution == 1.64
+
+
+def test_convert_cif2pdb():
+    protein = Protein("../6qsw.cif")
+    protein.load()
+    convert_cif2pdb(
+        protein.file_path, os.path.join(context_protein_6Oav["write_dir"], "6qsw.pdb")
+    )
+    assert os.path.exists(os.path.join(context_protein_6Oav["write_dir"], "6qsw.pdb"))

@@ -1,9 +1,12 @@
 r""" Implementation for editing protein structures using MDAnalysis."""
+
 from typing import TextIO, Union
 
 from collections.abc import Iterable
 
+import gemmi
 import MDAnalysis as mda
+from gemmi import cif
 from loguru import logger
 
 
@@ -183,3 +186,32 @@ def write_mda_universe(mda_univ: mda.Universe, file_path: str) -> TextIO:
         File to write to.
     """
     return mda_univ.write(file_path)
+
+
+def read_cif(file_path: str) -> gemmi.Structure:
+    r"""Read CIF file.
+    Parameters
+    ----------
+    file_path
+        Path to CIF file.
+    Returns
+    -------
+    gemmi.Structure
+        Structure object.
+    """
+    return gemmi.read_structure(file_path)
+
+
+def convert_cif2pdb(file_path: str, write_path: str):
+    r"""Convert CIT file to PDB file
+    Parameters
+    ----------
+    file_path
+        Path to cif file.
+    write_path
+        Path to write PDB file.
+    """
+    cif_structure = read_cif(file_path)
+    cif_structure.setup_entities()
+    cif_structure.shorten_chain_names()
+    cif_structure.write_pdb(write_path)
