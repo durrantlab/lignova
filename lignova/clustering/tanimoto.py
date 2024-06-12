@@ -2,7 +2,6 @@ r" Implementation of the tanimoto clustering algorithm."
 
 from typing import List
 
-import rdkit
 from loguru import logger
 from rdkit import Chem, DataStructs
 from rdkit.ML.Cluster import Butina

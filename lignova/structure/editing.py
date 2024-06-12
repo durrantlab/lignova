@@ -6,7 +6,6 @@ from collections.abc import Iterable
 
 import gemmi
 import MDAnalysis as mda
-from gemmi import cif
 from loguru import logger
 
 

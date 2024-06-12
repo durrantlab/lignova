@@ -151,7 +151,6 @@ def prep_structure(
         if isinstance(pdb_id, str):
             pdb_id = [pdb_id]
     else:
-        # NOTE:REMEMBER TO DEAL WITH THE CIF FILES
         pdb_id = glob.glob(os.path.join(input_dir, "*.pdb"))
         logger.info(f"Found a total of {len(pdb_id)} PDB files in the directory")
         if len(pdb_id) == 0:
@@ -903,7 +902,6 @@ def calc_rmsd_spyrmsd(
     """
     done = []
     failed = []
-    count = 0
     context = GlideContext.get_current()
     context.write_dir = dock_ligand_dir
     context.set_current(context)
