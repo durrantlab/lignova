@@ -3,6 +3,7 @@ from typing import TextIO, Union
 
 import ast
 import os
+import pickle
 import time
 
 import matplotlib
@@ -391,11 +392,30 @@ def make_ligand_cluster_file(
     initial_data = []
     hdf5 = HDF5Parser("../PubChem_data_edited_400k.hdf5")
     old_data = old_parquet.convert_to_pandas().groupby("Cluster number")
+    # check if the progress_cache.pkl file exists and if so read it
+    if os.path.exists("progress_cache.pkl"):
+        with open("progress_cache.pkl", "rb") as f:
+            initial_data = pickle.load(f)
+
     # loop through the data and get the gene ids and the cids
     for cluster_number, data in old_data:
+        logger.debug(f'Cluster represenatives: {data["Represenatives"]}')
         for pdb_id in data["Represenatives"]:
+            # check if the data["Represenatives"] is in the initial_data pdb_id
+            if any(pdb_id == x[1] for x in initial_data):
+                logger.debug(f"pdb_id: {pdb_id} already in initial_data")
+                continue
             protein = Protein()
-            protein.load(file_path=f"../representatives/{pdb_id.lower()}.pdb")
+            # check if the pdb file exists
+            if not os.path.exists(f"../representatives/{pdb_id.lower()}.pdb"):
+                # then use the protein.load function to get the pdb file
+                protein.load(
+                    pdb_id=pdb_id,
+                    write=True,
+                    write_path=f"../representatives/{pdb_id.lower()}.pdb",
+                )
+            else:
+                protein.load(file_path=f"../representatives/{pdb_id.lower()}.pdb")
             logger.debug(protein._pdb_file_path)
             ligands = get_ligand_names(protein._pdb_file_path)
             if len(ligands) > 1:
@@ -404,12 +424,19 @@ def make_ligand_cluster_file(
                     initial_data.append(
                         (cluster_number, pdb_id, ligand, smiles["stereo_smiles"], None)
                     )
-            else:
+            elif len(ligands) == 1:
                 smiles = get_smiles(ligands[0])
                 initial_data.append(
                     (cluster_number, pdb_id, ligands[0], smiles["stereo_smiles"], None)
                 )
+            else:
+                logger.error(f"No ligands found for {pdb_id}")
+                continue
         for member in data["members"]:
+            # check if the data["members"] is in the initial_data member
+            if any(member == x[2] for x in initial_data):
+                logger.debug(f"member: {member} already in initial_data")
+                continue
             # find the aids for each gene id
             aids = list(
                 aid_2_target[aid_2_target["Gene_id"].astype(str) == str(member)]["AID"]
@@ -432,6 +459,11 @@ def make_ligand_cluster_file(
                         logger.error(f"Error: {e}")
                         initial_data.append((cluster_number, member, cid, None, None))
                         continue
+            # save the progress to cache file
+            cache_file = "progress_cache.pkl"
+            logger.warning(f"Saving progress to {cache_file}")
+            with open(cache_file, "wb") as f:
+                pickle.dump(initial_data, f)
     new_parquet.write(initial_data, new_schema)
 
 
@@ -694,7 +726,7 @@ if __name__ == "__main__":
     # read aid_2_target and aid_2_cids from the csv files
     aid_2_target = pd.read_csv("../aid_2_target.csv")
     aid_2_cids = pd.read_csv("../aid_2_cids.csv")
-    hdf5 = HDF5Parser("../PubChem_data_edited_400k.hdf5")
+    hdf5 = HDF5Parser("../PubChem_data_edited_420k.hdf5")
     # read the parquet file
     schema = pa.schema(
         [
