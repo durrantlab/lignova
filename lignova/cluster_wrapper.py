@@ -374,6 +374,7 @@ def make_ligand_cluster_file(
     aid_2_cids: pd.DataFrame,
     aid_2_target: pd.DataFrame,
     hdf5_file: str,
+    initial_data: list | None = None,
 ) -> None:
     r"""Make a new Parquet file for the ligand clustering.
     Parameters
@@ -389,17 +390,22 @@ def make_ligand_cluster_file(
     hdf5_file : str
         Path to the HDF5 file.
     """
-    initial_data = []
+    initial_data = initial_data if initial_data is not None else []
     hdf5 = HDF5Parser("../PubChem_data_edited_400k.hdf5")
     old_data = old_parquet.convert_to_pandas().groupby("Cluster number")
     # check if the progress_cache.pkl file exists and if so read it
-    if os.path.exists("progress_cache.pkl"):
-        with open("progress_cache.pkl", "rb") as f:
-            initial_data = pickle.load(f)
+    if os.path.exists("new_progress_cache.pkl"):
+        try:
+            with open("new_progress_cache.pkl", "rb") as f:
+                initial_data = pickle.load(f)
+        except Exception as e:
+            logger.error(f"Error: {e}")
+            # read the
 
     # loop through the data and get the gene ids and the cids
     for cluster_number, data in old_data:
         logger.debug(f'Cluster represenatives: {data["Represenatives"]}')
+        """
         for pdb_id in data["Represenatives"]:
             # check if the data["Represenatives"] is in the initial_data pdb_id
             if any(pdb_id == x[1] for x in initial_data):
@@ -432,6 +438,7 @@ def make_ligand_cluster_file(
             else:
                 logger.error(f"No ligands found for {pdb_id}")
                 continue
+                """
         for member in data["members"]:
             # check if the data["members"] is in the initial_data member
             if any(member == x[2] for x in initial_data):
@@ -460,7 +467,7 @@ def make_ligand_cluster_file(
                         initial_data.append((cluster_number, member, cid, None, None))
                         continue
             # save the progress to cache file
-            cache_file = "progress_cache.pkl"
+            cache_file = "new_progress_cache.pkl"
             logger.warning(f"Saving progress to {cache_file}")
             with open(cache_file, "wb") as f:
                 pickle.dump(initial_data, f)
@@ -481,49 +488,61 @@ def add_smiles_cluster(
         ParquetParser object of the new file.
     """
     # READ THE DATA FROM THE compound_clustered_pubchem.parquet file
-    data = parquet.convert_to_pandas().groupby("Protein Cluster number")
-    TanimotoClustering = TanimotoClustering()
+    data = old_parquet.convert_to_pandas().groupby("Protein Cluster number")
+    tanimoto = TanimotoClustering()
+    all_results = []
+
     for cluster, rest in data:
-        compounds_count = []
-        logger.debug(f"Length of compounds with duplication: {len(rest)}")
-        cluster_number = cluster
+        logger.debug(f"Length of compounds: {len(rest)}")
         # get the rows with unique values in the compound id column
-        unique_rows = rest.drop_duplicates(
-            subset="Compound ID", ignore_index=True
-        ).dropna()
-        logger.debug(f"unique rows: {unique_rows}")
+        unique_rows = rest.drop_duplicates(subset=["Compound ID"])
         logger.debug(f"Length of unique rows: {len(unique_rows)}")
         smiles = unique_rows["Smiles"]
-        compound_ids = unique_rows["Compound ID"]
+        compound_ids = unique_rows["Compound ID"].tolist()
         logger.debug(f"Length of smiles: {len(smiles)}")
         original_length = len(smiles)
         # Get fingerprints for each molecule and tanimoto similarity as one liner
+        fingerprints = [tanimoto.get_morgan_fingerprint(smile) for smile in smiles]
+
+        # remove the None values from the fingerprints and their corresponding compound_ids
         fingerprints = [
-            TanimotoClustering.get_morgan_fingerprint(smile) for smile in smiles
+            fingerprint for fingerprint in fingerprints if fingerprint is not None
         ]
+        compound_ids = [
+            compound_id
+            for compound_id, fingerprint in zip(compound_ids, fingerprints)
+            if fingerprint is not None
+        ]
+        # remove the corresponding compound_ids from the rest dataframe and reset the index
+        rest = rest[rest["Compound ID"].isin(compound_ids)]
         logger.debug(f"unique fingerprints: {len(fingerprints)}")
         similarity = []
-        # loop over the fingerprints to get the similarity for each molecule with the previous molecules
+        # Loop over the fingerprints to get the similarity for each molecule with the previous molecules
         for i in range(1, len(fingerprints)):
             similarity.append(
-                TanimotoClustering.tanimoto_similarity(
-                    fingerprints[:i], fingerprints[i]
-                )
+                tanimoto.tanimoto_similarity(fingerprints[:i], fingerprints[i])
             )
         logger.debug(f"Length of similarity: {len(similarity)}")
-        # run TanimotoClustering.cluster_tanimoto(similarity, compound_ids, cutoff)
-        clusters = TanimotoClustering.cluster_tanimoto(
+        # Run TanimotoClustering.cluster_tanimoto(similarity, compound_ids, cutoff)
+        clusters = tanimoto.cluster_tanimoto(
             similarity, compound_ids, similarity_cutoff
         )
-        # loop through the clusters and add the cluster number to the dataframe Ligand Cluster number
+        # Add a column for Ligand Cluster number if it doesn't exist
+        if "Ligand Cluster number" not in rest.columns:
+            rest["Ligand Cluster number"] = None
+
+        # Loop through the clusters and add the cluster number to the dataframe Ligand Cluster number
         for cluster_number, cluster in enumerate(clusters, start=1):
             for compound in cluster:
-                rest.loc[rest["Compound ID"] == compound][
-                    "Ligand Cluster number"
-                ] = cluster_number
+                rest.loc[rest["Compound ID"] == compound, "Ligand Cluster number"] = (
+                    cluster_number
+                )
 
-        # save the data to the new parquet file
-        new_parquet.write(rest, new_parquet.schema)
+        all_results.append(rest)
+
+    # Concatenate all results and save the data to the new parquet file
+    final_result = pd.concat(all_results)
+    new_parquet.write(final_result, new_parquet.schema)
 
 
 if __name__ == "__main__":
@@ -708,7 +727,7 @@ if __name__ == "__main__":
     make_protein_cluster_file("clustered_pubchem.parquet", "../new_clusters_cluster_parsed.csv")
     hdf5_result=hdf5_raw_file_parser('../PubChem_data_edited_400k.hdf5')
     add_compounds(ParquetParser("clustered_pubchem.parquet",schema=schema), hdf5_result,overwrite=False)
-    """
+
     # read all .cif files in the ../representatives folder and convert them to .pdb files
     cif_files = [
         file for file in os.listdir("../representatives") if file.endswith(".cif")
@@ -723,6 +742,7 @@ if __name__ == "__main__":
             f"../representatives/{file.replace('.cif','.pdb')}",
         )
         logger.info(f"Converted {file} to .pdb file")
+    """
     # read aid_2_target and aid_2_cids from the csv files
     aid_2_target = pd.read_csv("../aid_2_target.csv")
     aid_2_cids = pd.read_csv("../aid_2_cids.csv")
@@ -750,91 +770,128 @@ if __name__ == "__main__":
     )
     # make a new parquet file with the new schema and the data from the trial_data
     new_parquet = ParquetParser("compounds_clustered_pubchem.parquet", new_schema)
-
+    """
+    #find rows with missing values in the Smiles column
+    missing_smiles = new_parquet.convert_to_pandas()[new_parquet.convert_to_pandas()["Smiles"].isnull()]
+    logger.info(f"Rows with missing values in the Smiles column\n:{missing_smiles}")
+    #make this missing_smiles a parquet file
+    missing_smiles.to_parquet("missing_smiles.parquet")
+    #make a ParquetParser object for the missing_smiles.parquet file
+    missing_smiles_parquet = ParquetParser("missing_smiles.parquet", new_schema)
+    logger.info(missing_smiles_parquet.convert_to_pandas().head())
+    #exclude the missing values from the new_parquet file
+    new_data = new_parquet.convert_to_pandas()[new_parquet.convert_to_pandas()["Smiles"].notnull()]
+    logger.info(f"Data with missing values excluded\n:{new_data}")
+    #save new_data into a list
+    new_data_list = new_data.values.tolist()
+    logger.info(f"Data with missing values excluded\n:{new_data_list}")
+    #read the compound_clustered_pubchem.parquet file
+    trial_data =new_parquet.convert_to_pandas()
+    logger.debug(f'the compound file sanity checks,{trial_data.head()}')
+    logger.debug(f'the compound file sanity checks,{trial_data.tail()}')
     make_ligand_cluster_file(
         old_parquet,
-        new_parquet,
+        missing_smiles_parquet,
         aid_2_cids,
         aid_2_target,
-        hdf5_file="../PubChem_data_edited_400k.hdf5",
+        hdf5_file="../PubChem_data_edited_420k.hdf5",
+        initial_data=new_data_list,
     )
-    """
-    # group the data by the cluster number
-    initial_data = []
-    trial_data = trial_data.groupby("Cluster number")
-    # loop through the data and get the gene ids and the cids
+    # read the data from the new parquet file
+    trial_data = new_parquet.convert_to_pandas()
+    #get the empty columns in the trial_data
+    logger.info(f'The length of empty columns\n:{trial_data.isnull().sum()}')
+    #group the data by the cluster number
+    trial_data = trial_data.groupby("Protein Cluster number")
+    #loop through the data and check which cluster has the least null values and the number of values in the cluster
+    #save these data to a file
+    with open("cluster_data_less_30_missing.csv", "w") as f:
+        f.write("Cluster number, Number of missing values, Length of data\n")
+    complete_data = pd.DataFrame()
     for cluster_number, data in trial_data:
-        for pdb_id in data["Represenatives"]:
-            protein = Protein()
-            protein.load(file_path=f"../representatives/{pdb_id.lower()}.pdb")
-            logger.debug(protein._pdb_file_path)
-            ligands = get_ligand_names(protein._pdb_file_path)
-            if len(ligands) > 1:
-                for ligand in ligands:
-                    smiles = get_smiles(ligand)
-                    initial_data.append(
-                        (cluster_number, pdb_id, ligand, smiles["stereo_smiles"], None)
-                    )
-            else:
-                smiles = get_smiles(ligands[0])
-                initial_data.append(
-                    (cluster_number, pdb_id, ligands[0], smiles["stereo_smiles"], None)
-                )
-        for member in data["members"]:
-            # find the aids for each gene id
-            aids = list(
-                aid_2_target[aid_2_target["Gene_id"].astype(str) == str(member)]["AID"]
-            )
-            # loop through the aids and get their cids from the aid_2_cids dataframe
-            for aid in aids:
-                logger.debug(f"aid: {aid}")
-                cids = ast.literal_eval(
-                    aid_2_cids[aid_2_cids["AID"] == aid]["CIDs"].to_list()[0]
-                )
-                for cid in cids:
-                    # get the smiles for each cid using hdf5.read(f'aids/{aid}/cids/{cid}/smiles')
-                    try:
-                        smiles = hdf5.read(f"aids/{aid}/cids/{cid}/smiles").astype(str)
-                        logger.debug(f"smiles: {smiles}")
-                        initial_data.append(
-                            (cluster_number, member, cid, smiles[0], None)
-                        )
-                        logger.info(f"Data: {initial_data}")
-                    except Exception as e:
-                        logger.error(f"Error: {e}")
-                        continue
-    new_parquet.write(initial_data, new_schema)
-    #read the protein_clustered_data.parquet file and find the length of the data
-    schema = pa.schema(
-        [
-            ("Cluster number", pa.int64()),
-            ("Represenatives", pa.string()),
-            ("members", pa.string()),
-            ("member_compound", pa.list_(pa.string())),
+        logger.info(f"Cluster number: {cluster_number}")
+
+        logger.info(f"Length of data: {len(data)}")
+        logger.info(f"Number of missing values: {data['Smiles'].isnull().sum()}")
+        #check if the ratio of missing values is less than 0.3 and if so save the cluster number and the number of missing values and the length of the data to a file
+        if data['Smiles'].isnull().sum()/len(data) < 0.3:
+            #save the cluster number and the number of missing values and the length of the data to a file
+            with open("cluster_data_less_30_missing.csv", "a") as f:
+                f.write(f"{cluster_number}, {data['Smiles'].isnull().sum()},{len(data)}\n")
+            #save the cluster number and the data
+            if data['Smiles'].isnull().sum() == 0:
+                complete_data = pd.concat([complete_data,data])
+
+    #save the complete_data to a parquet file
+    complete_data.to_parquet("complete_data.parquet")
+    """
+    count = {}
+    # read the complete_data.parquet file
+    complete_data = ParquetParser("complete_data.parquet", new_schema)
+    clustered_compound = ParquetParser("compounds_clustered_poster.parquet", new_schema)
+    """
+    #run the add_smiles_cluster function
+    add_smiles_cluster(complete_data,similarity_cutoff=0.7,new_parquet=clustered_compound)
+    logger.info(f'The length of empty columns\n:{clustered_compound.convert_to_pandas().isnull().sum()}')
+    #find the rows with missing values in the ligand cluster number column
+    logger.debug(f"Rows with missing values in the Ligand Cluster number column\n:{clustered_compound.convert_to_pandas()[clustered_compound.convert_to_pandas()['Ligand Cluster number'].isnull()]}")
+    """
+    # group the data by the Protein Cluster number
+    trial_data = clustered_compound.convert_to_pandas().groupby(
+        "Protein Cluster number"
+    )
+    # find the number of protein clusters
+    logger.info(f"Number of protein clusters: {len(trial_data)}")
+    # loop through the data and get the gene ids and the cids
+    count = {}
+    # empty pandas dataframe to store the data
+    empty_df = pd.DataFrame(
+        columns=[
+            "Protein Cluster number",
+            "PDB/Gene ID",
+            "Compound ID",
+            "Smiles",
+            "Ligand Cluster number",
         ]
     )
-    parquet = ParquetParser("../protein_clustered_data.parquet", schema)
-    logger.info(parquet.convert_to_pandas().head())
-    logger.info(parquet.convert_to_pandas().tail())
-    #find if there any rows with missing values in member_compound column
-    logger.info(f'The length of empty columns\n:{parquet.convert_to_pandas().isnull().sum()}')
-    #length of the data in the parquet file
-    logger.info(f"Length of entire data in parquaet file, {len(parquet.convert_to_pandas())}")
-    #extract the member_compound column from the parquet file and extract all the unique values
-    member_compound = parquet.convert_to_pandas()["member_compound"]
-    #append all the values in the member_compound column to a list
-    all_compounds = []
-    for compounds in member_compound:
-        all_compounds.extend(compounds)
-    #logger.info(all_compounds)
-    logger.info(f"Length of all compounds left after protein clustering,{len(list(set(all_compounds)))}")
-    #get the length of member_compound column in the parquet file where the members == 25
-    cids=parquet.convert_to_pandas()[parquet.convert_to_pandas()['members'] == '25']
-    logger.debug(cids)
-    logger.info(f"{set(cids['member_compound'][0])}")
-    logger.info(f"Length of member_compound column where members == 25: {len(list(set((cids['member_compound'][0]))))}")
+    for prot_cluster, data in trial_data:
+        # group the data by the Ligand Cluster number
+        ligand_data = data.groupby("Ligand Cluster number")
+        tmp = []
+        number_compounds = 0
+        # find cluster with characters in compound id column
+        for lig_cluster, lig_data in ligand_data:
+            if (
+                any(char.isalpha() for char in lig_data["Compound ID"])
+                and len(lig_data) > 1
+                and not all(char.isalpha() for char in lig_data["Compound ID"])
+            ):
+                # save the original data to a empty dataframe
+                empty_df = pd.concat([empty_df, lig_data])
+                # logger.info(f"Cluster number: {prot_cluster}, Ligand Cluster number: {lig_cluster}")
+                number_compounds += len(lig_data)
+                tmp.append(lig_cluster)
+        if len(tmp) > 0:
+            count[prot_cluster] = tmp
+            logger.info(f"originally {prot_cluster} had {len(data)} compounds")
+            logger.info(
+                f"The ones with pdb reference for {prot_cluster} are in clusters {tmp} with {number_compounds} compounds"
+            )
+    logger.info(f"Number of protein clusters with pdb reference: {len(count)}")
 
-    matplotlib.use('Agg')  # or another appropriate backend like 'Qt5Agg', 'Agg', etc.
+    # save empty_df to a parquet file named chosen_compounds_poster.parquet
+    empty_df.to_parquet("chosen_compounds_poster.parquet")
+    # read the chosen_compounds_poster.parquet file
+    chosen_compounds = ParquetParser("chosen_compounds_poster.parquet", new_schema)
+    logger.info(
+        f"The length of empty columns\n:{chosen_compounds.convert_to_pandas().isnull().sum()}"
+    )
+    logger.info(
+        f"Length of entire data in parquet file, {len(chosen_compounds.convert_to_pandas())}"
+    )
+    logger.info(f"head of the data\n:{chosen_compounds.convert_to_pandas().head()}")
+    logger.info(f"tail of the data\n:{chosen_compounds.convert_to_pandas().tail()}")
+"""
     #read the compound_clustered_pubchem.parquet file
     schema = pa.schema(
         [
