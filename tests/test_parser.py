@@ -115,6 +115,7 @@ def test_parquet_write():
             ),
         ]
     )
+    logger.info(f"Schema: {schema.names}")
     parser = ParquetParser(parquet_file_path, schema)
     data = [
         {
@@ -130,7 +131,7 @@ def test_parquet_write():
             },
         },
     ]
-    parser.write(pd.DataFrame(data), parser.schema)
+    parser.write(data, parser.schema)
     assert os.path.exists(parquet_file_path)
     result = parser.read()
     assert result.schema.names == ["id", "name", "attributes"]
@@ -234,6 +235,6 @@ def test_filter_data():
             },
         },
     ]
-    parser.write(pd.DataFrame(data), parser.schema)
+    parser.write(data, parser.schema)
     result = parser.filter_data(lambda x: (x == "John Doe"), "name")
     assert result.equals(pd.DataFrame([data[1]]))
