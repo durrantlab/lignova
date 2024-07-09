@@ -67,7 +67,7 @@ class ParquetParser(FormatManager):
                 "Data must be a pandas DataFrame or a list of dictionaries"
             )
         # Remove duplicate rows
-        data = data.drop_duplicates()
+        # data = data.drop_duplicates(inplace=True,keep='first',ignore_index=True)
         # Create a table from the pandas DataFrame
         table = pa.Table.from_pandas(data, schema=data_scheme)
         # Write the table to a Parquet file

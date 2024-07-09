@@ -48,7 +48,7 @@ class PubChemAPI:
         cids_str = str(cid)
         properties_str = ",".join(properties)
         url = f"{self.api_key}/compound/cid/{str(cid)}/property/{properties_str}/{self.retrieve_format}"
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, timeout=30)
         if response.status_code == 200:
             response = response.json()
             logger.debug(f"Retrieved compound information for CID {cid}.")

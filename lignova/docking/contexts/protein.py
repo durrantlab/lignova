@@ -6,6 +6,8 @@ _default_glide_context: "Optional[ProteinContext]" = None
 
 DEFAULT_IMPURITIES = [
     "2PE",
+    "EDO",
+    "HEM",
     "TUN",
     "HC3",
     "DMS",
@@ -40,6 +42,7 @@ DEFAULT_IMPURITIES = [
     "KCC",
     "BES",
     "THC",
+    "2HP",
     "PEB",
     "1PE",
     "HYP",
