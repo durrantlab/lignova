@@ -1,4 +1,5 @@
 r"""Implementation for different Schrodinger's suplementary functions."""
+
 from typing import Union
 
 import glob
@@ -95,10 +96,10 @@ def manipulate_complexes(
                 logger.debug(f"looking for the file in: {directory}")
                 for file in glob.glob(os.path.join(directory, "*")):
                     filename = os.path.basename(file)
-                    logger.debug(f"Checking file: {file}")
+                    # logger.debug(f"Checking file: {file}")
                     if (
                         filename.startswith(filename)
-                        and filename.endswith(".maegz")
+                        and (filename.endswith(".maegz") or filename.endswith(".mae"))
                         and filename != os.path.basename(input_file)
                         and "-out" in file
                     ):
@@ -128,7 +129,7 @@ def manipulate_complexes(
 def convert_to_pdb(
     input_file: str,
     context: str = GlideContext.get_current(),
-    n_structures: list = list(range(1, 4)),
+    n_structures: list | None = None,
 ):
     r"""Convert docking file to pdb format.
     Parameters
@@ -141,17 +142,18 @@ def convert_to_pdb(
     n_structures : int
         Number of structures to convert. Default is the first 3 structures.
     """
-    command = [
-        context.command + "/utilities/structconvert",
-        "-use_component_dict",
-        "-n",
-        ",".join(map(str, n_structures)),
-        input_file,
-        os.path.join(
-            context.write_dir,
-            f"{os.path.splitext(os.path.basename(input_file))[0]}.pdb",
-        ),
-    ]
+    command = [context.command + "/utilities/structconvert", "-use_component_dict"]
+    if n_structures:
+        command.extend(["-n", ",".join(map(str, n_structures))])
+    command.extend(
+        [
+            input_file,
+            os.path.join(
+                context.write_dir,
+                f"{os.path.splitext(os.path.basename(input_file))[0]}.pdb",
+            ),
+        ]
+    )
     try:
         process = subprocess.Popen(
             command,
@@ -174,7 +176,8 @@ def convert_to_pdb(
                 context.write_dir,
                 f"{os.path.splitext(os.path.basename(input_file))[0]}-1.pdb",
             )
-            logger.info(f"Converting files one by one: {output_file_new}")
+            logger.info(f"Converted files one by one: {output_file_new}")
+            """
             if os.path.exists(output_file_new):
                 # loop through the number of structures and convert them one by one
                 for i in n_structures:
@@ -210,6 +213,7 @@ def convert_to_pdb(
                             process.returncode, " ".join(command)
                         )
                 return True
+                """
         else:
             logger.error(f"Conversion failed for {input_file}")
             logger.error(f"Error Output:\n{stderr}")
