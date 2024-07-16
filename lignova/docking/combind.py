@@ -1,5 +1,6 @@
 r"""Implementation of combind."""
-from typing import TextIO, Union
+
+from typing import List, TextIO, Union
 
 import glob
 import os
@@ -22,39 +23,41 @@ class Combind(CombindContext):
 
     def featurize(
         self,
-        docking_filepath: Union[str, TextIO],
-        file_name: Union[str],
+        docking_filepaths: Union[str, List[str]],
+        file_name: str,
     ):
-        r"""Featurize the docking poses file.
+        r"""Featurize the docking files.
         Parameters
         ----------
-        docking_filepath : str, file-like object
-            Path to the docking file.
-        file_name : str,
+        docking_filepaths : str, list
+            Path to the docking file from GLIDE. Can be a single file or a list of two files.
+        file_name : str
             Name of the output file.
         """
-        if docking_filepath is None:
-            if not os.path.exists(os.path.join(self.work_dir, docking_filepath)):
-                logger.error("Docking file is not found.")
-                # find files with _pv.maegz extension in the work_dir using glob
-                files = glob.glob(os.path.join(self.work_dir, "*_pv.maegz"))
-                if len(files) == 0 or len(files) > 1:
-                    logger.error(
-                        "No files or Multiple docking files found in the work_dir."
-                    )
-                    raise OSError(
-                        "No files or Multiple docking files found in the work_dir."
-                    )
-            else:
-                docking_file = os.path.join(self.work_dir, docking_filepath)
+        if isinstance(docking_filepaths, str):
+            docking_filepaths = [docking_filepaths]
+
+        if len(docking_filepaths) == 0 or len(docking_filepaths) > 2:
+            logger.error(
+                "Invalid number of docking files provided. Must provide one or two files."
+            )
+            raise ValueError(
+                "Invalid number of docking files provided. Must provide one or two files."
+            )
+        # make sure all the files exist
+        for file in docking_filepaths:
+            if not os.path.exists(file):
+                logger.error(f"{file} does not exist.")
+                raise FileNotFoundError(f"{file} does not exist.")
         command1 = [
             self.activate,
             self.command + "/combind",
             "featurize",
             os.path.join(self.work_dir, f"{file_name}_features"),
-            docking_filepath,
         ]
+        command1.extend(docking_filepaths)
         command = " ".join(command1)
+
         try:
             process = subprocess.run(
                 command,
@@ -157,27 +160,18 @@ class Combind(CombindContext):
                 executable="/bin/bash",
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                check=True,
             )
-            if process.returncode == 0:
-                logger.info("Pose extraction from the docking file completed.")
-                output_file = glob.glob(
-                    os.path.join(
-                        self.work_dir,
-                        f"{os.path.splitext(os.path.basename(combind_csv))[0]}_pv.maegz",
-                    )
+            logger.info("Pose extraction from the docking file completed.")
+            output_file = glob.glob(
+                os.path.join(
+                    self.work_dir,
+                    f"{os.path.splitext(os.path.basename(combind_csv))[0]}_pv.maegz",
                 )
-                os.rename(
-                    output_file[0],
-                    os.path.join(self.work_dir, f"{extract_filename}_pv.maegz"),
-                )
-            else:
-                error_message = (
-                    "Failed to activate extract the top pose from the docking file"
-                    + f"\n{process.stderr.decode()}."
-                )
-                logger.critical(error_message)
-                raise NotImplementedError(error_message)
+            )
+            os.rename(
+                output_file[0],
+                os.path.join(self.work_dir, f"{extract_filename}_pv.maegz"),
+            )
         except Exception as e:
             logger.error(f"Pose extraction failed.\n {str(e)}")
             raise e
