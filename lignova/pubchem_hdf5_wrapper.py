@@ -114,8 +114,7 @@ def complete_hdf5(hdf5_file_path: str):
                             shape=(1,),
                         )
                         # add a timeout to avoid being blocked by the server
-                        time.sleep(3)
-
+                        time.sleep(5)
     except Exception as e:
         logger.error(f"Error occurred: {e}")
     else:
