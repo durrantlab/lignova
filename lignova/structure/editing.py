@@ -41,6 +41,25 @@ def select_chains(
     return mda_univ.select_atoms(selection)
 
 
+def validate_chains(mda_univ: mda.Universe, chains: Union[str, Iterable[str]]) -> bool:
+    r"""Validate chains.
+
+    Parameters
+    ----------
+    u
+        MDAnalysis universe to process.
+    chains
+        Chains to validate.
+    """
+    if isinstance(chains, str):
+        chains = [chains]
+    n_chains = len(set(mda_univ.segments.segids))
+    logger.info("There are {} chains in the structure", n_chains)
+    if set(chains).issubset(set(mda_univ.segments.segids)):
+        return True
+    return False
+
+
 def remove_residues(
     mda_univ: mda.Universe, residues: Union[str, Iterable[str]]
 ) -> mda.Universe:
