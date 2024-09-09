@@ -115,12 +115,10 @@ def test_prep_Protein():
                 outerbox_ref = line.split()[1]
             if "GRID_CENTER" in line:
                 grid_center_ref = [line.split()[1], line.split()[2], line.split()[3]]
-                for i in grid_center_ref:
-                    tmp = i.rstrip(",")
-                    if "[" or "]" in tmp:
-                        # remove the brackets from the string and convert to float
-                        grid_center_ref[grid_center_ref.index(i)] = float(tmp[1:-1])
-                        logger.info(grid_center_ref)
+                grid_center_ref = [
+                    float(item.strip("[], ")) for item in grid_center_ref
+                ]
+                logger.info(f"The grid center reference numbers are", grid_center_ref)
 
     with open(context_protein_6Oav["write_dir"] + "/6oav_chA_grid.log", "r") as file:
         lines = file.readlines()
@@ -128,7 +126,9 @@ def test_prep_Protein():
             if "OUTERBOX" in line:
                 outerbox_test = line.split()[1]
             if "GRID_CENTER" in line:
-                grid_center_test = [line.split()[1], line.split()[2], line.split()[3]]
+                temp = [line.split()[1], line.split()[2], line.split()[3]]
+                grid_center_test = [float(item.strip("[], ")) for item in temp]
+                logger.info(f"The grid center test numbers", grid_center_test)
 
     assert np.isclose(float(outerbox_ref), float(outerbox_test), rtol=0.1)
     assert np.all(
