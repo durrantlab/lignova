@@ -93,6 +93,60 @@ def is_xray_structure(pdb: str | TextIO) -> bool:
             return False
 
 
+def chery_pick_ligand(
+    pdb: str | TextIO, ligand: str, remove_water: bool = True
+) -> tuple["Protein", "Ligand"]:
+    r"""Cherry pick a ligand from a PDB file.
+    Parameters
+    ----------
+    pdb : str or file-like
+        Path to the PDB file or file-like object.
+    ligand : str
+        The ligand to cherry pick.
+    Returns
+    -------
+    Protein
+        Universe object containing the protein.
+    Ligand
+        Universe object containing the ligand.
+    """
+    pdb_obj = get_mda_universe(pdb)
+    water_object = select_residues(pdb_obj, residues=["HOH"])
+    # check if the ligand is in chain A and if not change chains till it is found using filter_hetatoms
+    selection = select_chains(pdb_obj, chains="A")
+    ligand_obj = select_residues(selection, residues=ligand)
+    chains = list(set(pdb_obj.segments.segids))
+    chains.sort()
+    index = 0
+    while (
+        len(ligand_obj) == 0
+        or ligand not in ligand_obj.resnames
+        and index < len(chains)
+    ):
+        logger.warning(f"No HETATM found in chain A. Checking chain.{chains[index]}")
+        selection = select_chains(pdb_obj, chains=chains[index])
+        ligand_obj = filter_hetatoms(selection)
+        ligand_obj = remove_residues(ligand_obj, residues=["HOH"])
+        water_object = select_residues(selection, residues=["HOH"])
+        if index + 1 < len(chains):
+            index += 1
+        else:
+            break
+        # change the chain to the next chain in the pdb file
+    protein = remove_hetatoms(pdb_obj)
+    if remove_water:
+        ligand_obj = remove_residues(ligand_obj, residues=["HOH"])
+        protein = remove_residues(protein, residues=["HOH"])
+    else:
+        ligand_obj = merge_universes([ligand_obj, water_object])
+        protein = merge_universes([protein, water_object])
+        logger.warning(
+            "Crystallographic Water molecules are not removed from the protein structure."
+        )
+    save_prot = merge_universes([protein, ligand_obj])
+    return save_prot, ligand_obj
+
+
 def separate_protein_ligand(
     pdb: str | TextIO,
     reference: str | TextIO = None,
@@ -126,9 +180,18 @@ def separate_protein_ligand(
         Universe object containing the ligand.
     """
     pdb_obj = get_mda_universe(pdb)
+    logger.debug(f"Chains in the pdb file: {list(set(pdb_obj.segments.segids))}")
     water_object = select_residues(pdb_obj, residues=["HOH"])
     # check if the file has hetatoms in chain A or not
     if keep_het_chain is not None:
+        if validate_chains(pdb_obj, keep_het_chain) is False:
+            logger.warning(
+                f"Chain {keep_het_chain} not found in the pdb file. Changing to the first chain."
+            )
+            # change the chain to the first chain in the pdb file
+            keep_het_chain = list(set(pdb_obj.segments.segids))[0]
+            logger.warning(f"Chain changed to {keep_het_chain}")
+        logger.debug(f"Chain specified: {keep_het_chain}")
         selection = select_chains(pdb_obj, chains=keep_het_chain)
         # check if the hetatoms in the selection (the residue names)
         # are valid using the protein context impurities
