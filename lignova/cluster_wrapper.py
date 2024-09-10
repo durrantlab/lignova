@@ -390,26 +390,34 @@ def make_ligand_cluster_file(
     hdf5_file : str
         Path to the HDF5 file.
     """
+    start_time = time.time()
+    if os.path.exists("backup.parquet"):
+        done_data = ParquetParser(
+            "backup.parquet", new_file_name.schema
+        ).convert_to_pandas()
+    else:
+        done_data = pd.DataFrame()
     initial_data = initial_data if initial_data is not None else []
-    hdf5 = HDF5Parser("../PubChem_data_edited_400k.hdf5")
+    hdf5 = HDF5Parser("../PubChem_data_edited.hdf5")
     old_data = old_parquet.convert_to_pandas().groupby("Cluster number")
     # check if the progress_cache.pkl file exists and if so read it
-    if os.path.exists("new_progress_cache.pkl"):
+    if os.path.exists("cache.pkl"):
         try:
-            with open("new_progress_cache.pkl", "rb") as f:
+            with open("cache.pkl", "rb") as f:
                 initial_data = pickle.load(f)
         except Exception as e:
             logger.error(f"Error: {e}")
-            # read the
-
     # loop through the data and get the gene ids and the cids
     for cluster_number, data in old_data:
         logger.debug(f'Cluster represenatives: {data["Represenatives"]}')
-        """
         for pdb_id in data["Represenatives"]:
+            # check if the pdb_id is in the done_data
+            if any(pdb_id == x[1] for x in done_data):
+                logger.debug(f"pdb_id: {pdb_id} already in done_data. Skipping")
+                continue
             # check if the data["Represenatives"] is in the initial_data pdb_id
             if any(pdb_id == x[1] for x in initial_data):
-                logger.debug(f"pdb_id: {pdb_id} already in initial_data")
+                logger.debug(f"pdb_id: {pdb_id} already in initial_data. Skipping")
                 continue
             protein = Protein()
             # check if the pdb file exists
@@ -431,18 +439,33 @@ def make_ligand_cluster_file(
                         (cluster_number, pdb_id, ligand, smiles["stereo_smiles"], None)
                     )
             elif len(ligands) == 1:
-                smiles = get_smiles(ligands[0])
-                initial_data.append(
-                    (cluster_number, pdb_id, ligands[0], smiles["stereo_smiles"], None)
-                )
+                try:
+                    smiles = get_smiles(ligands[0])
+                    initial_data.append(
+                        (
+                            cluster_number,
+                            pdb_id,
+                            ligands[0],
+                            smiles["stereo_smiles"],
+                            None,
+                        )
+                    )
+                except Exception as e:
+                    logger.error(f"Error: {e}")
+                    initial_data.append(
+                        (cluster_number, pdb_id, ligands[0], None, None)
+                    )
+                    continue
             else:
                 logger.error(f"No ligands found for {pdb_id}")
                 continue
-                """
         for member in data["members"]:
             # check if the data["members"] is in the initial_data member
             if any(member == x[2] for x in initial_data):
-                logger.debug(f"member: {member} already in initial_data")
+                logger.debug(f"member: {member} already in initial_data. Skipping")
+                continue
+            if any(member == x[2] for x in done_data):
+                logger.debug(f"member: {member} already in done_data. Skipping")
                 continue
             # find the aids for each gene id
             aids = list(
@@ -467,10 +490,22 @@ def make_ligand_cluster_file(
                         initial_data.append((cluster_number, member, cid, None, None))
                         continue
             # save the progress to cache file
-            cache_file = "new_progress_cache.pkl"
+            cache_file = "cache.pkl"
             logger.warning(f"Saving progress to {cache_file}")
             with open(cache_file, "wb") as f:
                 pickle.dump(initial_data, f)
+            # write the parquet file every 3hr
+            if time.time() - start_time > 60 * 60 * 3:
+                # make a parquet file with the initial_data named backup
+                backup = ParquetParser("backup.parquet", new_file_name.schema)
+                backup.write(initial_data, new_file_name.schema)
+                logger.info(
+                    f"Data written to backup Parquet file at {backup.file_path}"
+                )
+                start_time = time.time()
+                # read the backup file as a pandas dataframe
+                done_data = backup.convert_to_pandas()
+
     new_parquet.write(initial_data, new_schema)
 
 
@@ -491,7 +526,6 @@ def add_smiles_cluster(
     data = old_parquet.convert_to_pandas().groupby("Protein Cluster number")
     tanimoto = TanimotoClustering()
     all_results = []
-
     for cluster, rest in data:
         logger.debug(f"Length of compounds: {len(rest)}")
         # get the rows with unique values in the compound id column
@@ -501,6 +535,24 @@ def add_smiles_cluster(
         compound_ids = unique_rows["Compound ID"].tolist()
         logger.debug(f"Length of smiles: {len(smiles)}")
         original_length = len(smiles)
+        # if length of the smiles is less than 2, skip the cluster
+        if original_length < 2:
+            logger.error(f"Length of smiles: {original_length} is less than 2")
+            continue
+
+        # Get fingerprints for each molecule and tanimoto similarity as one liner
+        fingerprints = []
+        valid_compound_ids = []
+        for smile, compound_id in zip(smiles, compound_ids):
+            if smile is not None:
+                fingerprint = tanimoto.get_morgan_fingerprint(smile)
+                if fingerprint is not None:
+                    fingerprints.append(fingerprint)
+                    valid_compound_ids.append(compound_id)
+
+        # Update compound_ids to only include valid ones
+        compound_ids = valid_compound_ids
+        """
         # Get fingerprints for each molecule and tanimoto similarity as one liner
         fingerprints = [tanimoto.get_morgan_fingerprint(smile) for smile in smiles]
 
@@ -513,6 +565,7 @@ def add_smiles_cluster(
             for compound_id, fingerprint in zip(compound_ids, fingerprints)
             if fingerprint is not None
         ]
+        """
         # remove the corresponding compound_ids from the rest dataframe and reset the index
         rest = rest[rest["Compound ID"].isin(compound_ids)]
         logger.debug(f"unique fingerprints: {len(fingerprints)}")
@@ -523,6 +576,9 @@ def add_smiles_cluster(
                 tanimoto.tanimoto_similarity(fingerprints[:i], fingerprints[i])
             )
         logger.debug(f"Length of similarity: {len(similarity)}")
+        if len(similarity) == 0:
+            logger.error("Length of similarity is 0")
+            continue
         # Run TanimotoClustering.cluster_tanimoto(similarity, compound_ids, cutoff)
         clusters = tanimoto.cluster_tanimoto(
             similarity, compound_ids, similarity_cutoff
@@ -742,11 +798,10 @@ if __name__ == "__main__":
             f"../representatives/{file.replace('.cif','.pdb')}",
         )
         logger.info(f"Converted {file} to .pdb file")
-    """
     # read aid_2_target and aid_2_cids from the csv files
     aid_2_target = pd.read_csv("../aid_2_target.csv")
     aid_2_cids = pd.read_csv("../aid_2_cids.csv")
-    hdf5 = HDF5Parser("../PubChem_data_edited_420k.hdf5")
+    hdf5 = HDF5Parser("../PubChem_data_edited.hdf5")
     # read the parquet file
     schema = pa.schema(
         [
@@ -769,7 +824,28 @@ if __name__ == "__main__":
         ]
     )
     # make a new parquet file with the new schema and the data from the trial_data
-    new_parquet = ParquetParser("compounds_clustered_pubchem.parquet", new_schema)
+    new_parquet = ParquetParser("all_compounds_wo_smiles_cluster.parquet", new_schema)
+    make_ligand_cluster_file(
+        old_parquet,
+        new_parquet,
+        aid_2_cids,
+        aid_2_target,
+        hdf5_file="../PubChem_data_edited.hdf5",
+    )
+    """
+    new_schema = pa.schema(
+        [
+            ("Protein Cluster number", pa.int64()),
+            ("PDB/Gene ID", pa.string()),
+            ("Compound ID", pa.string()),
+            ("Smiles", pa.string()),
+            ("Ligand Cluster number", pa.int64()),
+        ]
+    )
+    old_parquet = ParquetParser("all_compounds_wo_smiles_cluster.parquet", new_schema)
+    new_parquet = ParquetParser("all_compounds_with_smiles_cluster.parquet", new_schema)
+    add_smiles_cluster(old_parquet, similarity_cutoff=0.7, new_parquet=new_parquet)
+    exit()
     """
     #find rows with missing values in the Smiles column
     missing_smiles = new_parquet.convert_to_pandas()[new_parquet.convert_to_pandas()["Smiles"].isnull()]
