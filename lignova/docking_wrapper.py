@@ -3,19 +3,22 @@ from typing import Optional
 
 import os
 
+import MDAnalysis as mda
 import pandas as pd
 import pyarrow as pa
 from loguru import logger
 
 from lignova.docking.contexts import GlideContext
+from lignova.docking.glide import Glide
 from lignova.hdf5.parquet import ParquetParser
+from lignova.io import write_text
+from lignova.structure.ligand import Ligand, PreparedLigand
 from lignova.structure.protein import Protein
 from lignova.structure.utils import (
     chery_pick_ligand,
     convert_cif2pdb,
     validate_ligands,
     validate_pdb,
-    write_mda_universe,
 )
 
 # OUTLINE
@@ -85,7 +88,7 @@ def extract_parquet_clusters(
         not only the same protein cluster
     Returns
     -------
-    cluster_members : pd.DataFrame
+    members : pd.DataFrame
         The dataframe containing the protein and ligand information
     """
     if not os.path.exists(file_path):
@@ -101,22 +104,21 @@ def extract_parquet_clusters(
     prot_cluster_number = prot_data["Protein Cluster number"].values[0]
     lig_cluster_number = prot_data["Ligand Cluster number"].values[0]
     if same_ligand_cluster:
-        cluster_members = data[
+        members = data[
             (data["Ligand Cluster number"] == lig_cluster_number)
             & (data["Protein Cluster number"] == prot_cluster_number)
         ]
     else:
-        cluster_members = data[data["Protein Cluster number"] == prot_cluster_number]
-    return cluster_members
+        members = data[data["Protein Cluster number"] == prot_cluster_number]
+    return members
 
 
 def parse_ligand_members(
     cluster_members: pd.DataFrame,
     pdb_id: str,
-    output_path: str,
     find_pdb_ligand: bool = False,
     input_dir: str | None = None,
-    water: bool = False,
+    water: bool = True,
 ) -> None:
     r"""Parse the cluster members information to write the ligand file
     Parameters
@@ -134,11 +136,11 @@ def parse_ligand_members(
         and write it to the output file
     input_dir : str | None (default=None)
         The path to the directory containing the pdb files
-    water : bool (default=False)
+    water : bool (default=True)
         If true, we remove the water molecules from the ligand file
     Returns
     -------
-    None
+    ligand : pd.DataFrame | mda.Universe
     """
     # split the cluster members into pdb and pubchem ligands
     pdb_ligands = cluster_members[
@@ -154,8 +156,6 @@ def parse_ligand_members(
         )
     ].drop_duplicates()
     logger.info(f"The pubchem ligands are {pubchem_ligands}")
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
     if find_pdb_ligand:
         if input_dir is None:
             logger.error("The input directory is not provided")
@@ -163,24 +163,21 @@ def parse_ligand_members(
         # loop through the pdb ligands and extract the ligand from the pdb file
         for lig_id in pdb_ligands["Compound ID"]:
             if os.path.exists(os.path.join(input_dir, f"{pdb_id.lower()}.pdb")):
-                ligand = chery_pick_ligand(
+                protein, ligand = chery_pick_ligand(
                     os.path.join(input_dir, f"{pdb_id.lower()}.pdb"),
                     lig_id,
                     remove_water=water,
-                )
-                write_mda_universe(
-                    ligand[1], os.path.join(output_path, f"{pdb_id.lower()}_lig.pdb")
                 )
             else:
                 logger.error(f"The file {pdb_id.lower()}.pdb does not exist")
                 raise FileNotFoundError(f"The file {pdb_id.lower()}.pdb does not exist")
     else:
-        # save the Compound ID and Smiles columns to the output file
-        pubchem_ligands[["Compound ID", "Smiles"]].to_csv(
-            os.path.join(output_path, f"{pdb_id.lower()}_pubchem_lig.csv"),
-            index=False,
-            header=True,
+        ligand = (
+            pubchem_ligands[["Compound ID", "Smiles"]]
+            .drop_duplicates()
+            .reset_index(drop=True)
         )
+    return ligand
 
 
 def get_pdb_coordinates(pdb_id: str, work_dir: str):
@@ -228,20 +225,58 @@ def get_pdb_coordinates(pdb_id: str, work_dir: str):
 
 
 def prep_ligands(
-    ligand_file: str, output_dir: str, context: GlideContext | None
+    ligand_object: pd.DataFrame | mda.core.groups.AtomGroup,
+    context: GlideContext | None,
 ) -> None:
     r"""
     Prepare the ligands for docking
     Parameters
     ----------
-    ligand_file : str
-        The path to the ligand file
-    output_dir : str
-        The path to the output directory
+    ligand_file : pd.DataFrame | mda.Universe
+        The ligand data to be prepared
+    context : GlideContext | None
+        The context object with information about the preparation
     Returns
     -------
-    None
+    PreparedLigand
     """
+    glide = Glide()
+    if not os.path.exists(context.write_dir):
+        logger.warning(f"The directory {context.write_dir} does not exist.Creating it")
+        os.makedirs(context.write_dir)
+    if isinstance(ligand_object, pd.DataFrame):
+        file_path = write_text(ligand_object, file_ext=".csv")
+    else:
+        file_path = write_text(ligand_object, file_ext=".pdb")
+    ligand = Ligand(file_path)
+    try:
+        glide.PrepLigand(ligand, context)
+        prepped_lig = PreparedLigand(
+            os.path.join(context.write_dir, ligand.file_id + "_prepared.mae")
+        )
+    except Exception as e:
+        logger.error(f"Error in preparing ligand {ligand.file_id}")
+        raise e
+    return prepped_lig
+
+
+def prep_proteins(pdb_file: str, context: GlideContext):
+    """
+    Prepare the protein for docking
+    Parameters
+    ----------
+    pdb_file : str
+        The path to the pdb file
+    context : GlideContext
+        The context object with information about the preparation
+    Returns
+    -------
+    PreparedProtein
+    """
+    if not os.path.exists(context.write_dir):
+        logger.warning(f"The directory {context.write_dir} does not exist.Creating it")
+        os.makedirs(context.write_dir)
+    protein = Protein(pdb_file)
     pass
 
 
@@ -252,10 +287,16 @@ if __name__ == "__main__":
     for pdbid in pdbids:
         logger.info(f"Getting the pdb coordinates for {pdbid}")
         get_pdb_coordinates(pdbid, "raw")
-    logger.info(f"The pdb ids are {pdbids}")
     logger.info(f"Example {extract_parquet_clusters(PARQUET_FILENAME, '5FTO')}")
     logger.info(f"Length of the pdb ids is {len(pdbids)}")
     cluster_members = extract_parquet_clusters(PARQUET_FILENAME, "5FTO")
-    parse_ligand_members(
-        cluster_members, "5FTO", "trial", input_dir="raw", find_pdb_ligand=False
+    ligand_info = parse_ligand_members(
+        cluster_members, "5FTO", input_dir="raw", find_pdb_ligand=True
     )
+    logger.info(f"The ligand information is\n {ligand_info}")
+    prep_context = GlideContext.get_current()
+    prep_context.write_dir = "trial"
+    prep_context.samplewater = True
+    prep_context.set_current(prep_context)
+    result = prep_ligands(ligand_info, prep_context)
+    logger.info(f"The prepared ligand is {result.file_path}")
