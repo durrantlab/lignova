@@ -97,7 +97,7 @@ def merge_universes(mda_univs: list) -> mda.Universe:
         merged = mda.Merge(*merge_list)
     else:
         logger.warning("Only one MDAnalysis universe to merge")
-        merged = mda_univs
+        merged = mda_univs[0]
     return merged.atoms
 
 
