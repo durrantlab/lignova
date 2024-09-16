@@ -133,23 +133,20 @@ def chery_pick_ligand(
         else:
             break
         # change the chain to the next chain in the pdb file
-    protein = remove_hetatoms(pdb_obj)
     if remove_water:
-        ligand_obj = remove_residues(ligand_obj, residues=["HOH"])
-        protein = remove_residues(protein, residues=["HOH"])
+        save_prot = merge_universes([remove_hetatoms(pdb_obj), ligand_obj])
     else:
-        ligand_obj = merge_universes([ligand_obj, water_object])
-        protein = merge_universes([protein, water_object])
-        logger.warning(
-            "Crystallographic Water molecules are not removed from the protein structure."
+        save_prot = merge_universes(
+            [remove_hetatoms(pdb_obj), ligand_obj, water_object]
         )
-    save_prot = merge_universes([protein, ligand_obj])
+        logger.warning(
+            f"Crystallographic Water molecules are not removed from the protein structure, {set(filter_hetatoms(save_prot).resnames)}."
+        )
     return save_prot, ligand_obj
 
 
 def separate_protein_ligand(
     pdb: str | TextIO,
-    reference: str | TextIO = None,
     remove_water: bool | None = True,
     keep_het_chain: str | list | None = None,
 ) -> tuple["Protein", "Ligand"]:
@@ -158,15 +155,6 @@ def separate_protein_ligand(
     ----------
     pdb : str or file-like
         Path to the PDB file or file-like object.
-    reference : str or file-like
-        Path to the Reference file or file-like object.
-    remove_water : bool
-        Remove crystallographic waters from the protein structures. Default is True.
-    keep_het_chain : str or list
-        Chain(s) to keep their HETATM in the protein structure.
-        Default is None. If None, all HETATM will be kept.
-    reference : str or file-like
-        Path to the Reference file or file-like object.
     remove_water : bool
         Remove crystallographic waters from the protein structures. Default is True.
     keep_het_chain : str or list
@@ -201,10 +189,6 @@ def separate_protein_ligand(
             for hetatom in filter_hetatoms(selection)
             if hetatom.resname not in impurities and len(hetatom.resname) == 3
         ]
-        # check if the length of hetatoms line is < 4 using mda
-        logger.debug((filter_hetatoms(selection).resnames.all()))
-        logger.debug((filter_hetatoms(selection).atoms.resnames.all()))
-        logger.debug(all(atom == "HOH" for atom in valid_hetatoms))
         while (
             len(filter_hetatoms(selection)) == 0
             or len(valid_hetatoms) == 0
@@ -234,53 +218,16 @@ def separate_protein_ligand(
         logger.debug(f"Chains in the pdb file: {keep_het_chain}")
         selection = select_chains(pdb_obj, chains=keep_het_chain)
         hetatm = filter_hetatoms(pdb_obj)
-    if reference is not None:
-        reference_obj = get_mda_universe(reference)
-        reference_chain = list(reference_obj.segments.segids)[0]
-        logger.debug(f"The reference chain(s) : {reference_chain}")
-        reference_ligand = set((reference_obj.residues.resids))
-        # convert the set to a list of strings
-        reference_ligand = [str(i) for i in reference_ligand]
-        logger.debug(f"The reference resid(s) : {reference_ligand}")
-        # check if the reference ligand more than one residue
-        if len(reference_ligand) > 1:
-            # get the resnames of the ligand
-            reference_rename = list(set(reference_obj.residues.resnames))
-            # remove resnames with less than 3 characters from the list in one line
-            reference_resname = [i for i in reference_rename if len(i) == 3]
-            # get the resids of the reference resname
-            logger.debug(f"The reference resname(s) : {reference_resname}")
-            # filter out that resname from the reference_obj
-            with mda.Writer("tmp.pdb", multiframe=True) as writer:
-                for model in reference_obj.trajectory:
-                    # Select atoms belonging to the specified residue name in the current frame
-                    selection = " or ".join([f"resname {r}" for r in reference_resname])
-                    selected_atoms = reference_obj.select_atoms(selection)
-                    writer.write(selected_atoms)
-            # rename tmp.pdb to reference.pdb
-            os.rename("tmp.pdb", reference)
-            reference_ligand = reference_resname
-        if check_ligand(pdb, reference) is False:
-            logger.warning("The ligand is not the same as the reference file.")
-            # get the chains from the reference file
-            selection = select_chains(pdb_obj, chains=reference_chain)
-            ligand = select_residues(selection, residues=reference_ligand)
-        ligand = select_residues(pdb_obj, residues=reference_ligand)
-        return selection.atoms, ligand
     actual_ligand = remove_residues(hetatm, residues=["HOH"])
     if remove_water:
-        # select the water molecules from the hetatm
-        ligand = remove_residues(hetatm, residues=["HOH"])
+        save_prot = merge_universes([remove_hetatoms(pdb_obj), actual_ligand])
     else:
-        ligand = merge_universes(
-            [hetatm, select_chains(water_object, chains=keep_het_chain)]
+        save_prot = merge_universes(
+            [remove_hetatoms(pdb_obj), actual_ligand, water_object]
         )
         logger.warning(
-            "Crystallographic Water molecules are not removed from the protein structure."
+            f"Crystallographic Water molecules are not removed from the structure, {set(filter_hetatoms(save_prot).resnames)}."
         )
-        logger.debug(ligand.resnames.all())
-    protein = remove_hetatoms(pdb_obj)
-    save_prot = merge_universes([protein, ligand])
     return save_prot, actual_ligand
 
 

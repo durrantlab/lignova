@@ -8,17 +8,21 @@ import pandas as pd
 import pyarrow as pa
 from loguru import logger
 
+from lignova.docking.combind import Combind
 from lignova.docking.contexts import GlideContext
+from lignova.docking.contexts.combind import CombindContext
 from lignova.docking.glide import Glide
 from lignova.hdf5.parquet import ParquetParser
 from lignova.io import write_text
-from lignova.structure.ligand import Ligand, PreparedLigand
-from lignova.structure.protein import Protein
+from lignova.structure.ligand import DockedLigand, Ligand, PreparedLigand
+from lignova.structure.protein import PreparedProtein, Protein
 from lignova.structure.utils import (
     chery_pick_ligand,
     convert_cif2pdb,
+    separate_protein_ligand,
     validate_ligands,
     validate_pdb,
+    write_mda_universe,
 )
 
 # OUTLINE
@@ -227,7 +231,8 @@ def get_pdb_coordinates(pdb_id: str, work_dir: str):
 def prep_ligands(
     ligand_object: pd.DataFrame | mda.core.groups.AtomGroup,
     context: GlideContext | None,
-) -> None:
+    file_name: str,
+) -> PreparedLigand:
     r"""
     Prepare the ligands for docking
     Parameters
@@ -236,6 +241,8 @@ def prep_ligands(
         The ligand data to be prepared
     context : GlideContext | None
         The context object with information about the preparation
+    file_name : str
+        The name of the file to be written
     Returns
     -------
     PreparedLigand
@@ -246,9 +253,17 @@ def prep_ligands(
         os.makedirs(context.write_dir)
     if isinstance(ligand_object, pd.DataFrame):
         file_path = write_text(ligand_object, file_ext=".csv")
+        file_name = file_name + "_lig_pubchem.csv"
     else:
         file_path = write_text(ligand_object, file_ext=".pdb")
-    ligand = Ligand(file_path)
+        file_name = file_name + "_lig.pdb"
+    temp_path = os.path.dirname(file_path)
+    logger.debug(f"Temp location is {temp_path}")
+    # Rename the temporary file
+    new_path = os.path.join(temp_path, f"{file_name}")
+    os.rename(file_path, new_path)
+    logger.debug(f"Renamed temporary file to {new_path}")
+    ligand = Ligand(new_path)
     try:
         glide.PrepLigand(ligand, context)
         prepped_lig = PreparedLigand(
@@ -257,6 +272,9 @@ def prep_ligands(
     except Exception as e:
         logger.error(f"Error in preparing ligand {ligand.file_id}")
         raise e
+    os.remove(new_path)
+    if os.path.exists(os.path.join(context.write_dir, ligand.file_id + ".mae")):
+        os.remove(os.path.join(context.write_dir, ligand.file_id + ".mae"))
     return prepped_lig
 
 
@@ -273,30 +291,133 @@ def prep_proteins(pdb_file: str, context: GlideContext):
     -------
     PreparedProtein
     """
+    temp_prot = Protein(file_path=pdb_file)
     if not os.path.exists(context.write_dir):
         logger.warning(f"The directory {context.write_dir} does not exist.Creating it")
         os.makedirs(context.write_dir)
-    protein = Protein(pdb_file)
-    pass
+    protein, ligand = separate_protein_ligand(pdb_file, remove_water=False)
+    write_mda_universe(
+        protein, os.path.join(context.write_dir, f"{temp_prot.file_id}.pdb")
+    )
+    input_prot = Protein(
+        file_path=os.path.join(context.write_dir, f"{temp_prot.file_id}.pdb")
+    )
+    glide = Glide()
+    try:
+        glide.PrepProtein(input_prot, context)
+        prepped_prot = PreparedProtein(
+            os.path.join(context.write_dir, input_prot.file_id + "_grid.zip")
+        )
+    except Exception as e:
+        logger.error(f"Error in preparing protein {input_prot.file_id}")
+        raise e
+    os.remove(os.path.join(context.write_dir, f"{temp_prot.file_id}.pdb"))
+    return prepped_prot
+
+
+def dock_ligands(
+    prepped_protein: PreparedProtein,
+    prepped_ligand: PreparedLigand,
+    context: GlideContext,
+) -> None:
+    r"""
+    Dock the ligands to the protein
+    Parameters
+    ----------
+    prepped_protein : PreparedProtein
+        The prepared protein to dock the ligand to
+    prepped_ligand : PreparedLigand
+        The prepared ligand to be docked
+    context : GlideContext
+        The context object with information about the docking
+    Returns
+    -------
+    DockedLigand
+    """
+    glide = Glide()
+    if not os.path.exists(context.write_dir):
+        logger.warning(f"The directory {context.write_dir} does not exist.Creating it")
+        os.makedirs(context.write_dir)
+    logger.info(f"Docking {prepped_ligand.file_id} to {prepped_protein.file_id}")
+    try:
+        glide.run(prepped_protein, prepped_ligand, context)
+        docked_ligand = DockedLigand(
+            os.path.join(
+                context.write_dir, prepped_ligand.file_id + "_docking_pv.maegz"
+            )
+        )
+    except Exception as e:
+        logger.error(f"Error in docking ligand {prepped_ligand.file_id}")
+        raise e
+    return docked_ligand
+
+
+# NOTE: The function run_combind is NOT READY FOR USE NOR WRITTEN correctly
+def run_combind(docked_ligand: DockedLigand, context: CombindContext) -> DockedLigand:
+    """
+    Run the combind program to get the top poses
+    Parameters
+    ----------
+    docked_ligand : DockedLigand
+        The docked ligand to be scored
+    context : GlideContext
+        The context object with information about the scoring
+    Returns
+    -------
+    DockedLigand
+    """
+    combind = Combind(
+        command=context.command,
+        work_dir=context.work_dir,
+        schrodinger=context.schrodinger,
+        schrodinger_env=context.schrodinger_env,
+    )
+    if not os.path.exists(context.write_dir):
+        logger.warning(f"The directory {context.write_dir} does not exist.Creating it")
+        os.makedirs(context.write_dir)
+    logger.info(f"Generating feautes for {docked_ligand.file_id}")
+    try:
+        combind.featurize(
+            docking_filepaths=docked_ligand, file_name=docked_ligand.file_id
+        )
+        combind.select_pose(
+            docked_ligand.file_id,
+            os.path.join(context.write_dir, docked_ligand.file_id + "_features"),
+        )
+        combind.get_3d_top_pose(
+            docked_ligand.file_path,
+            os.path.join(context.write_dir, docked_ligand.file_id + ".csv"),
+            dock_ligands.file_id,
+        )
+    except Exception as e:
+        logger.error(f"Error in scoring ligand {docked_ligand.file_id}")
+        raise e
+    return top_poses
 
 
 if __name__ == "__main__":
     PARQUET_FILENAME = "all_compounds_with_smiles_cluster.parquet"
     # PROOF OF CONCEPT FOR EACH FUNCTION
     pdbids = get_pdb_ids_from_parquet(PARQUET_FILENAME)
+    """
     for pdbid in pdbids:
         logger.info(f"Getting the pdb coordinates for {pdbid}")
         get_pdb_coordinates(pdbid, "raw")
     logger.info(f"Example {extract_parquet_clusters(PARQUET_FILENAME, '5FTO')}")
     logger.info(f"Length of the pdb ids is {len(pdbids)}")
+    """
     cluster_members = extract_parquet_clusters(PARQUET_FILENAME, "5FTO")
     ligand_info = parse_ligand_members(
-        cluster_members, "5FTO", input_dir="raw", find_pdb_ligand=True
+        cluster_members, "5FTO", input_dir="raw", find_pdb_ligand=False
     )
     logger.info(f"The ligand information is\n {ligand_info}")
     prep_context = GlideContext.get_current()
-    prep_context.write_dir = "trial"
+    prep_context.write_dir = "./trial"
     prep_context.samplewater = True
     prep_context.set_current(prep_context)
-    result = prep_ligands(ligand_info, prep_context)
+    result = prep_ligands(ligand_info, prep_context, "5fto")
     logger.info(f"The prepared ligand is {result.file_path}")
+    prep_prot = prep_proteins("raw/5fto.pdb", prep_context)
+    logger.info(f"The prepared protein is {prep_prot.file_path}")
+    final_lig = dock_ligands(prep_prot, result, prep_context)
+    logger.info(f"The docked ligand is {final_lig.file_path}")
