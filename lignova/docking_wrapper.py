@@ -123,6 +123,7 @@ def parse_ligand_members(
     find_pdb_ligand: bool = False,
     input_dir: str | None = None,
     water: bool = True,
+    combine: bool = False,
 ) -> None:
     r"""Parse the cluster members information to write the ligand file
     Parameters
@@ -142,6 +143,8 @@ def parse_ligand_members(
         The path to the directory containing the pdb files
     water : bool (default=True)
         If true, we remove the water molecules from the ligand file
+    combine : bool (default=False)
+        If true, we combine PDB and PubChem ligands into one csv file
     Returns
     -------
     ligand : pd.DataFrame | mda.Universe
@@ -152,7 +155,7 @@ def parse_ligand_members(
             lambda x: any(char.isalpha() for char in x)
         )
         & (cluster_members["PDB/Gene ID"] == pdb_id)
-    ]
+    ].drop_duplicates()
     logger.info(f"The pdb ligands are {pdb_ligands}")
     pubchem_ligands = cluster_members[
         cluster_members["PDB/Gene ID"].apply(
@@ -180,6 +183,10 @@ def parse_ligand_members(
             pubchem_ligands[["Compound ID", "Smiles"]]
             .drop_duplicates()
             .reset_index(drop=True)
+        )
+    if combine:
+        ligand = pd.concat(
+            [pdb_ligands[["Compound ID", "Smiles"]], ligand], axis=0, ignore_index=True
         )
     return ligand
 
@@ -295,7 +302,9 @@ def prep_proteins(pdb_file: str, context: GlideContext):
     if not os.path.exists(context.write_dir):
         logger.warning(f"The directory {context.write_dir} does not exist.Creating it")
         os.makedirs(context.write_dir)
-    protein, ligand = separate_protein_ligand(pdb_file, remove_water=False)
+    protein, ligand = separate_protein_ligand(
+        pdb_file, remove_water=False, keep_het_chain="A"
+    )
     write_mda_universe(
         protein, os.path.join(context.write_dir, f"{temp_prot.file_id}.pdb")
     )
@@ -352,7 +361,7 @@ def dock_ligands(
     return docked_ligand
 
 
-# NOTE: The function run_combind is NOT READY FOR USE NOR WRITTEN correctly
+# NOTE: The function run_combind is NOT FULLY TESTED
 def run_combind(docked_ligand: DockedLigand, context: CombindContext) -> DockedLigand:
     """
     Run the combind program to get the top poses
@@ -372,13 +381,16 @@ def run_combind(docked_ligand: DockedLigand, context: CombindContext) -> DockedL
         schrodinger=context.schrodinger,
         schrodinger_env=context.schrodinger_env,
     )
-    if not os.path.exists(context.write_dir):
+    if not os.path.exists(context.work_dir):
         logger.warning(f"The directory {context.write_dir} does not exist.Creating it")
         os.makedirs(context.write_dir)
-    logger.info(f"Generating feautes for {docked_ligand.file_id}")
+    logger.info(f"Generating features for {docked_ligand.file_id}")
     try:
         combind.featurize(
-            docking_filepaths=docked_ligand, file_name=docked_ligand.file_id
+            docking_filepaths=docked_ligand.file_path, file_name=docked_ligand.file_id
+        )
+        logger.debug(
+            f"Fetures generated for {docked_ligand.file_id}.Selecting top poses"
         )
         combind.select_pose(
             docked_ligand.file_id,
@@ -389,10 +401,30 @@ def run_combind(docked_ligand: DockedLigand, context: CombindContext) -> DockedL
             os.path.join(context.write_dir, docked_ligand.file_id + ".csv"),
             dock_ligands.file_id,
         )
+        logger.debug(f"Top poses selected for {docked_ligand.file_id}")
     except Exception as e:
         logger.error(f"Error in scoring ligand {docked_ligand.file_id}")
         raise e
     return top_poses
+
+
+def parse_combind_results(combind_docking: DockedLigand, context: CombindContext):
+    r"""Parse the combind docking results to seperate the crystallographic complex and the docked complex
+    Parameters
+    ----------
+    combind_docking : DockedLigand
+        The docked ligand file containing the combind docking results
+    context : CombindContext
+        The context object with information about the combind docking
+    Returns
+    -------
+    DockedLigand
+    """
+    if not os.path.exists(context.work_dir):
+        logger.warning(f"The directory {context.work_dir} does not exist.Creating it")
+        os.makedirs(context.work_dir)
+
+    pass
 
 
 if __name__ == "__main__":
@@ -403,12 +435,11 @@ if __name__ == "__main__":
     for pdbid in pdbids:
         logger.info(f"Getting the pdb coordinates for {pdbid}")
         get_pdb_coordinates(pdbid, "raw")
-    logger.info(f"Example {extract_parquet_clusters(PARQUET_FILENAME, '5FTO')}")
+    logger.info(f"Example {extract_parquet_clusters(PARQUET_FILENAME, '5fto'.upper())}")
     logger.info(f"Length of the pdb ids is {len(pdbids)}")
-    """
-    cluster_members = extract_parquet_clusters(PARQUET_FILENAME, "5FTO")
+    cluster_members = extract_parquet_clusters(PARQUET_FILENAME, "5fto".upper())
     ligand_info = parse_ligand_members(
-        cluster_members, "5FTO", input_dir="raw", find_pdb_ligand=False
+        cluster_members, "5fto".upper(), input_dir="raw", find_pdb_ligand=False,combine=True
     )
     logger.info(f"The ligand information is\n {ligand_info}")
     prep_context = GlideContext.get_current()
@@ -421,3 +452,9 @@ if __name__ == "__main__":
     logger.info(f"The prepared protein is {prep_prot.file_path}")
     final_lig = dock_ligands(prep_prot, result, prep_context)
     logger.info(f"The docked ligand is {final_lig.file_path}")
+    """
+    combind_context = CombindContext.get_current()
+    combind_context.work_dir = "./trial"
+    combind_context.set_current(combind_context)
+    final_lig = DockedLigand(file_path="trial/5fto_lig_pubchem_docking_pv.maegz")
+    combind_result = run_combind(final_lig, combind_context)
