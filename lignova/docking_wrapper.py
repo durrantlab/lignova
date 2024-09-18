@@ -180,14 +180,21 @@ def parse_ligand_members(
                 raise FileNotFoundError(f"The file {pdb_id.lower()}.pdb does not exist")
     else:
         ligand = (
-            pubchem_ligands[["Compound ID", "Smiles"]]
+            pubchem_ligands[["Smiles", "Compound ID"]]
             .drop_duplicates()
             .reset_index(drop=True)
         )
+        ligand = ligand.rename(columns={"Smiles": "SMILES", "Compound ID": "s_m_title"})
     if combine:
-        ligand = pd.concat(
-            [pdb_ligands[["Compound ID", "Smiles"]], ligand], axis=0, ignore_index=True
+        pdb_ligands_renamed = pdb_ligands[["Smiles", "Compound ID"]].rename(
+            columns={"Smiles": "SMILES", "Compound ID": "s_m_title"}
         )
+        ligand = pd.concat(
+            [pdb_ligands_renamed, ligand],
+            axis=0,
+            ignore_index=True,
+        )
+
     return ligand
 
 
@@ -362,7 +369,7 @@ def dock_ligands(
 
 
 # NOTE: The function run_combind is NOT FULLY TESTED
-def run_combind(docked_ligand: DockedLigand, context: CombindContext) -> DockedLigand:
+def run_combind(docked_ligand: DockedLigand, context: CombindContext) -> str:
     """
     Run the combind program to get the top poses
     Parameters
@@ -373,7 +380,7 @@ def run_combind(docked_ligand: DockedLigand, context: CombindContext) -> DockedL
         The context object with information about the scoring
     Returns
     -------
-    DockedLigand
+    str
     """
     combind = Combind(
         command=context.command,
@@ -386,34 +393,37 @@ def run_combind(docked_ligand: DockedLigand, context: CombindContext) -> DockedL
         os.makedirs(context.write_dir)
     logger.info(f"Generating features for {docked_ligand.file_id}")
     try:
-        combind.featurize(
-            docking_filepaths=docked_ligand.file_path, file_name=docked_ligand.file_id
-        )
+        if not os.path.exists(
+            os.path.join(context.work_dir, docked_ligand.file_id + "_features")
+        ):
+            combind.featurize(
+                docking_filepaths=docked_ligand.file_path,
+                file_name=docked_ligand.file_id,
+            )
+
         logger.debug(
             f"Fetures generated for {docked_ligand.file_id}.Selecting top poses"
         )
         combind.select_pose(
-            docked_ligand.file_id,
-            os.path.join(context.write_dir, docked_ligand.file_id + "_features"),
+            docked_ligand.file_id + "_poses",
+            os.path.join(context.work_dir, docked_ligand.file_id + "_features"),
         )
-        combind.get_3d_top_pose(
-            docked_ligand.file_path,
-            os.path.join(context.write_dir, docked_ligand.file_id + ".csv"),
-            dock_ligands.file_id,
-        )
-        logger.debug(f"Top poses selected for {docked_ligand.file_id}")
     except Exception as e:
         logger.error(f"Error in scoring ligand {docked_ligand.file_id}")
         raise e
-    return top_poses
+    return os.path.join(context.work_dir, docked_ligand.file_id + "_poses.csv")
 
 
-def parse_combind_results(combind_docking: DockedLigand, context: CombindContext):
-    r"""Parse the combind docking results to seperate the crystallographic complex and the docked complex
+def get_top_combind_pose(
+    combind_csv: str, glide_docking_file: DockedLigand, context: CombindContext
+) -> DockedLigand:
+    r"""Parse the combind docking results to get the top pose
     Parameters
     ----------
-    combind_docking : DockedLigand
-        The docked ligand file containing the combind docking results
+    combind_csv : str
+        The path to the combind docking results CSV file
+    glide_docking_file : DockedLigand
+        The DockedLigand object containing the glide docking results
     context : CombindContext
         The context object with information about the combind docking
     Returns
@@ -422,9 +432,32 @@ def parse_combind_results(combind_docking: DockedLigand, context: CombindContext
     """
     if not os.path.exists(context.work_dir):
         logger.warning(f"The directory {context.work_dir} does not exist.Creating it")
-        os.makedirs(context.work_dir)
-
-    pass
+        os.makedirs(context.write_dir)
+    if not os.path.exists(combind_csv):
+        logger.error(f"The file {combind_csv} does not exist")
+        raise FileNotFoundError(f"The file {combind_csv} does not exist")
+    combind = Combind(
+        command=context.command,
+        work_dir=context.work_dir,
+        schrodinger=context.schrodinger,
+        schrodinger_env=context.schrodinger_env,
+    )
+    try:
+        combind.get_3d_top_pose(
+            glide_docking_file.file_path,
+            combind_csv,
+            glide_docking_file.file_id + "_top_poses",
+        )
+        logger.debug(f"Top poses selected for {glide_docking_file.file_id}")
+        top_poses = DockedLigand(
+            os.path.join(
+                context.work_dir, glide_docking_file.file_id + "_top_poses.maegz"
+            )
+        )
+    except Exception as e:
+        logger.error(f"Error in selecting top poses for {glide_docking_file.file_id}")
+        raise e
+    return top_poses
 
 
 if __name__ == "__main__":
@@ -437,24 +470,33 @@ if __name__ == "__main__":
         get_pdb_coordinates(pdbid, "raw")
     logger.info(f"Example {extract_parquet_clusters(PARQUET_FILENAME, '5fto'.upper())}")
     logger.info(f"Length of the pdb ids is {len(pdbids)}")
+
     cluster_members = extract_parquet_clusters(PARQUET_FILENAME, "5fto".upper())
     ligand_info = parse_ligand_members(
         cluster_members, "5fto".upper(), input_dir="raw", find_pdb_ligand=False,combine=True
     )
     logger.info(f"The ligand information is\n {ligand_info}")
+    """
     prep_context = GlideContext.get_current()
     prep_context.write_dir = "./trial"
     prep_context.samplewater = True
     prep_context.set_current(prep_context)
-    result = prep_ligands(ligand_info, prep_context, "5fto")
+    # result = prep_ligands(ligand_info, prep_context, "5fto")
+    result = PreparedLigand(file_path="trial/5fto_lig_pubchem_prepared.mae")
     logger.info(f"The prepared ligand is {result.file_path}")
-    prep_prot = prep_proteins("raw/5fto.pdb", prep_context)
-    logger.info(f"The prepared protein is {prep_prot.file_path}")
-    final_lig = dock_ligands(prep_prot, result, prep_context)
-    logger.info(f"The docked ligand is {final_lig.file_path}")
-    """
+    prep_prot = PreparedProtein(file_path="trial/5fto_grid.zip")
+    # prep_prot = prep_proteins("raw/5fto.pdb", prep_context)
+    # logger.info(f"The prepared protein is {prep_prot.file_path}")
+
+    # final_lig = dock_ligands(prep_prot, result, prep_context)
+    final_lig = DockedLigand(file_path="trial/5fto_lig_pubchem_docking_pv.maegz")
+
     combind_context = CombindContext.get_current()
     combind_context.work_dir = "./trial"
     combind_context.set_current(combind_context)
     final_lig = DockedLigand(file_path="trial/5fto_lig_pubchem_docking_pv.maegz")
-    combind_result = run_combind(final_lig, combind_context)
+
+    raw_combind_result = run_combind(final_lig, combind_context)
+    final_combind_res = get_top_combind_pose(
+        raw_combind_result, final_lig, combind_context
+    )
