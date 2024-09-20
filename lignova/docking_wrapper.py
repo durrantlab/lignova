@@ -370,7 +370,8 @@ def dock_ligands(
             glide.run(prepped_protein, prepped_ligand, context)
         docked_ligand = DockedLigand(
             os.path.join(
-                context.write_dir, prepped_ligand.file_id + "_docking_pv.maegz"
+                context.write_dir,
+                prepped_ligand.file_id.replace("_prepared", "_docking_pv.maegz"),
             )
         )
     except Exception as e:
@@ -470,7 +471,7 @@ def get_top_combind_pose(
         logger.debug(f"Top poses selected for {glide_docking_file.file_id}")
         top_poses = DockedLigand(
             os.path.join(
-                context.work_dir, glide_docking_file.file_id + "_top_poses.maegz"
+                context.work_dir, glide_docking_file.file_id + "_top_poses_pv.maegz"
             )
         )
     except Exception as e:
@@ -671,20 +672,64 @@ if __name__ == "__main__":
     PARQUET_FILENAME = "all_compounds_with_smiles_cluster.parquet"
     # PROOF OF CONCEPT FOR EACH FUNCTION
     pdbids = get_pdb_ids_from_parquet(PARQUET_FILENAME)
-    """
+    import random
+
+    # get random  10 pdb ids from the list using random.sample
+    pdbids = random.sample(pdbids, 10)
+    rmsd_dict = {}
     for pdbid in pdbids:
         logger.info(f"Getting the pdb coordinates for {pdbid}")
         get_pdb_coordinates(pdbid, "raw")
-    logger.info(f"Example {extract_parquet_clusters(PARQUET_FILENAME, '5fto'.upper())}")
-    logger.info(f"Length of the pdb ids is {len(pdbids)}")
+        cluster_members = extract_parquet_clusters(PARQUET_FILENAME, pdbid.upper())
+        ligand_info = parse_ligand_members(
+            cluster_members,
+            pdbid.upper(),
+            input_dir="raw",
+            find_pdb_ligand=False,
+            combine=True,
+        )
+        pubchem_lig = ligand_info[
+            ligand_info["s_m_title"].apply(lambda x: all(char.isdigit() for char in x))
+        ]
+        pdb_lig = ligand_info[
+            ligand_info["s_m_title"].apply(lambda x: any(char.isalpha() for char in x))
+        ]
+        if not (len(pubchem_lig) != 0 and len(pdb_lig) >= 1):
+            logger.error(f"The ligand information for {pdbid} is not complete")
+            continue
+        logger.info(f"The ligand information is\n {ligand_info}")
+        prep_context = GlideContext.get_current()
+        prep_context.write_dir = "./trial"
+        prep_context.samplewater = True
+        prep_context.set_current(prep_context)
+        result = prep_ligands(ligand_info, prep_context, pdbid)
+        logger.info(f"The prepared ligand is {result.file_path}")
+        prep_prot = prep_proteins(f"raw/{pdbid.lower()}.pdb", prep_context)
+        logger.info(f"The prepared protein is {prep_prot.file_path}")
+        final_lig = dock_ligands(prep_prot, result, prep_context)
+        logger.info(f"The docked ligand is {final_lig.file_path}")
+        combind_context = CombindContext.get_current()
+        combind_context.work_dir = "./trial"
+        combind_context.set_current(combind_context)
+        raw_combind_result = run_combind(final_lig, combind_context)
+        final_combind_res = get_top_combind_pose(
+            raw_combind_result, final_lig, combind_context
+        )
+        extract_pdb_top_poses(
+            final_combind_res, combind_context, pdb_lig["s_m_title"].values[0]
+        )
+        rmsd_val = calc_rmsd_spyrmsd(result, final_combind_res, prep_context)
+        logger.info(f"The RMSD value is {rmsd_val}")
+        logger.debug(
+            f"The pdb id is {pdbid} which had pdb ligand {pdb_lig['s_m_title'].values[0]} and {len(pubchem_lig)} pubchem ligands"
+        )
+        rmsd_dict[pdbid] = rmsd_val
 
-    cluster_members = extract_parquet_clusters(PARQUET_FILENAME, "5fto".upper())
-    ligand_info = parse_ligand_members(
-        cluster_members, "5fto".upper(), input_dir="raw", find_pdb_ligand=False,combine=True
-    )
-    logger.info(f"The ligand information is\n {ligand_info}")
+    # save the rmsd values to a csv file
+    rmsd_df = pd.DataFrame(rmsd_dict.items(), columns=["PDB_ID", "RMSD"])
+    rmsd_df.to_csv("rmsd_values.csv", index=False)
+
     """
-
     combind_context = CombindContext.get_current()
     combind_context.work_dir = "./trial"
     combind_context.set_current(combind_context)
@@ -720,3 +765,4 @@ if __name__ == "__main__":
     final_combind_res = get_top_combind_pose(
         raw_combind_result, final_lig, combind_context
     )
+    """
