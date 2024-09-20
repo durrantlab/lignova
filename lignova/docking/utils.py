@@ -53,14 +53,15 @@ def manipulate_complexes(
     ]:
         logger.error(f"Mode {mode} not in the list of options")
         raise ValueError(f"Mode {mode} not in the list of options")
-    if outfile_name != "manipulate_outp.maegz":
-        new_filename = os.path.join(context.write_dir, outfile_name)
+    if outfile_name == "manipulate_outp.maegz":
+        new_filename = filename + "_" + outfile_name
     else:
-        new_filename = os.path.join(context.write_dir, filename + "_" + outfile_name)
+        new_filename = outfile_name
+
     # check if new_filename exists and if so append a number to the filename
-    if os.path.exists(new_filename):
+    if os.path.exists(os.path.join(context.write_dir, new_filename)):
         i = 1
-        while os.path.exists(new_filename):
+        while os.path.exists(os.path.join(context.write_dir, new_filename)):
             new_filename = os.path.join(
                 context.write_dir, filename + f"_{i}_" + outfile_name
             )
@@ -68,7 +69,7 @@ def manipulate_complexes(
     command = [context.command + "/run", "pv_convert.py", "-mode", mode]
     if mode in ["split_pv", "split_epv", "split_ligand", "split_receptor"]:
         command.extend(["-lig_last_mol"])
-    command.extend(["-o", new_filename, input_file])
+    command.extend(["-o", os.path.join(context.write_dir, new_filename), input_file])
     logger.debug(f"Running command: {' '.join(command)}")
     try:
         process = subprocess.Popen(
@@ -108,8 +109,12 @@ def manipulate_complexes(
                         break
                 if complexes_file:
                     # Rename the complexes file to match the input file name
-                    os.rename(complexes_file, new_filename)
-                    logger.info(f"Converted file saved at: {new_filename}")
+                    os.rename(
+                        complexes_file, os.path.join(context.write_dir, new_filename)
+                    )
+                    logger.info(
+                        f"Converted file saved at: {os.path.join(context.write_dir,new_filename)}"
+                    )
                 else:
                     logger.error(
                         f"Failed to find the generated complexes file for {os.path.basename(input_file)}"
