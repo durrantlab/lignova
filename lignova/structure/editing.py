@@ -92,6 +92,10 @@ def merge_universes(mda_univs: list) -> mda.Universe:
         logger.info(f"Merging {len(mda_univs)} MDAnalysis universes")
         merge_list = []
         for i in mda_univs:
+            # check if the universe is empty
+            if len(i.atoms) == 0:
+                logger.warning("Empty universe found")
+                continue
             # get the atoms from each universe and merge them
             merge_list.append(i.atoms)
         merged = mda.Merge(*merge_list)
