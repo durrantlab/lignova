@@ -77,6 +77,16 @@ class Combind(CombindContext):
                     encoding="utf-8",
                 ) as file:
                     file.write(process.stdout.decode())
+                # check if it created files in the work_dir with the words rmsd name gscore ifp
+                # and delete them
+                for file in os.listdir(self.work_dir):
+                    if any(
+                        keyword in file for keyword in ["rmsd", "name", "gscore", "ifp"]
+                    ):
+                        file_path = os.path.join(self.work_dir, file)
+                        if os.path.isfile(file_path):
+                            os.remove(file_path)
+                            logger.info(f"Deleted file: {file_path}")
             else:
                 error_message = (
                     "Failed to activate Schrodinger virtual environment"
