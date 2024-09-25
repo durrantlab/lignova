@@ -1,6 +1,6 @@
 r""" Implementation for editing protein structures using MDAnalysis."""
 
-from typing import TextIO, Union
+from typing import TextIO
 
 from collections.abc import Iterable
 
@@ -15,7 +15,7 @@ def get_mda_universe(pdb) -> mda.Universe:
 
 
 def select_chains(
-    mda_univ: mda.Universe, chains: Union[str, Iterable[str], None] = None
+    mda_univ: mda.Universe, chains: str | Iterable[str] | None = None
 ) -> mda.Universe:
     r"""Select specific chains.
 
@@ -41,7 +41,7 @@ def select_chains(
     return mda_univ.select_atoms(selection)
 
 
-def validate_chains(mda_univ: mda.Universe, chains: Union[str, Iterable[str]]) -> bool:
+def validate_chains(mda_univ: mda.Universe, chains: str | Iterable[str]) -> bool:
     r"""Validate chains.
 
     Parameters
@@ -61,7 +61,7 @@ def validate_chains(mda_univ: mda.Universe, chains: Union[str, Iterable[str]]) -
 
 
 def remove_residues(
-    mda_univ: mda.Universe, residues: Union[str, Iterable[str]]
+    mda_univ: mda.Universe, residues: str | Iterable[str]
 ) -> mda.Universe:
     r"""Remove residues from structure.
 
@@ -106,7 +106,7 @@ def merge_universes(mda_univs: list) -> mda.Universe:
 
 
 def select_residues(
-    mda_univ: mda.Universe, residues: Union[str, Iterable[str], int, Iterable[int]]
+    mda_univ: mda.Universe, residues: str | Iterable[str] | int | Iterable[int]
 ) -> mda.Universe:
     r"""Select residues from structure.
 
@@ -142,7 +142,7 @@ def remove_hetatoms(mda_univ: mda.Universe) -> mda.Universe:
 
 
 def filter_hetatoms(
-    mda_univ: mda.Universe, keep_het_chain: Union[list, str, None] = None
+    mda_univ: mda.Universe, keep_het_chain: list | str | None = None
 ) -> mda.Universe:
     r"""Filter hetero atoms.
 
@@ -155,7 +155,7 @@ def filter_hetatoms(
     """
     if keep_het_chain is None:
         return mda_univ.select_atoms("record_type HETATM")
-    elif isinstance(keep_het_chain, str):
+    if isinstance(keep_het_chain, str):
         keep_het_chain = [keep_het_chain]
     selection = " or ".join(
         [f"segid {c} and record_type HETATM" for c in keep_het_chain]
@@ -210,7 +210,7 @@ def write_mda_universe(mda_univ: mda.Universe, file_path: str) -> TextIO:
     return mda_univ.write(file_path)
 
 
-def read_cif(file_path: str) -> gemmi.Structure:
+def read_cif(file_path: str) -> "gemmi.Structure":  # Use string annotation
     r"""Read CIF file.
     Parameters
     ----------
@@ -221,6 +221,7 @@ def read_cif(file_path: str) -> gemmi.Structure:
     gemmi.Structure
         Structure object.
     """
+    # pylint: disable=c-extension-no-member
     return gemmi.read_structure(file_path)
 
 
@@ -233,6 +234,7 @@ def convert_cif2pdb(file_path: str, write_path: str):
     write_path
         Path to write PDB file.
     """
+    # pylint: disable=c-extension-no-member
     cif_structure = read_cif(file_path)
     cif_structure.setup_entities()
     cif_structure.shorten_chain_names()

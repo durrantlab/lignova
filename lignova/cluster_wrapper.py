@@ -22,7 +22,6 @@ from lignova.hdf5.parquet import ParquetParser
 from lignova.hdf5.parser import HDF5Parser
 from lignova.structure import Protein
 from lignova.structure.utils import (
-    convert_cif2pdb,
     get_ligand_names,
     get_rcsb_data,
     get_smiles,
@@ -321,7 +320,7 @@ def hdf5_raw_file_parser(hdf5_file: str) -> tuple[dict, dict]:
 
 def add_compounds(
     original_file: ParquetParser,
-    data_source: tuple(dict[str | str]),
+    data_source: tuple[dict[str, str]],
     overwrite: bool = True,
 ) -> None:
     r"""Add the compounds to the parquet file.

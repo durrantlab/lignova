@@ -1,4 +1,5 @@
 """Implementation of utility functions for the analysis module."""
+
 from typing import TextIO, Union
 
 import os
@@ -66,13 +67,13 @@ def interconvert_mae_sdf(
         command.extend(["-all"])
     logger.info(f"Running command: {' '.join(command)}")
     try:
-        process = subprocess.Popen(
+        with subprocess.Popen(
             command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=True,
-        )
-        stdout, stderr = process.communicate()
+        ) as process:
+            stdout, stderr = process.communicate()
         if process.returncode == 0:
             logger.info("File format conversion completed")
             logger.info(f"Output:\n{stdout}")
@@ -100,13 +101,13 @@ def obabel_convert(test_file: Union[str, TextIO], output_filename: str):
     command = ["obabel", test_file, "-O", output_filename]
 
     try:
-        process = subprocess.Popen(
+        with subprocess.Popen(
             command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=True,
-        )
-        stdout, stderr = process.communicate()
+        ) as process:
+            stdout, stderr = process.communicate()
         if process.returncode == 0:
             logger.info("File format conversion completed")
             logger.info(f"Output:\n{stdout}")

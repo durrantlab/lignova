@@ -1,4 +1,5 @@
 """Implements the Docking class."""
+
 import glob
 import os
 import shutil
@@ -59,13 +60,13 @@ class Glide(Docking):
             os.path.join(context.write_dir, jobname),
         ]
         try:
-            process = subprocess.Popen(
+            with subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 universal_newlines=True,
-            )
-            stdout, stderr = process.communicate()
+            ) as process:
+                _, stderr = process.communicate()
             if process.returncode == 0:
                 logger.info(
                     f"Docking jobname file created for {target.file_id} and {ligand.file_id}"
@@ -84,13 +85,13 @@ class Glide(Docking):
             os.path.join(context.write_dir, f"{jobname}.in"),
         ]
         try:
-            process = subprocess.Popen(
+            with subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 universal_newlines=True,
-            )
-            stdout, stderr = process.communicate()
+            ) as process:
+                _, stderr = process.communicate()
             if process.returncode == 0:
                 logger.info(f"Glide docking completed for {jobname}")
                 shutil.move(
@@ -133,13 +134,13 @@ class Glide(Docking):
             os.path.join(context.write_dir, f"{input_object.file_id}.mae"),
         ]
         try:
-            process = subprocess.Popen(
+            with subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 universal_newlines=True,
-            )
-            stdout, stderr = process.communicate()
+            ) as process:
+                process.communicate()
             if process.returncode == 0:
                 logger.info("Conversion completed successfully.")
 
@@ -185,13 +186,13 @@ class Glide(Docking):
                 context.lig_stereoisomers,
             ]
             try:
-                process = subprocess.Popen(
+                with subprocess.Popen(
                     command,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     universal_newlines=True,
-                )
-                stdout, stderr = process.communicate()
+                ) as process:
+                    _, stderr = process.communicate()
                 if process.returncode == 0:
                     logger.info(f"Ligand preparation completed for {ligand.file_id}")
                     # check if the prepared ligand file exists
@@ -261,13 +262,13 @@ class Glide(Docking):
             command.extend(["-samplewater"])
         logger.info(f"Preparing protein for PDB ID {protein.file_id}")
         try:
-            process = subprocess.Popen(
+            with subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 universal_newlines=True,
-            )
-            stdout, stderr = process.communicate()
+            ) as process:
+                _, stderr = process.communicate()
             if process.returncode == 0:
                 logger.info(f"Protein preparation completed for {protein.file_id}")
             else:
@@ -296,13 +297,13 @@ class Glide(Docking):
         ]
         logger.info(f"Generating grid for PDB ID {protein.file_id}")
         try:
-            process = subprocess.Popen(
+            with subprocess.Popen(
                 grid_command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 universal_newlines=True,
-            )
-            stdout, stderr = process.communicate()
+            ) as process:
+                _, stderr = process.communicate()
             if process.returncode == 0:
                 logger.info(f"Grid generation completed for PDB ID {protein.file_id}")
                 # find the grid file and rename it to the protein name
@@ -349,13 +350,13 @@ class Glide(Docking):
             docking_results,
         ]
         try:
-            process = subprocess.Popen(
+            with subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 universal_newlines=True,
-            )
-            stdout, stderr = process.communicate()
+            ) as process:
+                _, stderr = process.communicate()
             if process.returncode == 0:
                 logger.info(f"Sorting completed for {docking_results}")
             else:

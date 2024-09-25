@@ -1,6 +1,7 @@
 r"""Implementation for RMSD analysis."""
+
 # pylint: disable=R0801
-from typing import Iterable, TextIO, Union
+from typing import Iterable, TextIO
 
 import os
 import subprocess
@@ -22,17 +23,17 @@ class RMSD:
 
     def __init__(
         self,
-        ligand: Union[Iterable[DockedLigand], DockedLigand],
-        reference: Union[Iterable[Protein], Protein],
+        ligand: Iterable[DockedLigand] | DockedLigand,
+        reference: Iterable[Protein] | Protein,
         context: GlideContext.get_current(),
     ):
         r"""Initialize RMSD class.
 
         Parameters
         ----------
-        ligand: Union[Iterable[DockedLigand], DockedLigand]
+        ligand: Iterable[DockedLigand] | DockedLigand
             Docked ligand(s) Object that will be analyzed.
-        reference: Union[Iterable[Protein], Protein]
+        reference: Iterable[Protein] | Protein
             Reference ligand(s) in a Protein object that will be used for comparison.
         context: GlideContext object
             Docking context.
@@ -43,22 +44,22 @@ class RMSD:
 
     def rmsd_schrodinger(
         self,
-        output_filename: Union[str, TextIO],
-        cuttoff: Union[int, float, None] = None,
+        output_filename: str | TextIO,
+        cuttoff: int | float | None = None,
         asl: str = "ligand",
-        align: bool = False,
+        do_align: bool = False,
         neutral_sccafold: bool = False,
     ):
         r"""Calculate RMSD between docked ligand and reference ligand using Schrodinger.
         Parameters
         ----------
-        output_filename : str
+        output_filename : str | TextIO
             Output file name.
-        cuttoff : Union[int, float, None]
+        cuttoff : int | float | None
             Cuttoff for RMSD. Default is None.
         asl : str
             Atom selection language for RMSD calculations. Default is "ligand".
-        align : bool
+        do_align : bool
             Align the docked ligand to the reference ligand. Default is True.
         neutral_sccafold : bool
             Neutralize the ligand. Default is False.
@@ -69,20 +70,20 @@ class RMSD:
         if cuttoff is not None:
             command.append("-r")
             command.append(str(cuttoff))
-        if align:
+        if do_align:  # Update this line as well
             command.append("-m")
         command.extend(
             ["-c", output_filename, self.reference.file_path, self.ligand.file_path]
         )
 
         try:
-            process = subprocess.Popen(
+            with subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 universal_newlines=True,
-            )
-            stdout, stderr = process.communicate()
+            ) as process:
+                stdout, stderr = process.communicate()
             if process.returncode == 0:
                 logger.info(f"RMSD calculation completed for {self.ligand.file_id}")
                 logger.info(f"Output:\n{stdout}")
@@ -162,7 +163,8 @@ class RMSD:
         # Check if the length of the ligands is the same
         if len(ref_ligand.atoms) != len(dock_ligand.atoms):
             logger.warning(
-                f"Number of atoms in the reference ligand ({len(ref_ligand.atoms)}) and docked ligand ({len(dock_ligand.atoms)}) are not the same."
+                f"Atoms number in the reference ligand ({len(ref_ligand.atoms)}) "
+                f"and docked ligand ({len(dock_ligand.atoms)}) different."
             )
             # Find the common atoms
             common_atoms = find_common_atoms(ref_ligand, dock_ligand)
@@ -173,7 +175,7 @@ class RMSD:
         # Calculate the RMSD between the ligands
         rmsd_values = []
         if len(docked_traj.trajectory) > 1:
-            for traj in docked_traj.trajectory:
+            for _ in docked_traj.trajectory:
                 rmsd_value = rmsd(dock_ligand.positions, ref_ligand.positions)
                 rmsd_values.append(rmsd_value)
         else:
@@ -187,7 +189,7 @@ class RMSD:
         firstonly: bool = True,
         save: bool = False,
         minimize: bool = False,
-        output_filename: Union[str, TextIO, None] = None,
+        output_filename: str | TextIO | None = None,
     ):
         """Calculate RMSD between reference and target file using OpenBabel,
         taking into account the symmetry of the molecules.
@@ -200,7 +202,7 @@ class RMSD:
             Write the RMSD to a txt file. Default is False.
         minimize : bool
             Compute minimum RMSD. Default is False.
-        output_filename : Union[str, TextIO,None]
+        output_filename : str | TextIO | None
             Output file name if csv is true. Default is None.
         """
         command = ["obrms", "-x"]
@@ -210,13 +212,13 @@ class RMSD:
             command.append("-m")
         command.extend([self.reference.file_path, self.ligand.file_path])
         try:
-            process = subprocess.Popen(
+            with subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 universal_newlines=True,
-            )
-            stdout, stderr = process.communicate()
+            ) as process:
+                stdout, stderr = process.communicate()
             if process.returncode == 0:
                 logger.info(f"RMSD calculation completed for {self.ligand.file_id}")
                 logger.info(f"Output:\n{stdout}")
@@ -232,16 +234,16 @@ class RMSD:
             raise e
 
         # Parse the RMSD from the output
-        rmsd = stdout.strip()
+        rmsd_result = stdout.strip()
 
         # If an output filename is provided, write the RMSD to the file
         if save:
             if output_filename is not None:
                 with open(output_filename + ".txt", "w", encoding="utf-8") as file:
-                    file.write(f"RMSD: {rmsd}\n")
+                    file.write(f"RMSD: {rmsd_result}\n")
             else:
                 raise ValueError("Output filename is required if csv is True")
-        return rmsd
+        return rmsd_result
 
     def symmetry_rmsd(
         self,
@@ -249,7 +251,7 @@ class RMSD:
         hydrogens: bool = False,
         superimpose: bool = False,
         save: bool = False,
-        output_filename: Union[str, TextIO, None] = None,
+        output_filename: str | TextIO | None = None,
     ):
         r"""Calculate RMSD between reference and target file using Spyrmsd,
         taking into account the symmetry of the molecules.
@@ -272,13 +274,13 @@ class RMSD:
             command.append("-m")
         command.extend([self.reference.file_path, self.ligand.file_path])
         try:
-            process = subprocess.Popen(
+            with subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 universal_newlines=True,
-            )
-            stdout, stderr = process.communicate()
+            ) as process:
+                stdout, stderr = process.communicate()
             if process.returncode == 0:
                 logger.info(f"RMSD calculation completed for {self.ligand.file_id}")
                 logger.info(f"Output:\n{stdout}")
@@ -293,12 +295,12 @@ class RMSD:
             raise e
 
         # Parse the RMSD from the output
-        rmsd = stdout.strip()
+        rmsd_value = stdout.strip()
         # If an output filename is provided, write the RMSD to the file
         if save:
             if output_filename is not None:
                 with open(output_filename + ".txt", "w", encoding="utf-8") as file:
-                    file.write(f"RMSD: {rmsd}\n")
+                    file.write(f"RMSD: {rmsd_value}\n")
             else:
                 raise ValueError("Output filename is required if save is True")
-        return rmsd
+        return rmsd_value

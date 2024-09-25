@@ -1,6 +1,6 @@
 r"""Implementation of combind."""
 
-from typing import List, TextIO, Union
+from typing import List, TextIO
 
 import glob
 import os
@@ -23,7 +23,7 @@ class Combind(CombindContext):
 
     def featurize(
         self,
-        docking_filepaths: Union[str, List[str]],
+        docking_filepaths: str | List[str],
         file_name: str,
     ):
         r"""Featurize the docking files.
@@ -98,7 +98,7 @@ class Combind(CombindContext):
             logger.error(f"Featurization failed. {str(e)}")
             raise e
 
-    def select_pose(self, file_name: Union[str, TextIO], features_dir: Union[str]):
+    def select_pose(self, file_name: str | TextIO, features_dir: str):
         r"""Select the best pose from the docking file.
         Parameters
         ----------
@@ -141,9 +141,9 @@ class Combind(CombindContext):
 
     def get_3d_top_pose(
         self,
-        docking_filepath: Union[str, TextIO],
-        combind_csv: Union[str, TextIO],
-        extract_filename: Union[str],
+        docking_filepath: str | TextIO,
+        combind_csv: str | TextIO,
+        extract_filename: str,
     ):
         r"""Get the top ligand pose after combind prediction.
         Parameters
@@ -164,12 +164,13 @@ class Combind(CombindContext):
         ]
         command = " ".join(command1)
         try:
-            process = subprocess.run(
+            subprocess.run(
                 command,
                 shell=True,
                 executable="/bin/bash",
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
+                check=True,
             )
             logger.info("Pose extraction from the docking file completed.")
             output_file = glob.glob(
@@ -182,11 +183,14 @@ class Combind(CombindContext):
                 output_file[0],
                 os.path.join(self.work_dir, f"{extract_filename}_pv.maegz"),
             )
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Pose extraction failed: {e}")
+            raise
         except Exception as e:
             logger.error(f"Pose extraction failed.\n {str(e)}")
-            raise e
+            raise
 
-    def compute_combind_score(self, features_dir: Union[str], filename: Union[str]):
+    def compute_combind_score(self, features_dir: str, filename: str):
         r"""Compute the combind score.
         Parameters
         ----------
@@ -227,9 +231,9 @@ class Combind(CombindContext):
 
     def apply_combind_score(
         self,
-        docking_filepath: Union[str, TextIO],
-        combind_score_file: Union[str, TextIO],
-        output_filename: Union[str, TextIO],
+        docking_filepath: str | TextIO,
+        combind_score_file: str | TextIO,
+        output_filename: str | TextIO,
         sort: bool = True,
     ):
         r"""Apply the combind score to the docking file.
@@ -254,7 +258,7 @@ class Combind(CombindContext):
         ]
         command = " ".join(command1)
         try:
-            process = subprocess.run(
+            subprocess.run(
                 command,
                 shell=True,
                 executable="/bin/bash",
@@ -262,53 +266,42 @@ class Combind(CombindContext):
                 stderr=subprocess.PIPE,
                 check=True,
             )
-            if process.returncode == 0:
-                logger.info("Combind score application completed.")
-                if sort:
-                    command = [
-                        self.schrodinger + "/utilities/glide_sort",
-                        "-use_prop_d",
-                        "r_i_combind_score",
-                        "-o",
-                        os.path.join(
-                            self.work_dir, f"{output_filename}_combind_sorted.maegz"
-                        ),
-                        os.path.join(self.work_dir, f"{output_filename}_combind.maegz"),
-                    ]
-                    process = subprocess.Popen(
-                        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-                    )
-                    stdout, stderr = process.communicate()
-                    if process.returncode == 0:
-                        logger.info("Combind score application sorting completed.")
-                        with open(
-                            os.path.join(
-                                self.work_dir, f"{output_filename}_combind_sort.log"
-                            ),
-                            "w",
-                            encoding="utf-8",
-                        ) as file:
-                            file.write(stdout.decode())
-                    else:
-                        error_message = (
-                            "Failed to sort the combind score application"
-                            + f"\n{stderr.decode()}."
-                        )
-                        logger.critical(error_message)
-                        raise NotImplementedError(error_message)
-            else:
-                error_message = (
-                    "Failed to apply the combind score"
-                    + f"\n{process.stderr.decode()}."
+            logger.info("Combind score application completed.")
+            if sort:
+                command = [
+                    self.schrodinger + "/utilities/glide_sort",
+                    "-use_prop_d",
+                    "r_i_combind_score",
+                    "-o",
+                    os.path.join(
+                        self.work_dir, f"{output_filename}_combind_sorted.maegz"
+                    ),
+                    os.path.join(self.work_dir, f"{output_filename}_combind.maegz"),
+                ]
+                result = subprocess.run(
+                    command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    universal_newlines=True,
+                    check=True,
                 )
-                logger.critical(error_message)
-                raise NotImplementedError(error_message)
+                logger.info("Combind score application sorting completed.")
+                with open(
+                    os.path.join(self.work_dir, f"{output_filename}_combind_sort.log"),
+                    "w",
+                    encoding="utf-8",
+                ) as file:
+                    file.write(result.stdout)
+        except subprocess.CalledProcessError as e:
+            error_message = f"Failed to apply or sort the combind score: {e}"
+            logger.critical(error_message)
+            raise NotImplementedError(error_message) from e  # Changed this line
         except Exception as e:
             logger.error(f"Combind score application failed.\n {str(e)}")
-            raise e
+            raise
 
     def extract_data_csv(
-        self, docking_file: Union[str, TextIO], filename: str, filter_data: bool = True
+        self, docking_file: str | TextIO, filename: str, filter_data: bool = True
     ):
         r"""To extract the scores from schrodinger docking file including
         combind if run after apply_combind_score function.
@@ -332,10 +325,13 @@ class Combind(CombindContext):
             "-o",
             os.path.join(self.work_dir, f"{filename}.csv"),
         ]
-        process = subprocess.Popen(
-            command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
-        stdout, stderr = process.communicate()
+        with subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+        ) as process:
+            _, stderr = process.communicate()  # Changed this line
         if process.returncode == 0:
             logger.info("Data extraction completed.")
             if filter_data:

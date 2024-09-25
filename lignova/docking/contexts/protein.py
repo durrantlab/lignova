@@ -300,14 +300,16 @@ DEFAULT_IMPURITIES = [
 
 # pylint: disable-next=too-many-instance-attributes
 class ProteinContext:
-    r"""Singleton for protein pdb strucutres validation"""
+    r"""Singleton for protein pdb structures validation"""
 
     # pylint: disable-next=too-many-arguments,too-many-locals
     def __init__(
         self,
-        impurities: Optional[list] = DEFAULT_IMPURITIES,
+        impurities: Optional[list] = None,
     ):
-        self.impurities = impurities
+        self.impurities = (
+            impurities if impurities is not None else DEFAULT_IMPURITIES.copy()
+        )
 
     @staticmethod
     def get_current() -> "ProteinContext":

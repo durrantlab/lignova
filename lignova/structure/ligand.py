@@ -1,5 +1,4 @@
 """Implementation of ligand class."""
-from typing import Union
 
 from .base import Prepared, Structure
 
@@ -9,30 +8,32 @@ class Ligand(Structure):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._ligand_text = None  # Initialize _ligand_text in __init__
 
     # Define a property to access _ligand_text
     @property
     def ligand_text(self):
         r"""Return the ligand text."""
-        self.load(self.file_path)
+        if self._ligand_text is None:
+            self.load(self.file_path)
         return self._ligand_text
 
     def load(
         self,
-        file_path: Union[str, None] = None,
+        file_path: str | None = None,
         write: bool = False,
-        write_path: Union[None, str] = None,
-        pdb_id: Union[str, None] = None,
+        write_path: str | None = None,
+        pdb_id: str | None = None,
     ) -> None:
         r"""Load structural information for a ligand.
 
         Parameters
           ----------
-             file_path : str, optional
+             file_path : str | None
                  Path to ligand file.
-             write_path : str, optional
+             write_path : str | None
                  Path to write the ligand file to disk.
-             pdb_id : str, optional
+             pdb_id : str | None
                  PDB ID of ligand to download.
         """
         if file_path is not None:
@@ -41,7 +42,7 @@ class Ligand(Structure):
                 self._ligand_text = file.read()
         if write_path:
             # write to file
-            with open(write_path, "w") as file:
+            with open(write_path, "w", encoding="utf-8") as file:
                 file.write(self._ligand_text)
 
 

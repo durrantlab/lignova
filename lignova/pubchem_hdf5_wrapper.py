@@ -3,8 +3,10 @@ r""" Implementation of the PubChem wrapper."""
 import time
 
 import h5py
-from hdf5.pubchem import PubChemAPI
+import requests
 from loguru import logger
+
+from lignova.hdf5.pubchem import PubChemAPI
 
 
 def process_hdf5_file(hdf5_file_path: str):
@@ -16,7 +18,6 @@ def process_hdf5_file(hdf5_file_path: str):
 
     # open hdf5 file
     hdf5_file = h5py.File(hdf5_file_path, "r")
-    no_seq = []
     no_uniprot = []
     yes_uniprot = []
     no_targets = []
@@ -39,9 +40,6 @@ def process_hdf5_file(hdf5_file_path: str):
         if "protein_sequence" in hdf5_file["/aids/" + str(aid)].keys():
             # print(len(hdf5_file['/aids/'+str(aid)+'/protein_sequence'].asstr()[:]))
             yes_seq.append(aid)
-        else:
-            no_seq.append(aid)
-            # print('aid '+str(aid)+' has no protein sequence branch')
         if "uniprot_pdb_alphafold" in hdf5_file["/aids/" + str(aid)].keys():
             yes_uniprot.append(aid)
             # print('aid '+str(aid)+' has no uniprot_pdb_alphafold')
@@ -65,7 +63,6 @@ def process_hdf5_file(hdf5_file_path: str):
     hdf5_file.close()
     logger.info(f"aids with no targets_gene_id: {len(list(set(no_targets)))}")
     logger.info(f"aids with targets_gene_id: {len(list(set(yes_targets)))}")
-    logger.info(f"aids with no protein sequence: {len(list(set(no_seq)))}")
     logger.info(f"aids with protein sequence: {len(list(set(yes_seq)))}")
     logger.info(f"aids with no uniprot_pdb_alphafold: {len(list(set(no_uniprot)))}")
     logger.info(f"aids with uniprot_pdb_alphafold: {len(list(set(yes_uniprot)))}")
@@ -113,28 +110,25 @@ def complete_hdf5(hdf5_file_path: str):
                             maxshape=(None,),
                             shape=(1,),
                         )
-                        # add a timeout to avoid being blocked by the server
-                        time.sleep(5)
-    except Exception as e:
-        logger.error(f"Error occurred: {e}")
-    else:
+                    else:
+                        logger.info(f"Skipping CID {cids} for AID {aid}.")
+
+                    # add a timeout to avoid being blocked by the server
+                    time.sleep(5)
         logger.info("HDF5 file completed.")
+    except requests.RequestException as e:
+        logger.error(f"Network error when accessing PubChem API: {e}")
+    except (IOError, OSError) as e:
+        logger.error(f"File operation or system error occurred: {e}")
+    except KeyError as e:
+        logger.error(f"Key error (possibly missing data from PubChemAPI): {e}")
+    except ValueError as e:
+        logger.error(f"Value error (possibly from PubChemAPI): {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error occurred: {e}")
 
 
 if __name__ == "__main__":
-    hdf5_file_path = "../PubChem_data_edited.hdf5"
-    process_hdf5_file(hdf5_file_path)
-    complete_hdf5(hdf5_file_path)
-    # read the hdf5 file and loop through the aids
-    # for each aid, if there are no cids delete the aid
-    """
-    try:
-        # Open HDF5 file
-        with h5py.File(hdf5_file_path, "r+") as hdf5_file:
-            for aid in hdf5_file["/aids"]:
-                if "cids" not in hdf5_file[f"/aids/{aid}"].keys():
-                    del hdf5_file[f"/aids/{aid}"]
-    except Exception as e:
-        logger.error(f"Error occurred: {e}")
-
-    """
+    HDF5_FILEPATH = "../PubChem_data_edited.hdf5"
+    process_hdf5_file(HDF5_FILEPATH)
+    complete_hdf5(HDF5_FILEPATH)

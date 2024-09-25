@@ -5,11 +5,7 @@ from loguru import logger
 from rdkit import Chem, DataStructs
 
 from lignova.clustering.tanimoto import TanimotoClustering
-from lignova.structure.utils import (
-    get_smiles,
-    separate_protein_ligand,
-    write_mda_universe,
-)
+from lignova.structure.utils import get_smiles, separate_protein_ligand
 
 # Ensures we execute from file directory (for relative paths).
 os.chdir(os.path.dirname(os.path.realpath(__file__)))

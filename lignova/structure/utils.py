@@ -4,13 +4,21 @@ from typing import TextIO
 
 import os
 
-import MDAnalysis as mda
 import pandas as pd
 import requests
 from loguru import logger
 
 from ..docking.contexts import ProteinContext
-from .editing import *
+from .editing import (
+    filter_hetatoms,
+    get_mda_universe,
+    merge_universes,
+    remove_hetatoms,
+    remove_residues,
+    select_chains,
+    select_residues,
+    validate_chains,
+)
 
 
 def is_xray_structure(pdb: str | TextIO) -> bool:
@@ -35,62 +43,17 @@ def is_xray_structure(pdb: str | TextIO) -> bool:
             expdta_line = [line for line in lines if line.startswith("EXPDTA")]
             if expdta_line:
                 return "X-RAY" in expdta_line[0]
-            else:
-                remark_200_line = [
-                    line for line in lines if line.startswith("REMARK 200")
-                ]
-                return bool(remark_200_line)
-        elif ext == ".cif":
+            remark_200_line = [line for line in lines if line.startswith("REMARK 200")]
+            return bool(remark_200_line)
+        if ext == ".cif":
             # find the _exptl.method line
             exptl_line = [line for line in lines if line.startswith("_exptl.method")]
             if exptl_line:
                 return "X-RAY" in exptl_line[0]
-    elif isinstance(pdb, str):
+    if isinstance(pdb, str):
         raw_data = get_rcsb_data(pdb)
-        if raw_data["exptl"][0]["method"] == "X-RAY DIFFRACTION":
-            return True
-        else:
-            return False
-
-
-def is_xray_structure(pdb: str | TextIO) -> bool:
-    """
-    Check if the PDB file was generated from X-ray diffraction data.
-
-    Parameters:
-    -----------
-    pdb : str or file-like
-        Path to the PDB file. or file-like object. or just pdb id
-    Returns:
-    --------
-    bool
-        True if the PDB was generated from X-ray data, False otherwise.
-    """
-    # check if the pdb is a file or a pdb id
-    if os.path.isfile(pdb) and os.path.exists(pdb):
-        with open(pdb, "r", encoding="utf-8") as file:
-            lines = file.readlines()
-        ext = os.path.splitext(pdb)[-1].lower()
-        if ext == ".pdb":
-            expdta_line = [line for line in lines if line.startswith("EXPDTA")]
-            if expdta_line:
-                return "X-RAY" in expdta_line[0]
-            else:
-                remark_200_line = [
-                    line for line in lines if line.startswith("REMARK 200")
-                ]
-                return bool(remark_200_line)
-        elif ext == ".cif":
-            # find the _exptl.method line
-            exptl_line = [line for line in lines if line.startswith("_exptl.method")]
-            if exptl_line:
-                return "X-RAY" in exptl_line[0]
-    elif isinstance(pdb, str):
-        raw_data = get_rcsb_data(pdb)
-        if raw_data["exptl"][0]["method"] == "X-RAY DIFFRACTION":
-            return True
-        else:
-            return False
+        return raw_data["exptl"][0]["method"] == "X-RAY DIFFRACTION"
+    return False
 
 
 def chery_pick_ligand(
@@ -112,7 +75,8 @@ def chery_pick_ligand(
     """
     pdb_obj = get_mda_universe(pdb)
     water_object = select_residues(pdb_obj, residues=["HOH"])
-    # check if the ligand is in chain A and if not change chains till it is found using filter_hetatoms
+    # check if the ligand is in chain A and
+    # if not change chains till it is found using filter_hetatoms
     selection = select_chains(pdb_obj, chains="A")
     ligand_obj = select_residues(selection, residues=ligand)
     chains = list(set(pdb_obj.segments.segids))
@@ -140,7 +104,7 @@ def chery_pick_ligand(
             [remove_hetatoms(pdb_obj), ligand_obj, water_object]
         )
         logger.warning(
-            f"Crystallographic Water molecules are not removed from the protein structure, {set(filter_hetatoms(save_prot).resnames)}."
+            f"Crystallographic waters retained in protein: {set(filter_hetatoms(save_prot).resnames)}."
         )
     return save_prot, ligand_obj
 
@@ -205,7 +169,8 @@ def separate_protein_ligand(
                 for hetatom in filter_hetatoms(selection)
                 if hetatom.resname not in impurities and len(hetatom.resname) == 3
             ]
-            keep_het_chain = keep_het_chain
+            # Remove self-assignment
+            # keep_het_chain = keep_het_chain
         hetatm = filter_hetatoms(pdb_obj, keep_het_chain)
     else:
         logger.debug(
@@ -270,8 +235,7 @@ def check_ligand(pdb: str | TextIO, reference: str | TextIO) -> bool:
         i in reference_chain for i in chains
     ):
         return True
-    else:
-        return False
+    return False
 
 
 def get_rcsb_data(pdb_id: str):
@@ -335,10 +299,7 @@ def has_covalent_bonds(pdb: str, rcsb_data: dict | None = None) -> bool:
     else:
         data = get_rcsb_data(pdb)
     logger.debug(data["rcsb_entry_info"]["inter_mol_covalent_bond_count"])
-    if data["rcsb_entry_info"]["inter_mol_covalent_bond_count"] > 0:
-        return True
-    else:
-        return False
+    return data["rcsb_entry_info"]["inter_mol_covalent_bond_count"] > 0
 
 
 def has_ligands(pdb: str, rcsb_data: dict | None = None) -> bool:
@@ -360,10 +321,7 @@ def has_ligands(pdb: str, rcsb_data: dict | None = None) -> bool:
         data = get_rcsb_data(pdb)
     tmp = data["rcsb_entry_info"]["nonpolymer_entity_count"]
     logger.debug(f"ligand/non polymer count for {pdb} is {tmp}")
-    if tmp > 0:
-        return True
-    else:
-        return False
+    return data["rcsb_entry_info"]["nonpolymer_entity_count"] > 0
 
 
 def get_entity_ids(pdb_id: str, rcsb_data: dict | None = None) -> dict[str, list[str]]:
@@ -418,21 +376,16 @@ def pdb_has_mutation(pdb_id: str) -> bool:
         logger.debug(
             f"Mutations in {pdb_id}: {data['entity_poly']['rcsb_mutation_count']}"
         )
-        if data["entity_poly"]["rcsb_mutation_count"] > 0:
-            return True
-        else:
-            return False
-    else:
-        for entity_id in polymer_ids:
-            response = requests.get(url + entity_id, timeout=5)
-            data = response.json()
-            list_of_mutations.append(data["entity_poly"]["rcsb_mutation_count"])
+        return data["entity_poly"]["rcsb_mutation_count"] > 0
+    for entity_id in polymer_ids:
+        response = requests.get(url + entity_id, timeout=5)
+        data = response.json()
+        list_of_mutations.append(data["entity_poly"]["rcsb_mutation_count"])
     # check if the values of the list are 0
     if all(i == 0 for i in list_of_mutations):
         logger.debug(f"Mutations in {pdb_id}: {list_of_mutations}")
         return False
-    else:
-        return True
+    return True
 
 
 def get_nonpolymer_names(pdb_id: str, rcsb_data: dict | None = None) -> list:
@@ -487,14 +440,9 @@ def validate_ligands(
     ligands = get_nonpolymer_names(pdb)
     if not validate_pdb(pdb) or len(ligands) == 0:
         return False
-    else:
-        logger.debug(f"Ligands in {pdb}: {ligands}")
-        logger.debug(all(i in impurities for i in ligands))
-        # check if the ligands are in the impurities list
-        if all(i in impurities for i in ligands):
-            return False
-        else:
-            return True
+    logger.debug(f"Ligands in {pdb}: {ligands}")
+    logger.debug(all(i in impurities for i in ligands))
+    return not all(i in impurities for i in ligands)
 
 
 def validate_pdb(pdb_id: str) -> bool:
@@ -506,7 +454,8 @@ def validate_pdb(pdb_id: str) -> bool:
     Returns
     -------
     bool
-        True if the PDB file is valid (i.e has ligand, no covalent bond and no mutation), False otherwise.
+        True if the PDB file is valid (i.e has ligand,
+        no covalent bond and no mutation), False otherwise.
     """
     data = get_rcsb_data(pdb_id)
     if (
@@ -518,11 +467,11 @@ def validate_pdb(pdb_id: str) -> bool:
     ):
         logger.info(f"The PDB file {pdb_id} is valid.")
         return True
-    else:
-        logger.warning(
-            f"The PDB file {pdb_id} is not valid. Check ./structure/utils.py functions for more details."
-        )
-        return False
+
+    logger.warning(
+        f"The PDB file {pdb_id} is not valid. Check ./structure/utils.py functions for more details."
+    )
+    return False
 
 
 def get_ligand_names(pdb: str | TextIO) -> list:
@@ -543,9 +492,11 @@ def get_ligand_names(pdb: str | TextIO) -> list:
         logger.warning("The ligand has more than one residue.")
         impurities = ProteinContext.get_current().impurities
         # delete ant values with less than 3 characters from the list
-        ligand_resname = list(
-            set([i for i in ligand_resname if len(i) == 3 and i not in impurities])
-        )
+
+        ligand_resname = {
+            i for i in ligand_resname if len(i) == 3 and i not in impurities
+        }
+        ligand_resname = list(ligand_resname)
     logger.debug(f"Ligand residue name: {ligand_resname}")
     return ligand_resname
 
@@ -569,22 +520,21 @@ def get_smiles(ligand_resname: str | TextIO) -> dict[str, str]:
         logger.error(
             f"SMILES not found for {ligand_resname},Checking pdbx_chem_comp_descriptor"
         )
-        # get the pdbx_chem_comp_descriptor from the data
         if "pdbx_chem_comp_descriptor" not in data:
             logger.error(f"pdbx_chem_comp_descriptor not found for {ligand_resname}")
             return {"smiles": "", "stereo_smiles": ""}
-        else:
-            for descriptor in data["pdbx_chem_comp_descriptor"]:
-                if descriptor["type"] == "SMILES_CANONICAL":
-                    smiles = descriptor["descriptor"]
-                    logger.debug(f"SMILES Canonical: {smiles}")
-                    return {"smiles": smiles, "stereo_smiles": smiles}
-            else:
-                logger.error("SMILES Canonical not found for the ligand")
+
+        for descriptor in data["pdbx_chem_comp_descriptor"]:
+            if descriptor["type"] == "SMILES_CANONICAL":
+                smiles = descriptor["descriptor"]
+                logger.debug(f"SMILES Canonical: {smiles}")
+                return {"smiles": smiles, "stereo_smiles": smiles}
+
+        logger.error("SMILES Canonical not found for the ligand")
+        return {"smiles": "", "stereo_smiles": ""}
+
     smiles = data["rcsb_chem_comp_descriptor"]["smiles"]
     stereo_smiles = data["rcsb_chem_comp_descriptor"]["smilesstereo"]
     logger.debug(f"SMILES: {smiles}")
     logger.debug(f"Stereo SMILES: {stereo_smiles}")
-    # make a dictionary of the two smiles
-    smiles_dict = {"smiles": smiles, "stereo_smiles": stereo_smiles}
-    return smiles_dict
+    return {"smiles": smiles, "stereo_smiles": stereo_smiles}

@@ -1,4 +1,5 @@
 r"""Class for parsing HDF5 files."""
+
 from typing import List, Tuple
 
 import os
@@ -46,7 +47,7 @@ class HDF5Parser(FormatManager):
                 logger.debug(f"data: {data}")
                 if isinstance(data, h5py.Dataset):
                     return data[()]
-                elif isinstance(data, h5py.Group):
+                if isinstance(data, h5py.Group):
                     return list(data.keys())
         except Exception as e:
             raise e
@@ -133,7 +134,9 @@ class HDF5Parser(FormatManager):
             raise FileNotFoundError(f"File {self.file_path} not found.")
         try:
             # save the file stats to a file in the same directory as the hdf5 file
-            with open(self.file_path.replace(".hdf5", "_stats.txt"), "w") as txt_file:
+            with open(
+                self.file_path.replace(".hdf5", "_stats.txt"), "w", encoding="utf-8"
+            ) as txt_file:
                 with h5py.File(self.file_path, "r") as hdf5_file:
                     txt_file.write(f"File Path: {self.file_path}\n")
                     txt_file.write(f"Dataset Count: {len(list(hdf5_file.keys()))}\n")
@@ -164,6 +167,6 @@ class HDF5Parser(FormatManager):
             if name == path:
                 valid_path = True
 
-        with h5py.File(self.file_path, "r") as hdf5_file:
+        with h5py.File(self.file_path, "r", encoding="utf-8") as hdf5_file:
             hdf5_file.visititems(valid_visitor)
             return valid_path

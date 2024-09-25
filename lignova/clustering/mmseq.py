@@ -40,7 +40,8 @@ def mmseqs_cluster(
     sensitivity : float
         Sensitivity. Default is 7.0.
     outfile_name_suffix : str
-        Suffix for the output file and path. Default is "clusters" saved in the current working directory.
+        Suffix for the output file and path.
+        Default is "clusters" saved in the current working directory.
     tmp_dir : str
         Temporary directory. Default is "/tmp" saved in the current working directory.
     cluster_mode : int
@@ -89,8 +90,10 @@ def mmseqs_cluster(
             "1" if sort else "0",
         ]
     )
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = process.communicate()
+    with subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    ) as process:
+        stdout, stderr = process.communicate()
     save_directory = os.path.dirname(outfile_name_suffix)
     if process.returncode == 0:
         logger.info("Sequence Identity based clustering is completed")

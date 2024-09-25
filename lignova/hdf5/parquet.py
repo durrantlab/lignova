@@ -1,7 +1,5 @@
 r"""Implementation of the parquet class ."""
 
-from typing import Optional
-
 import pandas as pd
 import pyarrow as pa
 import pyarrow.dataset as ds

@@ -27,7 +27,8 @@ def manipulate_complexes(
     outfile_name : str
         Output file name. Default is input file name with "manipulate_outp.maegz" as suffix.
     mode : str
-        Mode to convert file. Default is "merge". Options are ["merge" - combine PV/EPV structures into complexes,
+        Mode to convert file. Default is "merge".
+        Options are ["merge" - combine PV/EPV structures into complexes,
         ,"split_pv" - extract receptor and ligands from complexes and save as PV
         ,"split_epv" - extract receptor and ligands from complexes and save as EPV
         ,"split_ligand" - extract ligands from complexes
@@ -63,22 +64,24 @@ def manipulate_complexes(
         i = 1
         while os.path.exists(os.path.join(context.write_dir, new_filename)):
             new_filename = os.path.join(
-                context.write_dir, filename + f"_{i}_" + outfile_name
+                context.write_dir, f"{filename}_{i}_{outfile_name}"
             )
             i += 1
+
     command = [context.command + "/run", "pv_convert.py", "-mode", mode]
     if mode in ["split_pv", "split_epv", "split_ligand", "split_receptor"]:
         command.extend(["-lig_last_mol"])
     command.extend(["-o", os.path.join(context.write_dir, new_filename), input_file])
     logger.debug(f"Running command: {' '.join(command)}")
     try:
-        process = subprocess.Popen(
+        with subprocess.Popen(
             command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=True,
-        )
-        stdout, stderr = process.communicate()
+        ) as process:
+            stdout, stderr = process.communicate()
+
         logger.debug(f"Output:\n{stdout}")
         # check if the filename has _pv or _epv and if so remove it
         if process.returncode == 0 and (
@@ -90,9 +93,8 @@ def manipulate_complexes(
             # Find the generated complexes file
             if mode not in ["split_epv", "pv_to_epv", "epv_to_pv"]:
                 complexes_file = None
-                # find the file with the same name as the input file but with "-out" in the name and .maegz extension
-                # find that file in the same directory as the input file
-                # find the input file directory
+                # find the file with the same name as the input file
+                # but with "-out" in the name and .maegz extension
                 directory = os.path.dirname(input_file)
                 logger.debug(f"looking for the file in: {directory}")
                 for file in glob.glob(os.path.join(directory, "*")):
@@ -144,35 +146,33 @@ def convert_to_pdb(
 
     context : str
         Glide context. Default is GlideContext.get_current().
-    n_structures : int
-        Number of structures to convert. Default is the first 3 structures.
+    n_structures : list | None
+        List of structure indices to convert. If None, converts all structures.
     """
     command = [context.command + "/utilities/structconvert", "-use_component_dict"]
     if n_structures:
         command.extend(["-n", ",".join(map(str, n_structures))])
-    command.extend(
-        [
-            input_file,
-            os.path.join(
-                context.write_dir,
-                f"{os.path.splitext(os.path.basename(input_file))[0]}.pdb",
-            ),
-        ]
+    # Break down the long line
+    output_path = os.path.join(
+        context.write_dir, f"{os.path.splitext(os.path.basename(input_file))[0]}.pdb"
     )
+    command.extend([input_file, output_path])
+
     try:
-        process = subprocess.Popen(
+        with subprocess.Popen(
             command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=True,
-        )
-        stdout, stderr = process.communicate()
+        ) as process:
+            stdout, stderr = process.communicate()
+
         logger.debug(f"Output:\n{stdout}")
         logger.debug(f"Error Output:\n{stderr}")
         if process.returncode == 0:
             logger.info(f"Converted {input_file} to pdb format")
             logger.info(f"Output:\n{stdout}")
-            return False
+        # Break down the long line
         elif (
             "Each Structure is converted independently and written to separate files"
             in stderr
@@ -182,43 +182,6 @@ def convert_to_pdb(
                 f"{os.path.splitext(os.path.basename(input_file))[0]}-1.pdb",
             )
             logger.info(f"Converted files one by one: {output_file_new}")
-            """
-            if os.path.exists(output_file_new):
-                # loop through the number of structures and convert them one by one
-                for i in n_structures:
-                    if i == 1:
-                        continue
-                    command = [
-                        context.command + "/utilities/structconvert",
-                        "-use_component_dict",
-                        "-n",
-                        str(i),
-                        input_file,
-                        os.path.join(
-                            context.write_dir,
-                            f"{os.path.splitext(os.path.basename(input_file))[0]}-{i}.pdb",
-                        ),
-                    ]
-                    process = subprocess.Popen(
-                        command,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        universal_newlines=True,
-                    )
-                    stdout, stderr = process.communicate()
-                    logger.debug(f"Output:\n{stdout}")
-                    logger.debug(f"Error Output:\n{stderr}")
-                    if process.returncode == 0:
-                        logger.info(f"Converted {input_file} to pdb format")
-                        logger.info(f"Output:\n{stdout}")
-                    else:
-                        logger.error(f"Conversion failed for {input_file}")
-                        logger.error(f"Error Output:\n{stderr}")
-                        raise subprocess.CalledProcessError(
-                            process.returncode, " ".join(command)
-                        )
-                return True
-                """
         else:
             logger.error(f"Conversion failed for {input_file}")
             logger.error(f"Error Output:\n{stderr}")
