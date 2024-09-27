@@ -725,12 +725,12 @@ if __name__ == "__main__":
         pdbids = [pdbid for pdbid in pdbids if pdbid not in rmsd_df["PDB_ID"].values]
     failed = []
     # get random  10 pdb ids from the list using random.sample
-    pdbids = random.sample(pdbids, 25)
+    pdbids = random.sample(pdbids, 20)
     temp = [pdbid for pdbid in pdbids if pdbid not in rmsd_df["PDB_ID"].values]
     while len(temp) < 25:
         temp = [pdbid for pdbid in pdbids if pdbid not in rmsd_df["PDB_ID"].values]
         pdbids.extend(random.sample(pdbids, 25 - len(temp)))
-
+    pdbids.extend(["5QD6", "5UFO"])
     failed = []
     rmsd_dict = {}
 
