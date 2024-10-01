@@ -3,6 +3,7 @@ r""" Utility functions for structure module. """
 from typing import TextIO
 
 import os
+import time
 
 import pandas as pd
 import requests
@@ -538,3 +539,78 @@ def get_smiles(ligand_resname: str | TextIO) -> dict[str, str]:
     logger.debug(f"SMILES: {smiles}")
     logger.debug(f"Stereo SMILES: {stereo_smiles}")
     return {"smiles": smiles, "stereo_smiles": stereo_smiles}
+
+
+def map_genid_to_pdb(gene_ids: list[str]) -> list[dict]:
+    r"""Map a list of gene IDs to PDB IDs using the UniProt ID Mapping API.
+    Parameters
+    ----------
+    gene_ids : list of str
+        The list of gene IDs to map.
+    Returns
+    -------
+        list of dict
+            The mapping of each gene ID to the PDB ID and other attributes.
+    """
+    url = "https://rest.uniprot.org/idmapping/run"
+    payload = {"from": "GeneID", "to": "UniProtKB", "ids": ",".join(gene_ids)}
+    response = requests.post(url, data=payload, timeout=5)
+    job_id = response.json().get("jobId")
+    if not job_id:
+        logger.error(f"Failed to retrieve job ID for gene IDs {gene_ids}")
+        return []
+
+    # Check the status of the job
+    status_url = f"https://rest.uniprot.org/idmapping/status/{job_id}"
+    status_response = requests.get(status_url, timeout=5)
+    if status_response.status_code != 200:
+        logger.error(
+            f"Error checking job status for job ID {job_id}: {status_response.status_code}"
+        )
+        return []
+
+    # Get the detailed results
+    url = f"https://rest.uniprot.org/idmapping/uniprotkb/results/stream/{job_id}?format=json"
+    response = requests.get(url, timeout=5)
+    while response.status_code != 200:
+        logger.error(f"Job ID {job_id} is not ready. Retrying in 5 seconds.")
+        time.sleep(5)
+
+    results = response.json()
+    if not results["results"]:
+        logger.error(f"No results found for gene IDs {gene_ids}")
+        return []
+
+    # Parse the results to extract all the attributes and save in a list of dictionaries
+    uniprot_results = []
+    for data in results["results"]:
+        uniprot_result = {
+            "Gene ID": data["from"],
+            "UniprotID": data["to"]["primaryAccession"],
+            "Organism": data["to"]["organism"]["scientificName"],
+            "Protein Name": (
+                data["to"]["proteinDescription"]["recommendedName"]["fullName"]["value"]
+                if "recommendedName" in data["to"]["proteinDescription"]
+                else data["to"]["proteinDescription"]["submissionNames"][0]["fullName"][
+                    "value"
+                ]
+            ),
+            "Gene Name": (
+                data["to"]["genes"][0]["geneName"]["value"]
+                if "genes" in data["to"] and "geneName" in data["to"]["genes"][0]
+                else ""
+            ),
+            "PDB IDs": [
+                ref["id"]
+                for ref in data["to"]["uniProtKBCrossReferences"]
+                if ref["database"] == "PDB"
+            ],
+            "AlphaFold IDs": [
+                ref["id"]
+                for ref in data["to"]["uniProtKBCrossReferences"]
+                if ref["database"] == "AlphaFoldDB"
+            ],
+        }
+        uniprot_results.append(uniprot_result)
+
+    return uniprot_results

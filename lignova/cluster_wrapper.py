@@ -25,6 +25,7 @@ from lignova.structure.utils import (
     get_ligand_names,
     get_rcsb_data,
     get_smiles,
+    map_genid_to_pdb,
     validate_ligands,
     validate_pdb,
 )
@@ -108,7 +109,7 @@ def fasta_parser(fasta: str | TextIO, delimiter: str | None = None) -> list:
     return protein_ids
 
 
-def pdb_validations(csvfilenames: str) -> dict:
+def pdb_validations(csvfilenames: str) -> None:
     r"""Validate the PDB files for the proteins in the CSV file.
     Parameters
     ----------
@@ -154,7 +155,6 @@ def pdb_validations(csvfilenames: str) -> dict:
                 df = pd.DataFrame(new_file.items(), columns=["Gene_id", "PDB"])
                 df.to_csv("new_pdb_files", index=False)
                 start_time = time.time()
-
     return new_file
 
 
@@ -647,12 +647,30 @@ def add_smiles_cluster(
 if __name__ == "__main__":
     HDF5_FILE = "../PubChem_data_edited.hdf5"
     FASTA_FILE = "../protein_sequences.fasta"
-    create_fasta_file(HDF5_FILE, FASTA_FILE)
-    PubChem_protein_ids = fasta_parser(FASTA_FILE)
-    logger.info(f"Number of protein ids: {len(PubChem_protein_ids)}")
+    GENE_ID2PDB_ID_FILE = "gene_id2pdb_id.csv"
+    # create_fasta_file(HDF5_FILE, FASTA_FILE)
     mmseqs_cluster(FASTA_FILE, outfile_name_suffix="../clusters", tmp_dir="../tmp")
+    PubChem_protein_ids = fasta_parser(FASTA_FILE)
+    logger.info(f"Number of protein ids: {len(set(PubChem_protein_ids))}")
+    gene2pdb = {}
+    batch_size = 400
+    unique_protein_ids = list(set(PubChem_protein_ids))
+    for i in range(0, len(unique_protein_ids), batch_size):
+        batch = [
+            protein_id.strip() for protein_id in unique_protein_ids[i : i + batch_size]
+        ]
+        logger.info(f"Processing batch {i // batch_size + 1}: {batch}")
+        batch_results = map_genid_to_pdb(batch)
+        for result in batch_results:
+            gene_id = result["Gene ID"]
+            pdb_id = result["PDB IDs"]
+            gene2pdb[gene_id] = pdb_id
+    # write the gene2pdb dictionary to a csv file
+    gene2pdb_df = pd.DataFrame(gene2pdb.items(), columns=["From", "PDB"])
+    gene2pdb_df.to_csv(GENE_ID2PDB_ID_FILE, index=False)
+    # validate the PDB files
+    # pdb_validations("gene_id2pdb_id.csv")
     # NOTE:THESE FILES ARE NOT REAL
     protein_cluster_file = "../../protein_cluster.parquet"
     ligand_cluster_file = "../../ligand_cluster.parquet"
-    gene_id2pdb_id_file = "../../gene_id2pdb_id.csv"
     # TODO:Continue rewiting the code from here forward
