@@ -251,7 +251,7 @@ def get_rcsb_data(pdb_id: str):
     """
 
     url = f"https://data.rcsb.org/rest/v1/core/entry/{pdb_id}"
-    response = requests.get(url, timeout=5)
+    response = requests.get(url, timeout=20)
     # check if the request was successful
     if response.status_code != 200:
         logger.error(f"Error fetching data for PDB ID {pdb_id}: {response.status_code}")
@@ -357,29 +357,33 @@ def get_entity_ids(pdb_id: str, rcsb_data: dict | None = None) -> dict[str, list
     return entity_ids
 
 
-def pdb_has_mutation(pdb_id: str) -> bool:
+def pdb_has_mutation(pdb_id: str, rcsb_data: dict | None = None) -> bool:
     r"""Check if a PDB file has mutations or not
     Parameters
     ----------
     pdb : str
         Path to the PDB file.
+    rcsb_data : dict or None
+        The data for the PDB ID from the RCSB API. If None, the data will be fetched.
     Returns
     -------
     bool
         True if the PDB file has mutations, False otherwise.
     """
+    if rcsb_data is not None:
+        polymer_ids = get_entity_ids(pdb_id, rcsb_data)["polymer"]
     polymer_ids = get_entity_ids(pdb_id)["polymer"]
     url = f"https://data.rcsb.org/rest/v1/core/polymer_entity/{pdb_id}/"
     list_of_mutations = []
     if len(polymer_ids) == 1:
-        response = requests.get(url + polymer_ids[0], timeout=5)
+        response = requests.get(url + polymer_ids[0], timeout=20)
         data = response.json()
         logger.debug(
             f"Mutations in {pdb_id}: {data['entity_poly']['rcsb_mutation_count']}"
         )
         return data["entity_poly"]["rcsb_mutation_count"] > 0
     for entity_id in polymer_ids:
-        response = requests.get(url + entity_id, timeout=5)
+        response = requests.get(url + entity_id, timeout=20)
         data = response.json()
         list_of_mutations.append(data["entity_poly"]["rcsb_mutation_count"])
     # check if the values of the list are 0
@@ -413,7 +417,7 @@ def get_nonpolymer_names(pdb_id: str, rcsb_data: dict | None = None) -> list:
     nonpolymer_names = []
     url = f"https://data.rcsb.org/rest/v1/core/nonpolymer_entity/{pdb_id}/"
     for entity_id in nonpolymer_ids:
-        response = requests.get(url + entity_id, timeout=10)
+        response = requests.get(url + entity_id, timeout=20)
         data = response.json()
         nonpolymer_names.append(data["pdbx_entity_nonpoly"]["comp_id"])
     # exclude ligands with names less than 3 characters from the list
@@ -439,7 +443,7 @@ def validate_ligands(
         True if the ligands are valid, False otherwise.
     """
     ligands = get_nonpolymer_names(pdb)
-    if not validate_pdb(pdb) or len(ligands) == 0:
+    if len(ligands) == 0:
         return False
     logger.debug(f"Ligands in {pdb}: {ligands}")
     logger.debug(all(i in impurities for i in ligands))
@@ -459,10 +463,13 @@ def validate_pdb(pdb_id: str) -> bool:
         no covalent bond and no mutation), False otherwise.
     """
     data = get_rcsb_data(pdb_id)
+    if len(data) == 0:
+        logger.error(f"Failed to fetch data for PDB ID {pdb_id}.")
+        return False
     if (
         has_ligands(pdb_id, data)
         and not has_covalent_bonds(pdb_id, data)
-        and not pdb_has_mutation(pdb_id)
+        and not pdb_has_mutation(pdb_id, data)
         and is_xray_structure(pdb_id)
         and find_resolution(pdb_id, data) <= 3.0
     ):
@@ -514,7 +521,7 @@ def get_smiles(ligand_resname: str | TextIO) -> dict[str, str]:
         The SMILES string of the ligand.
     """
     url = f"https://data.rcsb.org/rest/v1/core/chemcomp/{ligand_resname}"
-    response = requests.get(url, timeout=5)
+    response = requests.get(url, timeout=20)
     data = response.json()
     # check if the data['rcsb_chem_comp_descriptor']['smiles'] is not found
     if "smiles" not in data["rcsb_chem_comp_descriptor"]:
@@ -575,6 +582,7 @@ def map_genid_to_pdb(gene_ids: list[str]) -> list[dict]:
     while response.status_code != 200:
         logger.error(f"Job ID {job_id} is not ready. Retrying in 5 seconds.")
         time.sleep(5)
+        response = requests.get(url, timeout=5)
 
     results = response.json()
     if not results["results"]:

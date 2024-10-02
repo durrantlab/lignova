@@ -147,7 +147,7 @@ def parse_ligand_members(
     input_dir : str | None (default=None)
         The path to the directory containing the pdb files
     water : bool (default=True)
-        If true, we remove the water molecules from the ligand file
+        If true, we remove the water molecules from the ligand file extracted from the pdb file
     combine : bool (default=False)
         If true, we combine PDB and PubChem ligands into one csv file
     datatype : str (default="pdb")
@@ -334,7 +334,7 @@ def prep_proteins(pdb_file: str, context: GlideContext):
         os.makedirs(context.write_dir)
     if not os.path.exists(os.path.join(context.write_dir, temp_prot.file_id + ".pdb")):
         protein, ligand = separate_protein_ligand(
-            pdb_file, remove_water=False, keep_het_chain="A"
+            pdb_file, remove_water=not (context.samplewater), keep_het_chain="A"
         )
         write_mda_universe(
             protein, os.path.join(context.write_dir, f"{temp_prot.file_id}.pdb")
@@ -717,23 +717,14 @@ def calc_rmsd_spyrmsd(
 
 if __name__ == "__main__":
     PARQUET_FILENAME = "all_compounds_with_smiles_cluster.parquet"
-    # PROOF OF CONCEPT FOR EACH FUNCTION
-    pdbids = get_pdb_ids_from_parquet(PARQUET_FILENAME)
-
-    if os.path.exists("rmsd_values.csv"):
-        rmsd_df = pd.read_csv("rmsd_values.csv")
-        pdbids = [pdbid for pdbid in pdbids if pdbid not in rmsd_df["PDB_ID"].values]
-    failed = []
-    # get random  10 pdb ids from the list using random.sample
-    pdbids = random.sample(pdbids, 20)
-    temp = [pdbid for pdbid in pdbids if pdbid not in rmsd_df["PDB_ID"].values]
-    while len(temp) < 25:
-        temp = [pdbid for pdbid in pdbids if pdbid not in rmsd_df["PDB_ID"].values]
-        pdbids.extend(random.sample(pdbids, 25 - len(temp)))
-    pdbids.extend(["5QD6", "5UFO"])
+    RMSD_FILE_WATER = "rmsd_values_water.csv"
+    # read the pdb ids from the rmsd file
+    # pdbids = get_pdb_ids_from_parquet(PARQUET_FILENAME)
+    pdbids = pd.read_csv(RMSD_FILE_WATER)["PDB_ID"].values
+    logger.info(f"The pdb ids are {pdbids}")
+    logger.info(f"The number of pdb ids is {len(pdbids)}")
     failed = []
     rmsd_dict = {}
-
     for pdbid in pdbids:
         logger.info(f"Getting the pdb coordinates for {pdbid}")
         get_pdb_coordinates(pdbid, "raw")
@@ -761,7 +752,7 @@ if __name__ == "__main__":
         logger.info(f"The ligand information is\n {ligand_info}")
         prep_context = GlideContext.get_current()
         prep_context.write_dir = "./trial"
-        prep_context.samplewater = True
+        prep_context.samplewater = False
         prep_context.set_current(prep_context)
         try:
             result = prep_ligands(ligand_info, prep_context, pdbid)
@@ -805,12 +796,4 @@ if __name__ == "__main__":
                 f.write(f"{item}\n")
     # save the rmsd values to a csv file
     rmsd_df = pd.DataFrame(rmsd_dict.items(), columns=["PDB_ID", "RMSD"])
-    if os.path.exists("rmsd_values.csv"):
-        rmsd_df.to_csv(
-            "rmsd_values.csv",
-            mode="a",
-            header=False,
-            index=False,
-        )
-    else:
-        rmsd_df.to_csv("rmsd_values.csv", index=False)
+    rmsd_df.to_csv("rmsd_values_no_water.csv", index=False)
