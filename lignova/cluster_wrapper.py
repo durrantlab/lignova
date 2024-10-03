@@ -156,37 +156,63 @@ def pdb_validations(csvfilenames: str) -> None:
     new_csv_df.to_csv(f"valid_{csvfilenames}", index=False)
 
 
-def clean_cluster_files(file_path: str, delim: list = ["[", "]"]) -> list:
+def clean_cluster_files(cluster_filepath: str, valid_csvpath: str) -> None:
     """
-    This function takes the mmseqs2 cluster file and cleans it
-    by removing clusters with no representatives
+    Clean the cluster file by removing the clusters with no representatives/
+    no members and the clusters with invalid PDB ids.
     Parameters
     ----------
-    file_path : str
-        The path to the file containing the PDB IDs.
-    delim : str, optional
-        The delimiter used in the file. The default is ":".
+    cluster_filepath : str
+        Path to the parsed mmseq cluster file.
+    valid_csvpath : str
+        Path to the csv mapping the gene ids to the valid PDB ids.
     Returns
     -------
-    pdb_ids : list
-        A list of PDB IDs.
+    None
     """
-    with open(file_path, "r", encoding="utf-8") as file:
-        pdb_ids = []
-        for line in file:
-            if line.startswith("Cluster: []"):
-                continue
-            if line.startswith("Cluster "):
-                cluster_id = (
-                    line.split(" ")[1]
-                    .strip()
-                    .replace(delim[0], "")
-                    .replace(delim[1], "")
-                    .replace("\n", "")
-                )
-                pdb_ids.append(cluster_id.split(", "))
-        pdb_ids = [x for x in pdb_ids if x not in (" ", "''")]
-        return pdb_ids
+    # check if the cluster file exists
+    if not os.path.exists(cluster_filepath):
+        raise FileNotFoundError(f"Cluster file {cluster_filepath} not found.")
+    if not os.path.exists(valid_csvpath):
+        raise FileNotFoundError(f"Valid CSV file {valid_csvpath} not found.")
+
+    # Read the valid PDB ids from the CSV file
+    valid_pdbs = pd.read_csv(valid_csvpath)
+    valid_pdbs_dict = dict(zip(valid_pdbs["Gene_id"], valid_pdbs["PDB"]))
+
+    # Read the cluster file
+    cluster_data = pd.read_csv(cluster_filepath)
+    logger.info(f"Number of clusters: {len(cluster_data)}")
+    # Ensure the cluster file has the required columns
+    if (
+        "representatives" not in cluster_data.columns
+        or "members" not in cluster_data.columns
+    ):
+        raise ValueError(
+            "Cluster file must contain 'representatives' and 'members' columns."
+        )
+
+    # Filter clusters based on valid representatives or members
+    valid_clusters = []
+    for _, row in cluster_data.iterrows():
+        representatives = int(row["representatives"])
+        members = ast.literal_eval(row["members"])
+        # Check if any representative is valid
+        if representatives in valid_pdbs_dict.keys():
+            valid_clusters.append(row)
+            continue
+        # Check if any member maps to a valid PDB id
+        for member in members:
+            if int(member) in valid_pdbs_dict.keys():
+                row["representatives"] = member
+                valid_clusters.append(row)
+                break
+    # Create a DataFrame from the valid clusters and save it
+    valid_clusters_df = pd.DataFrame(valid_clusters)
+    valid_clusters_df.to_csv(f"valid_{os.path.basename(cluster_filepath)}", index=False)
+    logger.info(
+        f"Cleaned cluster file saved to valid_{os.path.basename(cluster_filepath)}"
+    )
 
 
 def get_protein_clusters(cluster_file: str) -> dict[tuple | list]:
@@ -601,12 +627,12 @@ if __name__ == "__main__":
     GENE_ID2PDB_ID_FILE = "gene_id2pdb_id.csv"
     RAW_ID_MAPPING_FILE = "id_mapping.csv"
     VALID_PDBS_FILE = "valid_gene_id2pdb_id.csv"
+    """
 
     # 1. Read the PubChem HDF5 file and extract the fasta sequences
     create_fasta_file(HDF5_FILE, FASTA_FILE)
     # 2. Cluster the fasta sequences using MMseqs2
     mmseqs_cluster(FASTA_FILE, outfile_name_suffix="../clusters", tmp_dir="../tmp")
-    """
     # 3. map the gene id to the PDB ids using ID mapping webservices
     PubChem_protein_ids = fasta_parser(FASTA_FILE)
     logger.info(f"Number of protein ids: {len(set(PubChem_protein_ids))}")
@@ -654,10 +680,11 @@ if __name__ == "__main__":
     valid_gene2pdb = pd.read_csv(VALID_PDBS_FILE)
     valid_gene2pdb = valid_gene2pdb[valid_gene2pdb["PDB"] != "[]"]
     valid_gene2pdb.to_csv(VALID_PDBS_FILE, index=False)
-    """
     # 5. Parse the MMseqs2 output to find representatives and members
     mmseqs_parser("../clusters_cluster.tsv", save=True)
+    """
+    clean_cluster_files("../clusters_cluster_parsed.csv", VALID_PDBS_FILE)
     # NOTE:THESE FILES ARE NOT REAL
     protein_cluster_file = "../../protein_cluster.parquet"
     ligand_cluster_file = "../../ligand_cluster.parquet"
-    # TODO:Continue rewiting the code from here forward
+    # TODO:figure out why the numbers don't add up in terms of valide clusters members
