@@ -584,11 +584,12 @@ def map_genid_to_pdb(gene_ids: list[str]) -> list[dict]:
         time.sleep(5)
         response = requests.get(url, timeout=5)
 
+    logger.debug(f"Job ID {job_id} is ready.")
     results = response.json()
     if not results["results"]:
         logger.error(f"No results found for gene IDs {gene_ids}")
         return []
-
+    logger.debug(f"Results found for {len(gene_ids)} gene IDs.")
     # Parse the results to extract all the attributes and save in a list of dictionaries
     uniprot_results = []
     for data in results["results"]:
