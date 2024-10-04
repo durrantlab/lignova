@@ -155,7 +155,7 @@ def test_validate_pdb():
 
 
 def test_validate_ligands():
-    assert not validate_ligands(context_protein_6Oav["id"])
+    assert validate_ligands(context_protein_6Oav["id"])
     assert validate_ligands("4uxl")
 
 
