@@ -158,13 +158,13 @@ def parse_ligand_members(
     ligand : pd.DataFrame | mda.Universe
     """
     # split the cluster members into pdb and pubchem ligands
-    pdb_ligands = cluster_members[
+    all_pdb_ligands = cluster_members[
         cluster_members["PDB/Gene ID"].apply(
             lambda x: any(char.isalpha() for char in x)
         )
         & (cluster_members["PDB/Gene ID"] == pdb_id)
     ].drop_duplicates()
-    logger.info(f"The pdb ligands are {pdb_ligands}")
+    logger.info(f"The pdb ligands are {all_pdb_ligands}")
     pubchem_ligands = cluster_members[
         cluster_members["PDB/Gene ID"].apply(
             lambda x: all(char.isdigit() for char in x)
@@ -177,9 +177,9 @@ def parse_ligand_members(
             raise ValueError("The input directory is not provided")
         if datatype == "pdb":
             # loop through the pdb ligands and extract the ligand from the pdb file
-            for lig_id in pdb_ligands["Compound ID"]:
+            for lig_id in all_pdb_ligands["Compound ID"]:
                 if os.path.exists(os.path.join(input_dir, f"{pdb_id.lower()}.pdb")):
-                    protein, ligand = chery_pick_ligand(
+                    _protein, ligand = chery_pick_ligand(
                         os.path.join(input_dir, f"{pdb_id.lower()}.pdb"),
                         lig_id,
                         remove_water=water,
@@ -190,7 +190,7 @@ def parse_ligand_members(
                         f"The file {pdb_id.lower()}.pdb does not exist"
                     )
         elif datatype == "pandas":
-            ligand = pdb_ligands[["Smiles", "Compound ID"]].rename(
+            ligand = all_pdb_ligands[["Smiles", "Compound ID"]].rename(
                 columns={"Smiles": "SMILES", "Compound ID": "s_m_title"}
             )
         else:
@@ -204,11 +204,11 @@ def parse_ligand_members(
         )
         ligand = ligand.rename(columns={"Smiles": "SMILES", "Compound ID": "s_m_title"})
     if combine:
-        pdb_ligands_renamed = pdb_ligands[["Smiles", "Compound ID"]].rename(
+        all_pdb_ligands_renamed = all_pdb_ligands[["Smiles", "Compound ID"]].rename(
             columns={"Smiles": "SMILES", "Compound ID": "s_m_title"}
         )
         ligand = pd.concat(
-            [pdb_ligands_renamed, ligand],
+            [all_pdb_ligands_renamed, ligand],
             axis=0,
             ignore_index=True,
         )
@@ -306,9 +306,9 @@ def prep_ligands(
         prepped_lig = PreparedLigand(
             os.path.join(context.write_dir, ligand.file_id + "_prepared.mae")
         )
-    except Exception as e:
+    except Exception as exc:
         logger.error(f"Error in preparing ligand {ligand.file_id}")
-        raise e
+        raise exc
     os.remove(new_path)
     if os.path.exists(os.path.join(context.write_dir, ligand.file_id + ".mae")):
         os.remove(os.path.join(context.write_dir, ligand.file_id + ".mae"))
@@ -333,7 +333,7 @@ def prep_proteins(pdb_file: str, context: GlideContext):
         logger.warning(f"The directory {context.write_dir} does not exist.Creating it")
         os.makedirs(context.write_dir)
     if not os.path.exists(os.path.join(context.write_dir, temp_prot.file_id + ".pdb")):
-        protein, ligand = separate_protein_ligand(
+        protein, _ligand = separate_protein_ligand(
             pdb_file, remove_water=not (context.samplewater), keep_het_chain="A"
         )
         write_mda_universe(
@@ -351,9 +351,9 @@ def prep_proteins(pdb_file: str, context: GlideContext):
         prepped_prot = PreparedProtein(
             os.path.join(context.write_dir, input_prot.file_id + "_grid.zip")
         )
-    except Exception as e:
+    except Exception as exc:
         logger.error(f"Error in preparing protein {input_prot.file_id}")
-        raise e
+        raise exc
     os.remove(os.path.join(context.write_dir, f"{temp_prot.file_id}.pdb"))
     return prepped_prot
 
@@ -396,9 +396,9 @@ def dock_ligands(
                 prepped_ligand.file_id.replace("_prepared", "_docking_pv.maegz"),
             )
         )
-    except Exception as e:
+    except Exception as exc:
         logger.error(f"Error in docking ligand {prepped_ligand.file_id}")
-        raise e
+        raise exc
     return docked_ligand
 
 
@@ -444,9 +444,9 @@ def run_combind(docked_ligand: DockedLigand, context: CombindContext) -> str:
                 docked_ligand.file_id + "_poses",
                 os.path.join(context.work_dir, docked_ligand.file_id + "_features"),
             )
-    except Exception as e:
+    except Exception as exc:
         logger.error(f"Error in scoring ligand {docked_ligand.file_id}")
-        raise e
+        raise exc
     return os.path.join(context.work_dir, docked_ligand.file_id + "_poses.csv")
 
 
@@ -495,9 +495,9 @@ def get_top_combind_pose(
                 context.work_dir, glide_docking_file.file_id + "_top_poses_pv.maegz"
             )
         )
-    except Exception as e:
+    except Exception as exc:
         logger.error(f"Error in selecting top poses for {glide_docking_file.file_id}")
-        raise e
+        raise exc
     return top_poses
 
 
@@ -610,9 +610,9 @@ def extract_pdb_top_poses(
             )
         )
         logger.debug(f"Top poses pdb complex for {combind_result.file_id} is extracted")
-    except Exception as e:
+    except Exception as exc:
         logger.error(f"Error in selecting top poses for {combind_result.file_id}")
-        raise e
+        raise exc
     return final_docked_lig
 
 
@@ -661,7 +661,7 @@ def calc_rmsd_spyrmsd(
             os.path.join(context.write_dir, target_file.file_id + ".pdb")
         )
     # sepate the protein and ligand from the reference and target files
-    ref_prot, ref_lig = separate_protein_ligand(
+    _ref_prot, ref_lig = separate_protein_ligand(
         reference_file.file_path, remove_water=True
     )
     # get the residue names in ref_lig and exclude the ligand_name
@@ -672,10 +672,11 @@ def calc_rmsd_spyrmsd(
         select_residues(ref_lig, ligand_name),
         os.path.join(context.write_dir, reference_file.file_id + "_ref_lig.pdb"),
     )
-    logger.debug(
-        f"Reference ligand is written to {os.path.join(context.write_dir,reference_file.file_id+'_ref_lig.pdb')}"
+    ref_lig_filepath = os.path.join(
+        context.write_dir, reference_file.file_id + "_ref_lig.pdb"
     )
-    tar_prot, tar_lig = separate_protein_ligand(
+    logger.debug(f"Reference ligand is written to {ref_lig_filepath}")
+    _tar_prot, tar_lig = separate_protein_ligand(
         target_file.file_path, remove_water=True
     )
     if len(ligand_residues) != 0:
@@ -688,9 +689,10 @@ def calc_rmsd_spyrmsd(
             tar_lig,
             os.path.join(context.write_dir, target_file.file_id + "_tar_lig.pdb"),
         )
-    logger.debug(
-        f"Target ligand is written to {os.path.join(context.write_dir,target_file.file_id+'_tar_lig.pdb')}"
+    tar_lig_filepath = os.path.join(
+        context.write_dir, target_file.file_id + "_tar_lig.pdb"
     )
+    logger.debug(f"Target ligand is written to {tar_lig_filepath}")
     new_ref_lig = DockedLigand(
         os.path.join(context.write_dir, reference_file.file_id + "_ref_lig.pdb")
     )
@@ -718,9 +720,8 @@ def calc_rmsd_spyrmsd(
 if __name__ == "__main__":
     PARQUET_FILENAME = "all_compounds_with_smiles_cluster.parquet"
     RMSD_FILE_WATER = "rmsd_values_water.csv"
-    # read the pdb ids from the rmsd file
-    # pdbids = get_pdb_ids_from_parquet(PARQUET_FILENAME)
-    pdbids = pd.read_csv(RMSD_FILE_WATER)["PDB_ID"].values
+    MRSD_FILE_NO_WATER = "rmsd_values_no_water.csv"
+    pdbids = get_pdb_ids_from_parquet(PARQUET_FILENAME)
     logger.info(f"The pdb ids are {pdbids}")
     logger.info(f"The number of pdb ids is {len(pdbids)}")
     failed = []
@@ -739,14 +740,14 @@ if __name__ == "__main__":
         pubchem_lig = ligand_info[
             ligand_info["s_m_title"].apply(lambda x: all(char.isdigit() for char in x))
         ]
-        pdb_lig = parse_ligand_members(
+        pdb_ligands = parse_ligand_members(
             ligand_members,
             pdbid.upper(),
             input_dir="raw",
             find_pdb_ligand=True,
             datatype="pandas",
         )
-        if not (len(pubchem_lig) != 0 and len(pdb_lig) >= 1):
+        if not (len(pubchem_lig) != 0 and len(pdb_ligands) >= 1):
             logger.error(f"The ligand information for {pdbid} is not complete")
             continue
         logger.info(f"The ligand information is\n {ligand_info}")
@@ -756,7 +757,7 @@ if __name__ == "__main__":
         prep_context.set_current(prep_context)
         try:
             result = prep_ligands(ligand_info, prep_context, pdbid)
-            ref_lig = PreparedLigand(
+            ref_lig_obj = PreparedLigand(
                 file_path=f"trial/{pdbid.lower()}_protein_prepared.mae"
             )
             logger.info(f"The prepared ligand is {result.file_path}")
@@ -772,18 +773,22 @@ if __name__ == "__main__":
                 raw_combind_result, final_lig, combind_context
             )
             rmsd_target_file = extract_pdb_top_poses(
-                final_combind_res, combind_context, pdb_lig["s_m_title"].values[0]
+                final_combind_res, combind_context, pdb_ligands["s_m_title"].values[0]
             )
-            rmsd_val = calc_rmsd_spyrmsd(
-                ref_lig, rmsd_target_file, prep_context, pdb_lig["s_m_title"].values[0]
+            RMSD_VAL = calc_rmsd_spyrmsd(
+                ref_lig_obj,
+                rmsd_target_file,
+                prep_context,
+                pdb_ligands["s_m_title"].values[0],
             )
-            rmsd_dict[pdbid] = rmsd_val
-            logger.info(f"The RMSD value is {rmsd_val}")
-        except Exception as e:
+            rmsd_dict[pdbid] = RMSD_VAL
+            logger.info(f"The RMSD value is {RMSD_VAL}")
+        except Exception as error:
             logger.error(f"Error in docking {pdbid}")
             failed.append(pdbid)
+        pdb_ligand_name = pdb_ligands["s_m_title"].values[0]
         logger.debug(
-            f"The pdb id is {pdbid} which had pdb ligand {pdb_lig['s_m_title'].values[0]} and {len(pubchem_lig)} pubchem ligands"
+            f"The pdb id is {pdbid} which had {pdb_ligand_name} pdb & {len(pubchem_lig)} pubchem ligands"
         )
     # save the failed pdb ids to a text file
     if len(failed) != 0 and not os.path.exists("trial/failed_pdb_ids.txt"):

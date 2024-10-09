@@ -493,7 +493,7 @@ def get_ligand_names(pdb: str | TextIO) -> list:
     list
         The names of the ligands in the PDB file.
     """
-    ligand = separate_protein_ligand(pdb)[1]
+    _, ligand = separate_protein_ligand(pdb)
     # get the residue name of the ligand
     ligand_resname = ligand.residues.resnames
     if len(ligand_resname) > 1:
