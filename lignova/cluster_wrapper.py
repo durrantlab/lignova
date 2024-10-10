@@ -1,26 +1,22 @@
-r" Implemtnation for a wrapper for MMseqs2 clustering"
+r"Implementation for a wrapper for MMseqs2 clustering"
 from typing import TextIO
 
 import ast
 import os
-import pickle
 import time
 
 import pandas as pd
 import pyarrow as pa
-import pyarrow.dataset as ds
-import pyarrow.parquet as pq
 from loguru import logger
 
-from lignova.analysis.utils import obabel_convert
 from lignova.clustering.mmseq import mmseqs_cluster, mmseqs_parser
 from lignova.clustering.tanimoto import TanimotoClustering
 from lignova.hdf5.parquet import ParquetParser
 from lignova.hdf5.parser import HDF5Parser
 from lignova.structure import Protein
+from lignova.structure.editing import convert_cif2pdb
 from lignova.structure.utils import (
     get_ligand_names,
-    get_rcsb_data,
     get_smiles,
     map_genid_to_pdb,
     validate_ligands,
@@ -39,7 +35,7 @@ from lignova.structure.utils import (
 # 8. Add the compounds to the parquet file with the protein clusters
 # from the protein_cluster.parquet file
 # 9. Run tanimoto clustering on the compounds and add the ligand clusters to the parquet file
-# 10. Write the ligand clusters data into ligand_cluster.parquet file
+# 10. Write the ligand clusters data into parquet file
 
 
 def create_fasta_file(hdf5_file: str, fasta_file: str) -> None:
@@ -124,28 +120,39 @@ def pdb_validations(csvfilenames: str) -> None:
     protein_ids = pd.read_csv(csvfilenames)
     # get the PDB column
     pdb_ids = protein_ids["PDB"]
+    new_file = {}
     # check if f"valid_{csvfilenames}" exists and if so read it as a dictionary
     if os.path.exists(f"valid_{csvfilenames}"):
-        new_file = pd.read_csv(f"valid_{csvfilenames}")
+        file_data = pd.read_csv(f"valid_{csvfilenames}")
         # make the new_file as a dictionary
-        new_file = dict(zip(new_file["Gene_id"], new_file["PDB"]))
-    else:
-        new_file = {}
+        # Create the dictionary with Gene_id as keys and PDB as values
+        for gene_id, pdb_list in zip(file_data["Gene_id"], file_data["PDB"]):
+            new_file[gene_id] = ast.literal_eval(pdb_list)
     for gene_id, pdb_id in zip(protein_ids["From"], pdb_ids):
         # read the pdb_id as a list
         pdb_id = ast.literal_eval(pdb_id)
         logger.debug(f"Gene id: {gene_id} PDB id: {pdb_id}")
         # find the value of the From column
-        if gene_id in new_file:
-            continue
-        new_file[gene_id] = []
+        if gene_id not in new_file:
+            new_file[gene_id] = []
         for pdb in pdb_id:
             # validate the pdb id
+            # check if the pdb id is valid is in the new_file[gene_id] values
+            if new_file[gene_id] is not None:
+                if pdb in new_file[gene_id]:
+                    logger.debug(
+                        f"PDB id {pdb} already in new_file for gene_id {gene_id}"
+                    )
+                    continue
             if not validate_pdb(pdb) or not validate_ligands(pdb):
                 logger.error(f"Invalid PDB id {pdb} for protein {gene_id}")
                 continue
+            logger.info(f"the current new_file dict: {new_file[gene_id]}")
+            logger.info(f"the type of new_file dict: {type(new_file[gene_id])}")
             logger.info(f"Valid PDB id {pdb} for gene_id {gene_id}")
-            new_file[gene_id].append(pdb)
+            tmp = new_file[gene_id]
+            tmp.append(pdb)
+            new_file[gene_id] = tmp
             # save this new file to a csv file every 10 minutes
             if time.time() - start_time > 60 * 10:
                 new_csv_df = pd.DataFrame(new_file.items(), columns=["Gene_id", "PDB"])
@@ -158,7 +165,7 @@ def pdb_validations(csvfilenames: str) -> None:
 
 def clean_cluster_files(cluster_filepath: str, valid_csvpath: str) -> None:
     """
-    Clean the cluster file by removing the clusters with no representatives/
+    Clean the cluster file by removing the clusters with no raw
     no members and the clusters with invalid PDB ids.
     Parameters
     ----------
@@ -198,73 +205,35 @@ def clean_cluster_files(cluster_filepath: str, valid_csvpath: str) -> None:
         representatives = int(row["representatives"])
         members = ast.literal_eval(row["members"])
         # Check if any representative is valid
+        new_reps = []
         if representatives in valid_pdbs_dict.keys():
-            valid_clusters.append(row)
-            continue
+            new_reps.extend(ast.literal_eval(valid_pdbs_dict[representatives]))
         # Check if any member maps to a valid PDB id
         for member in members:
             if int(member) in valid_pdbs_dict.keys():
-                row["representatives"] = member
-                valid_clusters.append(row)
-                break
+                new_reps.extend(ast.literal_eval(valid_pdbs_dict[member]))
+        row["representatives"] = list(set(new_reps))
+        row["members"] = members
+        valid_clusters.append(row)
+
     # Create a DataFrame from the valid clusters and save it
     valid_clusters_df = pd.DataFrame(valid_clusters)
+    # delete the rows with empty lists in the representatives column
+    valid_clusters_df = valid_clusters_df[
+        valid_clusters_df["representatives"].apply(lambda x: len(x) > 0)
+    ]
     valid_clusters_df.to_csv(f"valid_{os.path.basename(cluster_filepath)}", index=False)
     logger.info(
         f"Cleaned cluster file saved to valid_{os.path.basename(cluster_filepath)}"
     )
 
 
-def get_protein_clusters(cluster_file: str) -> dict[tuple | list]:
-    r"""Get the clusters from the cluster file.
+def make_protein_cluster_file(new_file: ParquetParser, cluster_csv: str) -> None:
+    r"""Make a  parquet cluster file with the new lines.
     Parameters
     ----------
-    cluster_file : str
-        Path to the cluster file.
-    Returns
-    -------
-    dict
-        Dictionary of clusters. The keys are the cluster representative
-        and the values are the cluster members.
-    """
-
-    # loop through the cluster file and write the data to the new file
-    with open(cluster_file, "r", encoding="utf-8") as file:
-        lines = file.readlines()
-    # find lines starting with Cluster and get the number of lines
-    clusters = [line for line in lines if line.startswith("Cluster")]
-    cluster_number = 0
-    members = []
-    representatives = []
-    tmp = []
-    cluster_dict = {}
-    for line in lines:
-        if line.startswith("Cluster"):
-            if tmp != []:
-                members.append(tmp)
-                cluster_dict[representatives[cluster_number - 1]] = members
-                tmp = []
-                members = []
-            # split the line by : and append the value to the representatives
-            cluster_number += 1
-            representatives.append(line.split(":")[1].strip())
-            continue
-        tmp.append(line.strip())
-        # check if this is the last line and if so
-        # append the members to the members list in the cluster_dict
-        if line == lines[-1]:
-            members.append(tmp)
-            cluster_dict[representatives[cluster_number - 1]] = members
-    return cluster_dict
-
-
-# NOTE:THIS FUNCTION IS ONLY IMPLEMENTED FOR PARQUET FILES
-def make_protein_cluster_file(new_file: str, cluster_csv: str) -> None:
-    r"""Make a new cluster file with the new lines.
-    Parameters
-    ----------
-    new_file : str
-        Path to the new cluster file. if the file not found, it will be created.
+    new_file : ParquetParser
+        Parquet object. if the file not found, it will be created.
     cluster_csv : str
         Path to the cluster file.
     """
@@ -273,37 +242,32 @@ def make_protein_cluster_file(new_file: str, cluster_csv: str) -> None:
         raise FileNotFoundError(
             f"Cluster file {cluster_csv} not found or not a valid file."
         )
-    # check the extension of the new file if it is h5 or parquet
-    if new_file.endswith(".h5") or new_file.endswith(".hdf5"):
-        if not os.path.exists(new_file):
-            hdf5 = HDF5Parser(new_file)
-            hdf5.create()
-    elif new_file.endswith(".parquet"):
-        schema = pa.schema(
-            [
-                ("Cluster number", pa.int64()),
-                ("Represenatives", pa.string()),
-                ("members", pa.string()),
-                ("member_compound", pa.list_(pa.string())),
-            ]
+    # check the new file exists
+    if not os.path.exists(new_file.file_path):
+        logger.info(f"New file {new_file.file_path} not found. Creating it.")
+        new_file.create()
+    # Read the cluster CSV file using pandas
+    cluster_data = pd.read_csv(cluster_csv)
+    logger.info(f"Number of clusters: {len(cluster_data)}")
+
+    # Ensure the cluster file has the required columns
+    if (
+        "representatives" not in cluster_data.columns
+        or "members" not in cluster_data.columns
+    ):
+        raise ValueError(
+            "Cluster file must contain 'representatives' and 'members' columns."
         )
-        clusters = get_protein_clusters(cluster_csv)
-        logger.info(f"Number of clusters: {len(clusters)}")
-        data = []
-        for cluster_number, (representatives, members_list) in enumerate(
-            clusters.items(), start=1
-        ):
-            for rep in ast.literal_eval(representatives):
-                for member in members_list[0]:
-                    data.append((cluster_number, rep, member, []))
-        logger.debug(data[:5])
-        logger.debug(data[25])
-        parquet = ParquetParser(new_file, schema)
-        if not os.path.exists(new_file):
-            parquet.create()
-        parquet.write(data, schema)
-    else:
-        raise ValueError(f"Invalid file extension {new_file}")
+
+    data = []
+    for cluster_number, row in cluster_data.iterrows():
+        representatives = ast.literal_eval(row["representatives"])
+        members_list = ast.literal_eval(row["members"])
+        for rep in representatives:
+            for member in members_list:
+                data.append((cluster_number + 1, str(rep), str(member), []))
+    new_file.write(data, new_file.schema)
+    logger.info(f"Data written to Parquet file at {new_file.file_path}")
 
 
 def hdf5_raw_file_parser(hdf5_file: str) -> tuple[dict, dict]:
@@ -324,18 +288,18 @@ def hdf5_raw_file_parser(hdf5_file: str) -> tuple[dict, dict]:
     hdf5 = HDF5Parser(hdf5_file)
     # read the hdf5 file
     aids = hdf5.read("aids")
-    aid_2_target = {}
-    aid_2_cids = {}
+    aid_2_target_dict = {}
+    aid_2_cids_dict = {}
     logger.info(f"Number of aids: {len(aids)}")
     for aid in aids:
         gene_id = hdf5.read(f"/aids/{aid}/targets_gene_id")
         cids = hdf5.read(f"/aids/{aid}/cids")
         logger.debug(f"cids: {cids}")
-        aid_2_target[aid] = gene_id[0]
-        aid_2_cids[aid] = cids
-    logger.debug(f"Number of aids: {len(aid_2_target)}")
-    logger.debug(f"Number of aids: {len(aid_2_cids)}")
-    return aid_2_target, aid_2_cids
+        aid_2_target_dict[aid] = gene_id[0]
+        aid_2_cids_dict[aid] = cids
+    logger.debug(f"Number of aids: {len(aid_2_target_dict)}")
+    logger.debug(f"Number of aids: {len(aid_2_cids_dict)}")
+    return aid_2_target_dict, aid_2_cids_dict
 
 
 def add_compounds(
@@ -363,7 +327,6 @@ def add_compounds(
     # loop through the old_data and update the member_compound column
     for index, row in old_data.iterrows():
         gene_id = row["members"]
-        member = row["member_compound"]
         # get the aids for each gene_id
         aids = list(
             aid_2_target[aid_2_target["Gene_id"].astype(str) == str(gene_id)]["AID"]
@@ -373,10 +336,8 @@ def add_compounds(
         for aid in aids:
             # add the cids to the cids list knowing that the cids are ['5291'] sting of list
             cids.extend(aid_2_cids[aid_2_cids["AID"] == aid]["CIDs"].to_list()[0])
-            logger.debug(f"cids: {cids}")
         # update the member_compound column
         old_data.at[index, "member_compound"] = cids
-        logger.info(old_data.at[index, "member_compound"])
     if overwrite:
         original_file.write(old_data)
         logger.info(f"Data written to Parquet file at {original_file.file_path}")
@@ -390,8 +351,8 @@ def add_compounds(
 def make_ligand_cluster_file(
     old_parquet: ParquetParser,
     new_file_name: ParquetParser,
-    aid_2_cids: pd.DataFrame,
-    aid_2_target: pd.DataFrame,
+    aid_2_cids_df: pd.DataFrame,
+    aid_2_target_df: pd.DataFrame,
     hdf5_file: str,
     initial_data: list | None = None,
 ) -> None:
@@ -402,12 +363,14 @@ def make_ligand_cluster_file(
         ParquetParser object of the old file.
     new_file_name : ParquetParser
         ParquetParser object of the new file.
-    aid_2_cids : pd.DataFrame
+    aid_2_cids_df : pd.DataFrame
         DataFrame containing the aids and cids.
-    aid_2_target : pd.DataFrame
+    aid_2_target_df : pd.DataFrame
         DataFrame containing the aids and gene ids.
     hdf5_file : str
         Path to the HDF5 file.
+    intial_data : list
+        List of initial data to be added to the new file. Default is None.
     """
     start_time = time.time()
     if os.path.exists("backup.parquet"):
@@ -419,38 +382,39 @@ def make_ligand_cluster_file(
     initial_data = initial_data if initial_data is not None else []
     hdf5 = HDF5Parser(hdf5_file)
     old_data = old_parquet.convert_to_pandas().groupby("Cluster number")
-    # check if the progress_cache.pkl file exists and if so read it
-    if os.path.exists("cache.pkl"):
-        try:
-            with open("cache.pkl", "rb") as cashe_file:
-                initial_data = pickle.load(cashe_file)
-        except Exception as e:
-            logger.error(f"Error: {e}")
     # loop through the data and get the gene ids and the cids
     for cluster_number, data in old_data:
         logger.debug(f'Cluster represenatives: {data["Represenatives"]}')
         for pdb_id in data["Represenatives"]:
+            logger.info(f"pdb_id: {pdb_id}")
             # check if the pdb_id is in the done_data
-            if any(pdb_id == x[1] for x in done_data):
+            if any(pdb_id == x[1] for x in done_data) or any(
+                pdb_id == x[1] for x in initial_data
+            ):
                 logger.debug(f"pdb_id: {pdb_id} already in done_data. Skipping")
-                continue
-            # check if the data["Represenatives"] is in the initial_data pdb_id
-            if any(pdb_id == x[1] for x in initial_data):
-                logger.debug(f"pdb_id: {pdb_id} already in initial_data. Skipping")
                 continue
             protein = Protein()
             # check if the pdb file exists
-            if not os.path.exists(f"../representatives/{pdb_id.lower()}.pdb"):
+            if not os.path.exists(f"raw/{pdb_id.lower()}.pdb"):
                 # then use the protein.load function to get the pdb file
+                file_ext = (
+                    "pdb"
+                    if protein.get_pdb_from_rcsb(pdb_id).startswith("HEADER")
+                    else "cif"
+                )
+                logger.info(f"Downloading {pdb_id} from RCSB with extension {file_ext}")
                 protein.load(
                     pdb_id=pdb_id,
                     write=True,
-                    write_path=f"../representatives/{pdb_id.lower()}.pdb",
+                    write_path=f"raw/{pdb_id.lower()}.{file_ext}",
                 )
-            else:
-                protein.load(file_path=f"../representatives/{pdb_id.lower()}.pdb")
-            logger.debug(protein._pdb_file_path)
-            ligands = get_ligand_names(protein._pdb_file_path)
+                if file_ext == "cif":
+                    logger.info(f"Converting {pdb_id} to pdb format")
+                    convert_cif2pdb(
+                        f"raw/{pdb_id.lower()}.cif", f"raw/{pdb_id.lower()}.pdb"
+                    )
+            protein = Protein(file_path=f"raw/{pdb_id.lower()}.pdb")
+            ligands = get_ligand_names(protein.file_path)
             if len(ligands) > 1:
                 for ligand in ligands:
                     smiles = get_smiles(ligand)
@@ -480,21 +444,22 @@ def make_ligand_cluster_file(
                 continue
         for member in data["members"]:
             # check if the data["members"] is in the initial_data member
-            if any(member == x[2] for x in initial_data):
-                logger.debug(f"member: {member} already in initial_data. Skipping")
-                continue
-            if any(member == x[2] for x in done_data):
+            if any(member == x[1] for x in done_data) or any(
+                member == x[1] for x in initial_data
+            ):
                 logger.debug(f"member: {member} already in done_data. Skipping")
                 continue
             # find the aids for each gene id
             aids = list(
-                aid_2_target[aid_2_target["Gene_id"].astype(str) == str(member)]["AID"]
+                aid_2_target_df[aid_2_target_df["Gene_id"].astype(str) == str(member)][
+                    "AID"
+                ]
             )
-            # loop through the aids and get their cids from the aid_2_cids dataframe
+            # loop through the aids and get their cids from the aid_2_cids_df dataframe
             for aid in aids:
                 logger.debug(f"aid: {aid}")
                 cids = ast.literal_eval(
-                    aid_2_cids[aid_2_cids["AID"] == aid]["CIDs"].to_list()[0]
+                    aid_2_cids_df[aid_2_cids_df["AID"] == aid]["CIDs"].to_list()[0]
                 )
                 for cid in cids:
                     # get the smiles for each cid using hdf5.read(f'aids/{aid}/cids/{cid}/smiles')
@@ -508,13 +473,8 @@ def make_ligand_cluster_file(
                         logger.error(f"Error: {e}")
                         initial_data.append((cluster_number, member, cid, None, None))
                         continue
-            # save the progress to cache file
-            cache_file = "cache.pkl"
-            logger.warning(f"Saving progress to {cache_file}")
-            with open(cache_file, "wb") as cache_filename:
-                pickle.dump(initial_data, cache_filename)
-            # write the parquet file every 3hr
-            if time.time() - start_time > 60 * 60 * 3:
+            # save the progress to backup parquet file every 20 minutes
+            if time.time() - start_time > 60 * 20:
                 # make a parquet file with the initial_data named backup
                 backup = ParquetParser("backup.parquet", new_file_name.schema)
                 backup.write(initial_data, new_file_name.schema)
@@ -525,7 +485,7 @@ def make_ligand_cluster_file(
                 # read the backup file as a pandas dataframe
                 done_data = backup.convert_to_pandas()
 
-    new_parquet.write(initial_data, new_schema)
+    new_file_name.write(initial_data, new_file_name.schema)
 
 
 def add_smiles_cluster(
@@ -550,7 +510,10 @@ def add_smiles_cluster(
         # get the rows with unique values in the compound id column
         unique_rows = rest.drop_duplicates(subset=["Compound ID"])
         logger.debug(f"Length of unique rows: {len(unique_rows)}")
-        smiles = unique_rows["Smiles"]
+        smiles = [
+            smile.decode("utf-8") if isinstance(smile, bytes) else smile
+            for smile in unique_rows["Smiles"]
+        ]
         compound_ids = unique_rows["Compound ID"].tolist()
         logger.debug(f"Length of smiles: {len(smiles)}")
         original_length = len(smiles)
@@ -568,32 +531,17 @@ def add_smiles_cluster(
                 if fingerprint is not None:
                     fingerprints.append(fingerprint)
                     valid_compound_ids.append(compound_id)
-
         # Update compound_ids to only include valid ones
         compound_ids = valid_compound_ids
-        """
-        # Get fingerprints for each molecule and tanimoto similarity as one liner
-        fingerprints = [tanimoto.get_morgan_fingerprint(smile) for smile in smiles]
-
-        # remove the None values from the fingerprints and their corresponding compound_ids
-        fingerprints = [
-            fingerprint for fingerprint in fingerprints if fingerprint is not None
-        ]
-        compound_ids = [
-            compound_id
-            for compound_id, fingerprint in zip(compound_ids, fingerprints)
-            if fingerprint is not None
-        ]
-        """
         # remove the corresponding compound_ids from the rest dataframe and reset the index
         rest = rest[rest["Compound ID"].isin(compound_ids)]
         logger.debug(f"unique fingerprints: {len(fingerprints)}")
         similarity = []
         # Loop over the fingerprints to get the similarity for each molecule
         # with the previous molecules
-        for i in range(1, len(fingerprints)):
+        for index in range(1, len(fingerprints)):
             similarity.append(
-                tanimoto.tanimoto_similarity(fingerprints[:i], fingerprints[i])
+                tanimoto.tanimoto_similarity(fingerprints[:index], fingerprints[index])
             )
         logger.debug(f"Length of similarity: {len(similarity)}")
         if len(similarity) == 0:
@@ -615,7 +563,6 @@ def add_smiles_cluster(
                 )
 
         all_results.append(rest)
-
     # Concatenate all results and save the data to the new parquet file
     final_result = pd.concat(all_results)
     new_parquet.write(final_result, new_parquet.schema)
@@ -627,29 +574,30 @@ if __name__ == "__main__":
     GENE_ID2PDB_ID_FILE = "gene_id2pdb_id.csv"
     RAW_ID_MAPPING_FILE = "id_mapping.csv"
     VALID_PDBS_FILE = "valid_gene_id2pdb_id.csv"
-    """
+    PROTEIN_CLUSTER_FILE = "protein_cluster_4_10.parquet"
+    AID_2_CIDS_FILE = "../aid_2_cids.csv"
+    AID_2_TARGET_FILE = "../aid_2_target.csv"
+    FINAL_FULL_PARQUET = "final_ligand_cluster.parquet"
 
     # 1. Read the PubChem HDF5 file and extract the fasta sequences
     create_fasta_file(HDF5_FILE, FASTA_FILE)
     # 2. Cluster the fasta sequences using MMseqs2
     mmseqs_cluster(FASTA_FILE, outfile_name_suffix="../clusters", tmp_dir="../tmp")
+
     # 3. map the gene id to the PDB ids using ID mapping webservices
     PubChem_protein_ids = fasta_parser(FASTA_FILE)
-    logger.info(f"Number of protein ids: {len(set(PubChem_protein_ids))}")
-    gene2pdb = {}
-    batch_size = 400
-    all_results = []
+    logger.info(f"Number of protein ids: {len(PubChem_protein_ids)}")
+    BATCH_SIZE = 400
+    mapped_geneids = []
     unique_protein_ids = list(set(PubChem_protein_ids))
-    for i in range(0, len(unique_protein_ids), batch_size):
+    logger.info(f"Number of unique protein ids: {len(unique_protein_ids)}")
+    for i in range(0, len(unique_protein_ids), BATCH_SIZE):
         batch = [
-            protein_id.strip() for protein_id in unique_protein_ids[i : i + batch_size]
+            protein_id.strip() for protein_id in unique_protein_ids[i : i + BATCH_SIZE]
         ]
-        logger.info(f"Processing batch {i // batch_size + 1}: {batch}")
+        logger.info(f"Processing batch {i // BATCH_SIZE + 1}: {batch}")
         batch_results = map_genid_to_pdb(batch)
         for result in batch_results:
-            gene_id = result["Gene ID"]
-            pdb_id = result["PDB IDs"]
-            gene2pdb[gene_id] = pdb_id
             flattened_result = {
                 "Gene ID": result["Gene ID"],
                 "UniprotID": result["UniprotID"],
@@ -659,32 +607,108 @@ if __name__ == "__main__":
                 "PDB IDs": ",".join(result["PDB IDs"]),
                 "AlphaFold IDs": ",".join(result["AlphaFold IDs"]),
             }
-            all_results.append(flattened_result)
+            mapped_geneids.append(flattened_result)
 
-    all_results_df = pd.DataFrame(all_results)
-    all_results_df.to_csv(RAW_ID_MAPPING_FILE, index=False)
-    # write the gene2pdb dictionary to a csv file
-    gene2pdb_df = pd.DataFrame(gene2pdb.items(), columns=["From", "PDB"])
-    gene2pdb_df.to_csv(GENE_ID2PDB_ID_FILE, index=False)
+    mapped_geneids_df = pd.DataFrame(mapped_geneids)
+
+    gene2pdb = mapped_geneids_df[["Gene ID", "PDB IDs"]]
+    # remove rows with nan values in the PDB column
+    gene2pdb = gene2pdb.dropna(subset=["PDB IDs"])
+    gene2pdb.columns = ["From", "PDB"]
+    # make the pdb column a list of strings
+    gene2pdb["PDB"] = gene2pdb["PDB"].apply(lambda x: x.split(","))
+    mapped_geneids_df.to_csv(RAW_ID_MAPPING_FILE, index=False)
+    gene2pdb.to_csv(GENE_ID2PDB_ID_FILE, index=False)
+
     # 4. Validate the PDB ids and write the valid PDB ids to a new file
-    #read the gene2pdb csv file and delete any rows and empty list in the PDB column
+    # read the gene2pdb csv file and delete any rows and empty list in the PDB column
     gene2pdb = pd.read_csv(GENE_ID2PDB_ID_FILE)
     logger.info(f"Number of gene2pdb: {len(gene2pdb)}")
-    #parse the gene2pdb file and delete any rows with the pdb column as an empty list
-    gene2pdb = gene2pdb[gene2pdb["PDB"] != "[]"]
-    # write the gene2pdb to a new file
-    gene2pdb.to_csv(GENE_ID2PDB_ID_FILE, index=False)
     pdb_validations(GENE_ID2PDB_ID_FILE)
-
-    #read the valid_gene_id2pdb_id csv file and remove gene ids with empty PDB column
+    # read the valid_gene_id2pdb_id csv file and remove gene ids with empty PDB column
     valid_gene2pdb = pd.read_csv(VALID_PDBS_FILE)
     valid_gene2pdb = valid_gene2pdb[valid_gene2pdb["PDB"] != "[]"]
     valid_gene2pdb.to_csv(VALID_PDBS_FILE, index=False)
     # 5. Parse the MMseqs2 output to find representatives and members
     mmseqs_parser("../clusters_cluster.tsv", save=True)
-    """
+    # 6. Write the clusters data into protein_cluster.parquet file
+    schema = pa.schema(
+        [
+            ("Cluster number", pa.int64()),
+            ("Represenatives", pa.string()),
+            ("members", pa.string()),
+            ("member_compound", pa.list_(pa.string())),
+        ]
+    )
+    prot_parq = ParquetParser(PROTEIN_CLUSTER_FILE, schema)
+
     clean_cluster_files("../clusters_cluster_parsed.csv", VALID_PDBS_FILE)
-    # NOTE:THESE FILES ARE NOT REAL
-    protein_cluster_file = "../../protein_cluster.parquet"
-    ligand_cluster_file = "../../ligand_cluster.parquet"
-    # TODO:figure out why the numbers don't add up in terms of valide clusters members
+    make_protein_cluster_file(prot_parq, "valid_clusters_cluster_parsed.csv")
+    # 7. Parse the hdf5 file to get the aids and cids
+    aids_2_target, aid_2_cid = hdf5_raw_file_parser(HDF5_FILE)
+    # save the aids_2_target and aid_2_cid as csv files
+    aids_2_target_df = pd.DataFrame(aids_2_target.items(), columns=["AID", "Gene_id"])
+    aid_2_cid_df = pd.DataFrame(aid_2_cid.items(), columns=["AID", "CIDs"])
+    aids_2_target_df.to_csv("../aid_2_target.csv", index=False)
+    aid_2_cid_df.to_csv("../aid_2_cids.csv", index=False)
+
+    # 8. Add the compounds to the parquet file with the protein clusters
+    add_compounds(prot_parq, (aids_2_target, aid_2_cid), overwrite=False)
+    prot_with_compounds = ParquetParser("new_protein_cluster_4_10.parquet", schema)
+    # 9. Run tanimoto clustering on the compounds and add the ligand clusters to the parquet file
+    # 10. Write the ligand clusters data into ligand_cluster.parquet file
+
+    LIGAND_CLUST_FILE = "ligand_cluster.parquet"
+    ligand_cluster_schema = pa.schema(
+        [
+            ("Protein Cluster number", pa.int64()),
+            ("PDB/Gene ID", pa.string()),
+            ("Compound ID", pa.string()),
+            ("Smiles", pa.string()),
+            ("Ligand Cluster number", pa.int64()),
+        ]
+    )
+    lig_parq = ParquetParser(LIGAND_CLUST_FILE, ligand_cluster_schema)
+
+    # read the lig_parq data as a pandas dataframe then convet it to a list
+    lig_data = lig_parq.convert_to_pandas()
+    # read the ligand_cluster_file as a ParquetParser object
+    aid_2cids_df = pd.read_csv(AID_2_CIDS_FILE)
+    aid_2target_df = pd.read_csv(AID_2_TARGET_FILE)
+
+    make_ligand_cluster_file(
+        prot_with_compounds,
+        lig_parq,
+        aid_2cids_df,
+        aid_2target_df,
+        HDF5_FILE,
+        lig_data.values.tolist(),
+    )
+    final_parq = ParquetParser(FINAL_FULL_PARQUET, ligand_cluster_schema)
+    add_smiles_cluster(lig_parq, 0.7, final_parq)
+
+    final_data = final_parq.convert_to_pandas()
+    logger.info(f"Number of rows: {len(final_data)}")
+    # how many unique ligand clusters are there
+    logger.info(
+        f"Number of unique ligand clusters: {len(final_data['Ligand Cluster number'].unique())}"
+    )
+    # how many unique protein clusters are there
+    logger.info(
+        f"Number of unique protein clusters: {len(final_data['Protein Cluster number'].unique())}"
+    )
+    # how many unique ligands are there
+    logger.info(f"Number of unique ligands: {len(final_data['Compound ID'].unique())}")
+    logger.info(f"Number of unique proteins: {len(final_data['PDB/Gene ID'].unique())}")
+    # how many unique smiles are there
+    logger.info(f"Number of unique smiles: {len(final_data['Smiles'].unique())}")
+    # how many pdb/gene ids are there that are only numbers and not a mix of numbers and letters
+    pdb_ids = final_data["PDB/Gene ID"]
+    pdb_ids = pdb_ids[pdb_ids.str.isdigit()]
+    logger.info(
+        f"Number of pdb/gene ids that are only numbers: {len(pdb_ids.unique())}"
+    )
+    # get the number of the compound ids for these pdb_ids
+    logger.info(
+        f"Number of compound ids for these pdb/gene ids: {len(final_data[final_data['PDB/Gene ID'].isin(pdb_ids)]['Compound ID'].unique())}"
+    )
