@@ -720,14 +720,24 @@ def calc_rmsd_spyrmsd(
 if __name__ == "__main__":
     PARQUET_FILENAME = "final_ligand_cluster.parquet"
     RMSD_FILE_WATER = "rmsd_values_water.csv"
-    MRSD_FILE_NO_WATER = "rmsd_values_no_water.csv"
+    RMSD_FILE_NO_WATER = "rmsd_values_no_water.csv"
     pdbids = get_pdb_ids_from_parquet(PARQUET_FILENAME)
     logger.info(f"The pdb ids are {pdbids}")
     logger.info(f"The number of pdb ids is {len(pdbids)}")
     failed = []
-    rmsd_dict = {}
     count = 0
+    # Check if the rmsd file exists
+    if os.path.exists(RMSD_FILE_NO_WATER):
+        rmsd_df = pd.read_csv(RMSD_FILE_NO_WATER)
+        rmsd_dict = dict(zip(rmsd_df["PDB_ID"].values, rmsd_df["RMSD"].values))
+        logger.info(f"The rmsd dictionary is {rmsd_dict}")
+    else:
+        rmsd_dict = {}
     for pdbid in pdbids:
+        # check if the pdb id is in the rmsd dictionary
+        if pdbid in rmsd_dict:
+            logger.info(f"The pdb id {pdbid} is already in the rmsd dictionary")
+            continue
         logger.info(f"Getting the pdb coordinates for {pdbid}")
         get_pdb_coordinates(pdbid, "raw")
         ligand_members = extract_parquet_clusters(PARQUET_FILENAME, pdbid.upper())
@@ -788,8 +798,9 @@ if __name__ == "__main__":
             logger.info(f"The RMSD value is {RMSD_VAL}")
             count += 1
             if count % 10 == 0:
+                logger.info(f"Writing the rmsd values to the csv file")
                 rmsd_df = pd.DataFrame(rmsd_dict.items(), columns=["PDB_ID", "RMSD"])
-                rmsd_df.to_csv("rmsd_values_no_water.csv", index=False)
+                rmsd_df.to_csv(RMSD_FILE_NO_WATER, index=False)
         except Exception as error:
             logger.error(f"Error in docking {pdbid}")
             failed.append(pdbid)
@@ -808,4 +819,4 @@ if __name__ == "__main__":
                 f.write(f"{item}\n")
     # save the final rmsd values to a csv file
     rmsd_df = pd.DataFrame(rmsd_dict.items(), columns=["PDB_ID", "RMSD"])
-    rmsd_df.to_csv("rmsd_values_no_water.csv", index=False)
+    rmsd_df.to_csv(RMSD_FILE_NO_WATER, index=False)
