@@ -718,7 +718,7 @@ def calc_rmsd_spyrmsd(
 
 
 if __name__ == "__main__":
-    PARQUET_FILENAME = "all_compounds_with_smiles_cluster.parquet"
+    PARQUET_FILENAME = "final_ligand_cluster.parquet"
     RMSD_FILE_WATER = "rmsd_values_water.csv"
     MRSD_FILE_NO_WATER = "rmsd_values_no_water.csv"
     pdbids = get_pdb_ids_from_parquet(PARQUET_FILENAME)
@@ -726,6 +726,7 @@ if __name__ == "__main__":
     logger.info(f"The number of pdb ids is {len(pdbids)}")
     failed = []
     rmsd_dict = {}
+    count = 0
     for pdbid in pdbids:
         logger.info(f"Getting the pdb coordinates for {pdbid}")
         get_pdb_coordinates(pdbid, "raw")
@@ -773,7 +774,9 @@ if __name__ == "__main__":
                 raw_combind_result, final_lig, combind_context
             )
             rmsd_target_file = extract_pdb_top_poses(
-                final_combind_res, combind_context, pdb_ligands["s_m_title"].values[0]
+                final_combind_res,
+                combind_context,
+                pdb_ligands["s_m_title"].values[0],
             )
             RMSD_VAL = calc_rmsd_spyrmsd(
                 ref_lig_obj,
@@ -783,6 +786,10 @@ if __name__ == "__main__":
             )
             rmsd_dict[pdbid] = RMSD_VAL
             logger.info(f"The RMSD value is {RMSD_VAL}")
+            count += 1
+            if count % 10 == 0:
+                rmsd_df = pd.DataFrame(rmsd_dict.items(), columns=["PDB_ID", "RMSD"])
+                rmsd_df.to_csv("rmsd_values_no_water.csv", index=False)
         except Exception as error:
             logger.error(f"Error in docking {pdbid}")
             failed.append(pdbid)
@@ -799,6 +806,6 @@ if __name__ == "__main__":
         with open("trial/failed_pdb_ids.txt", "a", encoding="utf-8") as f:
             for item in failed:
                 f.write(f"{item}\n")
-    # save the rmsd values to a csv file
+    # save the final rmsd values to a csv file
     rmsd_df = pd.DataFrame(rmsd_dict.items(), columns=["PDB_ID", "RMSD"])
     rmsd_df.to_csv("rmsd_values_no_water.csv", index=False)
