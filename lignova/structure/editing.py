@@ -1,8 +1,10 @@
 r""" Implementation for editing protein structures using MDAnalysis."""
-from typing import TextIO, Union
+
+from typing import TextIO
 
 from collections.abc import Iterable
 
+import gemmi
 import MDAnalysis as mda
 from loguru import logger
 
@@ -13,7 +15,7 @@ def get_mda_universe(pdb) -> mda.Universe:
 
 
 def select_chains(
-    mda_univ: mda.Universe, chains: Union[str, Iterable[str], None] = None
+    mda_univ: mda.Universe, chains: str | Iterable[str] | None = None
 ) -> mda.Universe:
     r"""Select specific chains.
 
@@ -39,8 +41,27 @@ def select_chains(
     return mda_univ.select_atoms(selection)
 
 
+def validate_chains(mda_univ: mda.Universe, chains: str | Iterable[str]) -> bool:
+    r"""Validate chains.
+
+    Parameters
+    ----------
+    u
+        MDAnalysis universe to process.
+    chains
+        Chains to validate.
+    """
+    if isinstance(chains, str):
+        chains = [chains]
+    n_chains = len(set(mda_univ.segments.segids))
+    logger.info("There are {} chains in the structure", n_chains)
+    if set(chains).issubset(set(mda_univ.segments.segids)):
+        return True
+    return False
+
+
 def remove_residues(
-    mda_univ: mda.Universe, residues: Union[str, Iterable[str]]
+    mda_univ: mda.Universe, residues: str | Iterable[str]
 ) -> mda.Universe:
     r"""Remove residues from structure.
 
@@ -71,17 +92,21 @@ def merge_universes(mda_univs: list) -> mda.Universe:
         logger.info(f"Merging {len(mda_univs)} MDAnalysis universes")
         merge_list = []
         for i in mda_univs:
+            # check if the universe is empty
+            if len(i.atoms) == 0:
+                logger.warning("Empty universe found")
+                continue
             # get the atoms from each universe and merge them
             merge_list.append(i.atoms)
         merged = mda.Merge(*merge_list)
     else:
         logger.warning("Only one MDAnalysis universe to merge")
-        merged = mda_univs
+        merged = mda_univs[0]
     return merged.atoms
 
 
 def select_residues(
-    mda_univ: mda.Universe, residues: Union[str, Iterable[str], int, Iterable[int]]
+    mda_univ: mda.Universe, residues: str | Iterable[str] | int | Iterable[int]
 ) -> mda.Universe:
     r"""Select residues from structure.
 
@@ -117,7 +142,7 @@ def remove_hetatoms(mda_univ: mda.Universe) -> mda.Universe:
 
 
 def filter_hetatoms(
-    mda_univ: mda.Universe, keep_het_chain: Union[list, str, None] = None
+    mda_univ: mda.Universe, keep_het_chain: list | str | None = None
 ) -> mda.Universe:
     r"""Filter hetero atoms.
 
@@ -130,7 +155,7 @@ def filter_hetatoms(
     """
     if keep_het_chain is None:
         return mda_univ.select_atoms("record_type HETATM")
-    elif isinstance(keep_het_chain, str):
+    if isinstance(keep_het_chain, str):
         keep_het_chain = [keep_het_chain]
     selection = " or ".join(
         [f"segid {c} and record_type HETATM" for c in keep_het_chain]
@@ -183,3 +208,34 @@ def write_mda_universe(mda_univ: mda.Universe, file_path: str) -> TextIO:
         File to write to.
     """
     return mda_univ.write(file_path)
+
+
+def read_cif(file_path: str) -> "gemmi.Structure":  # Use string annotation
+    r"""Read CIF file.
+    Parameters
+    ----------
+    file_path
+        Path to CIF file.
+    Returns
+    -------
+    gemmi.Structure
+        Structure object.
+    """
+    # pylint: disable=c-extension-no-member
+    return gemmi.read_structure(file_path)
+
+
+def convert_cif2pdb(file_path: str, write_path: str):
+    r"""Convert CIT file to PDB file
+    Parameters
+    ----------
+    file_path
+        Path to cif file.
+    write_path
+        Path to write PDB file.
+    """
+    # pylint: disable=c-extension-no-member
+    cif_structure = read_cif(file_path)
+    cif_structure.setup_entities()
+    cif_structure.shorten_chain_names()
+    cif_structure.write_pdb(write_path)

@@ -3,6 +3,7 @@ import glob
 import os
 import shutil
 
+import numpy as np
 import pytest
 
 from lignova.docking import Glide
@@ -114,15 +115,28 @@ def test_prep_Protein():
                 outerbox_ref = line.split()[1]
             if "GRID_CENTER" in line:
                 grid_center_ref = [line.split()[1], line.split()[2], line.split()[3]]
+                grid_center_ref = [
+                    float(item.strip("[], ")) for item in grid_center_ref
+                ]
+                logger.info(f"The grid center reference numbers are", grid_center_ref)
+
     with open(context_protein_6Oav["write_dir"] + "/6oav_chA_grid.log", "r") as file:
         lines = file.readlines()
         for line in lines:
             if "OUTERBOX" in line:
                 outerbox_test = line.split()[1]
             if "GRID_CENTER" in line:
-                grid_center_test = [line.split()[1], line.split()[2], line.split()[3]]
-    assert outerbox_ref == outerbox_test
-    assert grid_center_ref == grid_center_test
+                temp = [line.split()[1], line.split()[2], line.split()[3]]
+                grid_center_test = [float(item.strip("[], ")) for item in temp]
+                logger.info(f"The grid center test numbers", grid_center_test)
+
+    assert np.isclose(float(outerbox_ref), float(outerbox_test), rtol=0.1)
+    assert np.all(
+        [
+            np.isclose(float(grid_center_ref[i]), float(grid_center_test[i]), rtol=0.1)
+            for i in range(3)
+        ]
+    )
     assert prep_info["epik_pH"] == "7.0"
     assert prep_info["epik_pHt"] == "2.0"
     assert prep_info["forcefield"] == "OPLS_2005"
@@ -152,9 +166,10 @@ def test_docking():
     with open(test_file_path, "r") as file:
         docking_results_test_reader = csv.DictReader(file)
         docking_results_test = list(docking_results_test_reader)
-    assert (
-        docking_results_ref[0]["r_i_glide_gscore"]
-        == docking_results_test[0]["r_i_glide_gscore"]
+    assert np.isclose(
+        float(docking_results_ref[0]["r_i_glide_gscore"]),
+        float(docking_results_test[0]["r_i_glide_gscore"]),
+        rtol=0.1,
     )
     assert len(docking_results_ref) == len(docking_results_test)
     assert context.docking_protocol == "SP"

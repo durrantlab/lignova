@@ -1,7 +1,5 @@
 r"""Implementation of the parquet class ."""
 
-from typing import Optional
-
 import pandas as pd
 import pyarrow as pa
 import pyarrow.dataset as ds
@@ -51,8 +49,7 @@ class ParquetParser(FormatManager):
         return dataset
 
     def write(self, data: pd.DataFrame | list, data_scheme: pa.Schema) -> None:
-        r"""Write data to a Parquet file using PyArrow
-
+        r"""Write data to a Parquet file using PyArrow.
         Parameters:
         ----------
             data : pd.DataFrame
@@ -67,6 +64,8 @@ class ParquetParser(FormatManager):
             raise ValueError(
                 "Data must be a pandas DataFrame or a list of dictionaries"
             )
+        # Remove duplicate rows
+        # data = data.drop_duplicates(inplace=True,keep='first',ignore_index=True)
         # Create a table from the pandas DataFrame
         table = pa.Table.from_pandas(data, schema=data_scheme)
         # Write the table to a Parquet file
@@ -85,10 +84,10 @@ class ParquetParser(FormatManager):
             table: pa.Table
         """
         if column_names is None:
-            data = self.read(schema=self.schema)
+            data = self.read()
             data = data.scanner()
         else:
-            data = self.read(schema=self.schema, column=column_names)
+            data = self.read(column=column_names)
         return data.to_table()
 
     def convert_to_pandas(self, column_names: str | list | None = None) -> pd.DataFrame:
@@ -107,4 +106,24 @@ class ParquetParser(FormatManager):
             data = data.scanner().to_table()
         else:
             data = self.read(column=column_names).to_table()
+        return data.to_pandas()
+
+    def filter_data(self, condition: callable, column: str) -> pd.DataFrame:
+        r"""Filter data based on a column value.
+
+        Parameters:
+        ----------
+            condition: callable
+                Condition to filter the data.
+            column: str
+                Column to filter the data.
+        Returns:
+        ----------
+            df: pd.DataFrame
+        """
+        data = self.read()
+        field = ds.field(column)
+        filter_expr = condition(field)
+        logger.debug(filter_expr)
+        data = data.scanner(filter=filter_expr).to_table()
         return data.to_pandas()

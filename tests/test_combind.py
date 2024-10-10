@@ -49,7 +49,7 @@ def test_featurize():
         schrodinger_env=context.schrodinger_env,
     )
     combind.featurize(
-        docking_filepath=context_protein_6Oav["docking_results_path"],
+        context_protein_6Oav["docking_results_path"],
         file_name="6oav_m3a",
     )
     ref_rmsd = np.load(context_protein_6Oav["ref_rmsd_file"])

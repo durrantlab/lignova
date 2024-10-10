@@ -1,9 +1,9 @@
-import requests
-from loguru import logger
-
 r""" Implementation of the PubChem API parser class.
 https://pubchemdocs.ncbi.nlm.nih.gov/pug-rest
 """
+
+import requests
+from loguru import logger
 
 
 class PubChemAPI:
@@ -47,8 +47,8 @@ class PubChemAPI:
             raise ValueError("No properties provided.")
         cids_str = str(cid)
         properties_str = ",".join(properties)
-        url = f"{self.api_key}/compound/cid/{str(cid)}/property/{properties_str}/{self.retrieve_format}"
-        response = requests.get(url, timeout=10)
+        url = f"{self.api_key}/compound/cid/{cids_str}/property/{properties_str}/{self.retrieve_format}"
+        response = requests.get(url, timeout=30)
         if response.status_code == 200:
             response = response.json()
             logger.debug(f"Retrieved compound information for CID {cid}.")
@@ -66,12 +66,10 @@ class PubChemAPI:
                         )
                         compound_info[str(prop)] = ""
                 return compound_info
-            else:
-                logger.warning(f"Failed to find properties information for CID {cid}.")
-                return {}
-        else:
-            logger.warning(f"Failed to retrieve compound information for CID {cid}.")
+            logger.warning(f"Failed to find properties information for CID {cid}.")
             return {}
+        logger.warning(f"Failed to retrieve compound information for CID {cid}.")
+        return {}
 
     def get_binding_affinity(self, aid: int, cid: list[int]) -> dict:
         r"""Get binding affinity information from PubChem API.
@@ -87,7 +85,7 @@ class PubChemAPI:
             dict: Binding affinity information.
         """
         url = f"{self.api_key}/assay/aid/{str(aid)}/concise/{self.retrieve_format}"
-        response = requests.get(url)
+        response = requests.get(url, timeout=30)
         data = response.json()
         if response.status_code == 200:
             if "Table" in data and "Row" in data["Table"]:
@@ -108,13 +106,11 @@ class PubChemAPI:
                     if cid_value in cid:
                         activity_data[cid_value] = cid_data
                 return activity_data
-            else:
-                logger.warning(
-                    f"Failed to retrieve binding affinity information for CID {cid}."
-                )
-                return {}
-        else:
             logger.warning(
                 f"Failed to retrieve binding affinity information for CID {cid}."
             )
             return {}
+        logger.warning(
+            f"Failed to retrieve binding affinity information for CID {cid}."
+        )
+        return {}

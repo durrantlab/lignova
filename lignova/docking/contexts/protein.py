@@ -1,9 +1,13 @@
 r""" Implementation of the ProteinContext class containing the configuration for PDB/protein validation."""
+
 from typing import Optional
 
 _default_glide_context: "Optional[ProteinContext]" = None
 
 DEFAULT_IMPURITIES = [
+    "2PE",
+    "EDO",
+    "HEM",
     "TUN",
     "HC3",
     "DMS",
@@ -38,6 +42,7 @@ DEFAULT_IMPURITIES = [
     "KCC",
     "BES",
     "THC",
+    "2HP",
     "PEB",
     "1PE",
     "HYP",
@@ -295,14 +300,16 @@ DEFAULT_IMPURITIES = [
 
 # pylint: disable-next=too-many-instance-attributes
 class ProteinContext:
-    r"""Singleton for protein pdb strucutres validation"""
+    r"""Singleton for protein pdb structures validation"""
 
     # pylint: disable-next=too-many-arguments,too-many-locals
     def __init__(
         self,
-        impurities: Optional[list] = DEFAULT_IMPURITIES,
+        impurities: Optional[list] = None,
     ):
-        self.impurities = impurities
+        self.impurities = (
+            impurities if impurities is not None else DEFAULT_IMPURITIES.copy()
+        )
 
     @staticmethod
     def get_current() -> "ProteinContext":

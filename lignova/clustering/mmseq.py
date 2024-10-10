@@ -40,7 +40,8 @@ def mmseqs_cluster(
     sensitivity : float
         Sensitivity. Default is 7.0.
     outfile_name_suffix : str
-        Suffix for the output file and path. Default is "clusters" saved in the current working directory.
+        Suffix for the output file and path.
+        Default is "clusters" saved in the current working directory.
     tmp_dir : str
         Temporary directory. Default is "/tmp" saved in the current working directory.
     cluster_mode : int
@@ -89,8 +90,10 @@ def mmseqs_cluster(
             "1" if sort else "0",
         ]
     )
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = process.communicate()
+    with subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    ) as process:
+        stdout, stderr = process.communicate()
     save_directory = os.path.dirname(outfile_name_suffix)
     if process.returncode == 0:
         logger.info("Sequence Identity based clustering is completed")
@@ -144,16 +147,14 @@ def mmseqs_parser(
         tsv_filename, sep="\t", header=None, names=["cluster", "members"]
     )
     logger.info(f"Read {len(clusters)} clusters from {tsv_filename}")
-    # Group by cluster
-    logger.info(f"found {len(clusters.groupby('cluster'))} unique clusters")
+    # Group by cluster and aggregate members into lists
+    grouped_clusters = clusters.groupby("cluster")["members"].apply(list).reset_index()
+    grouped_clusters.rename(columns={"cluster": "representatives"}, inplace=True)
+    logger.info(f"Found {len(grouped_clusters)} unique clusters")
     if save:
         logger.info("Saving parsed clusters")
         if save_filename is None:
             save_filename = tsv_filename.replace(".tsv", "_parsed.csv")
             logger.info(f"Saving parsed clusters to {save_filename}")
-        with open(save_filename, "w", encoding="utf-8") as file:
-            for name, group in clusters.groupby("cluster"):
-                file.write(f"Cluster :{name}\n")
-                for member in group["members"]:
-                    file.write(f"{member}\n")
-    return clusters.groupby("cluster")
+        grouped_clusters.to_csv(save_filename, index=False)
+    return grouped_clusters

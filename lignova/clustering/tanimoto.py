@@ -1,11 +1,7 @@
 r" Implementation of the tanimoto clustering algorithm."
 
-from typing import Dict, List
+from typing import List
 
-import os
-import subprocess
-
-import rdkit
 from loguru import logger
 from rdkit import Chem, DataStructs
 from rdkit.ML.Cluster import Butina
@@ -14,15 +10,10 @@ from rdkit.ML.Cluster import Butina
 class TanimotoClustering:
     r"""Tanimoto clustering algorithm."""
 
-    def __init__(self, similarity_threshold: float = 0.2):
-        r"""Initialize the Tanimoto clustering algorithm.
-        parameters:
-        ----------
-            similarity_threshold: float
-                Similarity threshold for clustering.
-        """
-        self.similarity_threshold = similarity_threshold
+    def __init__(self):
+        r"""Initialize the Tanimoto clustering algorithm."""
 
+    # pylint: disable=c-extension-no-member,no-member
     def get_morgan_fingerprint(self, smiles: str, radius: int = 2):
         r"""Get the fingerprint of the molecule.
         parameters:
@@ -34,23 +25,27 @@ class TanimotoClustering:
         ----------
             rdkit.DataStructs.cDataStructs.ExplicitBitVect: Fingerprint.
         """
-        mol = rdkit.Chem.MolFromSmiles(smiles)
+        mol = Chem.MolFromSmiles(smiles)
         if mol is None:
             logger.error(f"Invalid SMILES: {smiles}")
             return None
-        else:
-            return rdkit.Chem.AllChem.GetMorganFingerprintAsBitVect(mol, radius)
 
+        return Chem.rdMolDescriptors.GetMorganFingerprintAsBitVect(mol, radius)
+
+    # pylint: disable=c-extension-no-member
     def tanimoto_similarity(
         self,
-        mol1: DataStructs.cDataStructs.ExplicitBitVect
-        | List[DataStructs.cDataStructs.ExplicitBitVect],
+        mol1: (
+            DataStructs.cDataStructs.ExplicitBitVect
+            | List[DataStructs.cDataStructs.ExplicitBitVect]
+        ),
         mol2: DataStructs.cDataStructs.ExplicitBitVect,
     ):
         r"""Calculate the Tanimoto similarity between two fingerprints.
         parameters:
         ----------
-            mol1: rdkit.DataStructs.cDataStructs.ExplicitBitVect | List[rdkit.DataStructs.cDataStructs.ExplicitBitVect]
+            mol1: rdkit.DataStructs.cDataStructs.ExplicitBitVect |
+            List[rdkit.DataStructs.cDataStructs.ExplicitBitVect]
                 First molecule fingerprint or list of fingerprints.
             mol2: rdkit.DataStructs.cDataStructs.ExplicitBitVect | None
                 Second molecule fingerprint or None.
@@ -59,9 +54,9 @@ class TanimotoClustering:
             float: Tanimoto similarity.
         """
         if isinstance(mol1, list):
-            return DataStructs.BulkTanimotoSimilarity(mol2, mol1)
-        else:
-            return DataStructs.TanimotoSimilarity(mol1, mol2)
+            return DataStructs.cDataStructs.BulkTanimotoSimilarity(mol2, mol1)
+
+        return DataStructs.cDataStructs.TanimotoSimilarity(mol1, mol2)
 
     def cal_distance(
         self, tanimoto_score: list[list[float]] | list[float]
@@ -79,19 +74,17 @@ class TanimotoClustering:
         # we will calculate the distance between the fingerprints using the formula 1 - score
         distance = []
         if isinstance(tanimoto_score[0], float):
-            for i in range(len(tanimoto_score)):
-                distance.append(1 - tanimoto_score[i])
-            return distance
-        for i in range(len(tanimoto_score)):
-            tmp = []
-            for j in range(len(tanimoto_score[i])):
-                tmp.append(1 - tanimoto_score[i][j])
-            distance.extend(tmp)
-        logger.debug(f"Distances: {distance}")
+            distance = [1 - score for score in tanimoto_score]
+        else:
+            for item in tanimoto_score:
+                distance.extend([1 - score for score in item])
         return distance
 
     def cluster_tanimoto(
-        self, tanimoto_score: list[list[float]], smiles: list[str]
+        self,
+        tanimoto_score: list[list[float]],
+        smiles: list[str],
+        similarity_threshold: float,
     ) -> List[List[str]]:
         r"""Cluster the SMILES based on Tanimoto similarity using butina algorithm.
         parameters:
@@ -100,6 +93,8 @@ class TanimotoClustering:
                 Dictionary of SMILES or compound identifiers and their Tanimoto similarity scores.
             smiles: List[str]
                 List of SMILES or compound identifiers.
+            similarity_threshold: float
+                Similarity threshold.
         returns:
         ----------
             List[List[str]]: Clustered .
@@ -108,11 +103,9 @@ class TanimotoClustering:
         # calculate the distance between the fingerprints using cal_distance
         distance = self.cal_distance(tanimoto_score)
         clusters = Butina.ClusterData(
-            distance, len(smiles), self.similarity_threshold, isDistData=True
+            distance, len(smiles), 1 - similarity_threshold, isDistData=True
         )
         logger.info(f"Number of clusters: {len(clusters)}")
-        logger.debug(f"Clusters: {clusters}")
         # convert the clusters to smiles
         clusters = [[smiles[i] for i in cluster] for cluster in clusters]
-        logger.info(f"Clusters: {clusters}")
         return clusters

@@ -1,4 +1,5 @@
 r"""Implementation of structure class."""
+
 from typing import Union
 
 import os
@@ -83,7 +84,7 @@ class Prepared:
         }
         if "ligand" in str(type(self)):
             return lig_info
-        elif "protein" in str(type(self)):
+        if "protein" in str(type(self)):
             return prot_info
-        else:
+        if "ligand" not in str(type(self)) and "protein" not in str(type(self)):
             return None

@@ -15,6 +15,7 @@ context_protein_6Oav = {
     "id": "6OAV",
     "file_path": "./files/6oav/6oav.pdb",
     "write_dir": "./tmp/6oav",
+    "cif_file": "./files/6qsw.cif",
 }
 
 
@@ -154,8 +155,19 @@ def test_validate_pdb():
 
 
 def test_validate_ligands():
-    assert not validate_ligands(context_protein_6Oav["id"])
+    assert validate_ligands(context_protein_6Oav["id"])
     assert validate_ligands("4uxl")
+
+
+def test_get_ligand_names():
+    protein = Protein()
+    protein._load_from_pdb_id(
+        pdb_id="6OAV",
+        write=True,
+        write_path=context_protein_6Oav["write_dir"] + "/6oav.pdb",
+    )
+    ligands = get_ligand_names(protein._pdb_file_path)
+    assert ligands == ["M3A"]
 
 
 def test_get_smiles():
@@ -165,7 +177,27 @@ def test_get_smiles():
         write=True,
         write_path=context_protein_6Oav["write_dir"] + "/6oav.pdb",
     )
-    smiles = get_smiles(protein._pdb_file_path)
+    ligand = get_ligand_names(protein._pdb_file_path)[0]
+    smiles = get_smiles(ligand)
     assert isinstance(smiles, dict)
     assert smiles["smiles"] == "c1ccc(cc1)NC(=O)n2c(nc(n2)Nc3ccc(cc3)C#N)N"
     assert smiles["stereo_smiles"] == "c1ccc(cc1)NC(=O)n2c(nc(n2)Nc3ccc(cc3)C#N)N"
+
+
+def test_read_cif():
+    protein = Protein(context_protein_6Oav["cif_file"])
+    protein.load()
+    data = read_cif(protein.file_path)
+    assert protein.file_path == context_protein_6Oav["cif_file"]
+    assert protein.file_id == "6qsw"
+    assert protein.file_ext == "cif"
+    assert data.resolution == 1.64
+
+
+def test_convert_cif2pdb():
+    protein = Protein(context_protein_6Oav["cif_file"])
+    protein.load()
+    convert_cif2pdb(
+        protein.file_path, os.path.join(context_protein_6Oav["write_dir"], "6qsw.pdb")
+    )
+    assert os.path.exists(os.path.join(context_protein_6Oav["write_dir"], "6qsw.pdb"))
