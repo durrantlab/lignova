@@ -1,4 +1,5 @@
 r"""Implements the Docking class."""
+
 from typing import Union
 
 from abc import ABC, abstractmethod

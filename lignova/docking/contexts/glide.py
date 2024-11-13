@@ -1,4 +1,5 @@
 r""" Implementation of the GlideContext class containing the configuration for Glide docking."""
+
 from typing import Optional, Union
 
 import os
