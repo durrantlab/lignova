@@ -94,7 +94,6 @@ def test_is_xray_structure():
 
 
 def test_separate_protein_ligand():
-    # rSeparate protein and ligand from PDB
     protein = Protein()
     protein._load_from_pdb_id(
         pdb_id="6OAV",
@@ -104,6 +103,18 @@ def test_separate_protein_ligand():
     protein_p, ligand_p = separate_protein_ligand(protein._pdb_file_path)
     assert len(set(protein_p.segments.segids)) == 1
     assert ligand_p.resnames.all() == "M3A"
+
+
+def test_separate_protein_ligand():
+    protein = Protein()
+    protein._load_from_pdb_id(
+        pdb_id="4ZBG",
+        write=True,
+        write_path=context_protein_6Oav["write_dir"] + "/4zbg.pdb",
+    )
+    protein_p, ligand_p = separate_protein_ligand(protein._pdb_file_path)
+    assert len(set(protein_p.segments.segids)) == 1
+    assert ligand_p.resnames.all() == "ACO"
 
 
 def test_select_residues():
@@ -157,6 +168,7 @@ def test_validate_pdb():
 def test_validate_ligands():
     assert validate_ligands(context_protein_6Oav["id"])
     assert validate_ligands("4uxl")
+    assert not validate_ligands("4zbg")
 
 
 def test_get_ligand_names():

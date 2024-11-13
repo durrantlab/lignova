@@ -75,7 +75,6 @@ def remove_residues(
     if isinstance(residues, str):
         residues = [residues]
     selection = " and ".join([f"not resname {r}" for r in residues])
-    logger.info("MDAnalysis selection: {}", selection)
     return mda_univ.select_atoms(selection)
 
 

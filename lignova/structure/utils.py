@@ -184,6 +184,9 @@ def separate_protein_ligand(
         logger.debug(f"Chains in the pdb file: {keep_het_chain}")
         selection = select_chains(pdb_obj, chains=keep_het_chain)
         hetatm = filter_hetatoms(pdb_obj)
+    # delete any hetatoms in hetatm that exist in the crystal additive list
+    additatives = ProteinContext.get_current().crystal_additives
+    hetatm = remove_residues(hetatm, residues=additatives)
     actual_ligand = remove_residues(hetatm, residues=["HOH"])
     if remove_water:
         save_prot = merge_universes([remove_hetatoms(pdb_obj), actual_ligand])
