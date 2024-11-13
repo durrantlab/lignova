@@ -228,7 +228,7 @@ class Glide(Docking):
         return prep
 
     @staticmethod
-    def PrepProtein(protein, context):
+    def PrepProtein(protein, context, ligand_asl: str | None = None):
         r"""Prepare protein structures using Schrödinger's Protein Wizard
         Parameters
         ----------
@@ -236,6 +236,9 @@ class Glide(Docking):
             The protein structure to be prepared for docking as a Protein object
         context : GlideContext
             The context for the glide docking
+        ligand_asl : str
+            The name of the ligand in the protein structure to generate the grid around it
+            (i.e ligand residue name). Set to None if the ligand is not known
         """
         command = [
             context.command + "/utilities/prepwizard",
@@ -280,14 +283,17 @@ class Glide(Docking):
         except Exception as e:
             logger.error(f"An error occurred during protein preparation: {str(e)}")
             raise e
-
+        if ligand_asl is None:
+            ligand_asl = "ligand"
+        else:
+            ligand_asl = f"res {ligand_asl.lower()}"
         # Generate a grid around the ligand in the protein structure
         grid_command = [
             context.command + "/utilities/generate_glide_grids",
             "-rec_file",
             os.path.join(context.write_dir, f"{protein.file_id}_protein_prepared.mae"),
             "-lig_asl",
-            "ligand",
+            ligand_asl,
             "-inner_box",
             context.grid_innerbox,
             "-verbose",
