@@ -49,6 +49,8 @@ class Glide(Docking):
             ligand.file_path,
             "-forcefield",
             context.forcefield,
+            "-docking_method",
+            context.docking_method,
             "-precision",
             context.docking_protocol,
             "-nenhanced_sampling",

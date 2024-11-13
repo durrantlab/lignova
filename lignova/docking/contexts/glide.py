@@ -1,4 +1,5 @@
 r""" Implementation of the GlideContext class containing the configuration for Glide docking."""
+
 from typing import Optional, Union
 
 import os
@@ -31,6 +32,7 @@ DEFAULT_REHTREAT = "True"
 DEFAULT_SAMPLEWATER = "True"
 DEFUALT_MINIMIZE_ADJ_H = "True"
 DEFAULT_LIG_EPIK = "True"
+DEFAULT_DOCKING_METHOD = "rigid"
 
 
 # pylint: disable-next=too-many-instance-attributes
@@ -64,6 +66,7 @@ class GlideContext:
         samplewater: Union[bool, None],
         minimize_adj_h: Union[bool, None],
         lig_epik: Union[bool, None],
+        docking_method: Union[str, None],
     ):
         if not os.environ.get("SCHRODINGER") or command is None:
             logger.critical(
@@ -96,6 +99,7 @@ class GlideContext:
         self.samplewater = samplewater
         self.minimize_adj_h = minimize_adj_h
         self.lig_epik = lig_epik
+        self.docking_method = docking_method
 
     @staticmethod
     def get_current() -> "GlideContext":
@@ -130,6 +134,7 @@ class GlideContext:
                 samplewater=DEFAULT_SAMPLEWATER,
                 minimize_adj_h=DEFUALT_MINIMIZE_ADJ_H,
                 lig_epik=DEFAULT_LIG_EPIK,
+                docking_method=DEFAULT_DOCKING_METHOD,
             )
         return _default_glide_context
 
