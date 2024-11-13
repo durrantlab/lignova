@@ -635,8 +635,8 @@ parsed_docked/
 *-001/
 tests/tmp/*
 !tests/tmp/.gitkeep
-trial/
-water_docking/
+water/
+nt_water/
 raw/
 *.parquet
 *.pkl

@@ -3,6 +3,7 @@ from typing import Optional
 
 import os
 import random
+import time
 
 import MDAnalysis as mda
 import pandas as pd
@@ -212,6 +213,8 @@ def parse_ligand_members(
             axis=0,
             ignore_index=True,
         )
+        # make sure the ligand is unique
+        ligand = ligand.drop_duplicates(subset=["s_m_title"])
 
     return ligand
 
@@ -315,7 +318,9 @@ def prep_ligands(
     return prepped_lig
 
 
-def prep_proteins(pdb_file: str, context: GlideContext):
+def prep_proteins(
+    pdb_file: str, context: GlideContext, lig_asl: str | None
+) -> PreparedProtein:
     """
     Prepare the protein for docking
     Parameters
@@ -324,6 +329,8 @@ def prep_proteins(pdb_file: str, context: GlideContext):
         The path to the pdb file
     context : GlideContext
         The context object with information about the preparation
+    lig_asl : str | None (default=None)
+        The ligand asl file to be used in the preparation i.e the ligand residue name
     Returns
     -------
     PreparedProtein
@@ -347,7 +354,7 @@ def prep_proteins(pdb_file: str, context: GlideContext):
         if not os.path.exists(
             os.path.join(context.write_dir, input_prot.file_id + "_grid.zip")
         ):
-            glide.PrepProtein(input_prot, context)
+            glide.PrepProtein(input_prot, context, lig_asl)
         prepped_prot = PreparedProtein(
             os.path.join(context.write_dir, input_prot.file_id + "_grid.zip")
         )
@@ -718,14 +725,22 @@ def calc_rmsd_spyrmsd(
 
 
 if __name__ == "__main__":
-    PARQUET_FILENAME = "final_ligand_cluster.parquet"
+    start_time = time.time()
+    PARQUET_FILENAME = "final_ligand_cluster_0.7_Tc.parquet"
     RMSD_FILE_WATER = "rmsd_values_water.csv"
     RMSD_FILE_NO_WATER = "rmsd_values_no_water.csv"
-    pdbids = get_pdb_ids_from_parquet(PARQUET_FILENAME)
-    logger.info(f"The pdb ids are {pdbids}")
-    logger.info(f"The number of pdb ids is {len(pdbids)}")
+    # pdbids = get_pdb_ids_from_parquet(PARQUET_FILENAME)
+    pdbids = pd.read_csv("merged_data.csv")["PDB_ID"].values
+    # add 2dux and 3aox to the pdbids
+    pdbids = list(pdbids)
+    pdbids.append("2DUX")
+    pdbids.append("3AOX")
     failed = []
     count = 0
+    total_ligands_docked = 0
+    logger.info(f"The number of pdb ids to dock into is {len(pdbids)}")
+    logger.info(f"The pdb ids are {pdbids}")
+
     # Check if the rmsd file exists
     if os.path.exists(RMSD_FILE_NO_WATER):
         rmsd_df = pd.read_csv(RMSD_FILE_NO_WATER)
@@ -733,6 +748,7 @@ if __name__ == "__main__":
         logger.info(f"The rmsd dictionary is {rmsd_dict}")
     else:
         rmsd_dict = {}
+
     for pdbid in pdbids:
         # check if the pdb id is in the rmsd dictionary
         if pdbid in rmsd_dict:
@@ -758,26 +774,30 @@ if __name__ == "__main__":
             find_pdb_ligand=True,
             datatype="pandas",
         )
+        lig_name = pdb_ligands["s_m_title"].values[0]
         if not (len(pubchem_lig) != 0 and len(pdb_ligands) >= 1):
             logger.error(f"The ligand information for {pdbid} is not complete")
             continue
         logger.info(f"The ligand information is\n {ligand_info}")
         prep_context = GlideContext.get_current()
-        prep_context.write_dir = "./trial"
+        prep_context.write_dir = "./nt_water"
         prep_context.samplewater = False
         prep_context.set_current(prep_context)
         try:
             result = prep_ligands(ligand_info, prep_context, pdbid)
             ref_lig_obj = PreparedLigand(
-                file_path=f"trial/{pdbid.lower()}_protein_prepared.mae"
+                file_path=f"nt_water/{pdbid.lower()}_protein_prepared.mae"
             )
             logger.info(f"The prepared ligand is {result.file_path}")
-            prep_prot = prep_proteins(f"raw/{pdbid.lower()}.pdb", prep_context)
+
+            prep_prot = prep_proteins(
+                f"raw/{pdbid.lower()}.pdb", prep_context, lig_name
+            )
             logger.info(f"The prepared protein is {prep_prot.file_path}")
             final_lig = dock_ligands(prep_prot, result, prep_context)
             logger.info(f"The docked ligand is {final_lig.file_path}")
             combind_context = CombindContext.get_current()
-            combind_context.work_dir = "./trial"
+            combind_context.work_dir = "./nt_water"
             combind_context.set_current(combind_context)
             raw_combind_result = run_combind(final_lig, combind_context)
             final_combind_res = get_top_combind_pose(
@@ -797,6 +817,7 @@ if __name__ == "__main__":
             rmsd_dict[pdbid] = RMSD_VAL
             logger.info(f"The RMSD value is {RMSD_VAL}")
             count += 1
+            total_ligands_docked += len(ligand_info)
             if count % 10 == 0:
                 logger.info(f"Writing the rmsd values to the csv file")
                 rmsd_df = pd.DataFrame(rmsd_dict.items(), columns=["PDB_ID", "RMSD"])
@@ -809,14 +830,20 @@ if __name__ == "__main__":
             f"The pdb id is {pdbid} which had {pdb_ligand_name} pdb & {len(pubchem_lig)} pubchem ligands"
         )
     # save the failed pdb ids to a text file
-    if len(failed) != 0 and not os.path.exists("trial/failed_pdb_ids.txt"):
-        with open("trial/failed_pdb_ids.txt", "w", encoding="utf-8") as f:
+    if len(failed) != 0 and not os.path.exists("nt_water/failed_pdb_ids.txt"):
+        with open("nt_water/failed_pdb_ids.txt", "w", encoding="utf-8") as f:
             for item in failed:
                 f.write(f"{item}\n")
-    elif os.path.exists("trial/failed_pdb_ids.txt"):
-        with open("trial/failed_pdb_ids.txt", "a", encoding="utf-8") as f:
+    elif os.path.exists("nt_water/failed_pdb_ids.txt"):
+        with open("nt_water/failed_pdb_ids.txt", "a", encoding="utf-8") as f:
             for item in failed:
                 f.write(f"{item}\n")
     # save the final rmsd values to a csv file
     rmsd_df = pd.DataFrame(rmsd_dict.items(), columns=["PDB_ID", "RMSD"])
     rmsd_df.to_csv(RMSD_FILE_NO_WATER, index=False)
+
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    logger.info(f"Total time taken: {elapsed_time:.2f} seconds")
+    logger.info(f"Total number of ligands docked: {total_ligands_docked}")
+    logger.info(f"Total number of proteins docked: {count}")

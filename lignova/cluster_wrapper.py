@@ -688,7 +688,17 @@ if __name__ == "__main__":
     add_smiles_cluster(lig_parq, 0.7, final_parq)
 
     final_data = final_parq.convert_to_pandas()
-    logger.info(f"Number of rows: {len(final_data)}")
+    # find if there is duplicate data in the final_parq file with full exaxt rows
+    logger.info(f"Number of rows in the final_parq file: {len(final_data)}")
+    # check the duplicates in the final_parq file interms of Compound ID and Smiles
+    duplicates = final_data[final_data.duplicated(subset=["Compound ID"])]
+    # save the unique data to a new parquet file named unique_final_ligand_cluster.parquet
+    unique_data = data.drop_duplicates(subset=["Compound ID"])
+    unique_parq = ParquetParser("unique_final_ligand_cluster.parquet", schema)
+    unique_parq.write(unique_data, schema)
+    logger.info(
+        f"Number of unique rows in the unique_final_parq file: {len(unique_data)}"
+    )
     # how many unique ligand clusters are there
     logger.info(
         f"Number of unique ligand clusters: {len(final_data['Ligand Cluster number'].unique())}"
