@@ -626,10 +626,24 @@ docs/autoapi
 # psi4
 timer.dat
 psi.*.clean
-
+tests/*-001/*
 tests/tmp/*
 !tests/tmp/.gitkeep
 
 # pixi environments
 .pixi
 *.egg-info
+
+# data folder 
+prepped/
+combind/
+docked/
+parsed_docked/
+*-001/
+tests/tmp/*
+!tests/tmp/.gitkeep
+water/
+nt_water/
+raw/
+*.parquet
+*.pkl
