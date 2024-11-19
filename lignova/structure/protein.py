@@ -1,4 +1,5 @@
 """Implementation of protein class."""
+
 from typing import Union
 
 import requests

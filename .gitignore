@@ -1,4 +1,6 @@
-public
+
+# Created by https://www.gitignore.io/api/osx,python,pycharm,windows,visualstudio,visualstudiocode
+# Edit at https://www.gitignore.io/?templates=osx,python,pycharm,windows,visualstudio,visualstudiocode
 
 ### OSX ###
 # General
@@ -165,6 +167,7 @@ htmlcov/
 .cache
 nosetests.xml
 coverage.xml
+report.xml
 *.cover
 .hypothesis/
 .pytest_cache/
@@ -337,6 +340,7 @@ StyleCopReport.xml
 *.obj
 *.iobj
 *.pch
+*.pdb
 *.ipdb
 *.pgc
 *.pgd
@@ -615,19 +619,22 @@ MigrationBackup/
 
 
 # Doc builds
-docs/source/_build
-docs/html
-docs/source/doc
-docs/source/autoapi
+docs/_build
+public/
+docs/autoapi
 
 # psi4
 timer.dat
 psi.*.clean
-parsed/
-jdd_tests/cluster*.txt
-jdd_tests/ligand*.pk
-jdd_tests/cache
-jdd_tests/__pycache__
+tests/*-001/*
+tests/tmp/*
+!tests/tmp/.gitkeep
+
+# pixi environments
+.pixi
+*.egg-info
+
+# data folder 
 prepped/
 combind/
 docked/
