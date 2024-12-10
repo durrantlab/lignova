@@ -176,3 +176,4 @@ def test_docking():
     assert context.forcefield == "OPLS_2005"
     assert context.n_enhanced_sampling == "4"
     assert context.postdock_nposes == "100"
+    assert context.docking_method == "confgen"

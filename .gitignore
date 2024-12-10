@@ -647,3 +647,4 @@ nt_water/
 raw/
 *.parquet
 *.pkl
+*.csv
