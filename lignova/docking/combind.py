@@ -25,6 +25,8 @@ class Combind(CombindContext):
         self,
         docking_filepaths: str | List[str],
         file_name: str,
+        max_poses: int = 1000000,
+        screen: bool = False,
     ):
         r"""Featurize the docking files.
         Parameters
@@ -33,6 +35,8 @@ class Combind(CombindContext):
             Path to the docking file from GLIDE. Can be a single file or a list of two files.
         file_name : str
             Name of the output file.
+        max_poses : int, optional, default=1000000
+        screen : bool, optional, default=False
         """
         if isinstance(docking_filepaths, str):
             docking_filepaths = [docking_filepaths]
@@ -44,6 +48,13 @@ class Combind(CombindContext):
             raise ValueError(
                 "Invalid number of docking files provided. Must provide one or two files."
             )
+        elif len(docking_filepaths) < 2 and screen:
+            logger.error(
+                "Screening requires two docking files. Please provide a second file."
+            )
+            raise ValueError(
+                "Screening requires two docking files. Please provide a second file."
+            )
         # make sure all the files exist
         for file in docking_filepaths:
             if not os.path.exists(file):
@@ -53,8 +64,13 @@ class Combind(CombindContext):
             self.activate,
             self.command + "/combind",
             "featurize",
-            os.path.join(self.work_dir, f"{file_name}_features"),
+            "--max-poses",
+            "1000000",
         ]
+        if screen:
+            command1.append("--no-mcss")
+            command1.append("--screen")
+        command1.append(os.path.join(self.work_dir, f"{file_name}_features"))
         command1.extend(docking_filepaths)
         command = " ".join(command1)
 
@@ -301,7 +317,11 @@ class Combind(CombindContext):
             raise
 
     def extract_data_csv(
-        self, docking_file: str | TextIO, filename: str, filter_data: bool = True
+        self,
+        docking_file: str | TextIO,
+        filename: str,
+        filter_data: bool = True,
+        top_poses: bool = False,
     ):
         r"""To extract the scores from schrodinger docking file including
         combind if run after apply_combind_score function.
@@ -313,6 +333,8 @@ class Combind(CombindContext):
             name of the output file.
         filter_data : bool, optional, default=True
             filter_data the docking file to include only scores.
+        top_poses : bool, optional, default=False
+            If True, extract the data of the top poses per ligand only.
         """
         # check if the docking file exists
         if not os.path.exists(docking_file):
@@ -334,21 +356,50 @@ class Combind(CombindContext):
             _, stderr = process.communicate()  # Changed this line
         if process.returncode == 0:
             logger.info("Data extraction completed.")
+            if top_poses:
+                # find the best pose for each ligand in terms of the highest combind score
+                data = pd.read_csv(os.path.join(self.work_dir, f"{filename}.csv"))
+                # add a column to called POSE with the index of the row
+                # add a column to called POSE with the loacation of the row within the group of ligands so it would recount when the ligand changes
+                data["POSE"] = data.groupby("s_m_title").cumcount() + 1
+                # save the data
+                # group by ligand and find the max combind score and get that row
+                data = data.loc[data.groupby("s_m_title")["r_i_combind_score"].idxmax()]
+                logger.debug(data)
+                logger.info("Top poses extracted.")
+                # save it with the same name
+                data.to_csv(os.path.join(self.work_dir, f"{filename}.csv"), index=False)
             if filter_data:
                 # read the csv file and filter_data the scores
                 data = pd.read_csv(os.path.join(self.work_dir, f"{filename}.csv"))
-                data = data[
-                    [
-                        "s_m_title",
-                        "i_i_glide_posenum",
-                        "r_i_docking_score",
-                        "r_i_combind_score",
-                        "r_i_glide_emodel",
-                        "r_i_glide_energy",
-                        "r_i_glide_gscore",
-                        "r_i_glide_ligand_efficiency",
+                # if the data has a column called POSE keep it
+                if "POSE" in data.columns:
+                    data = data[
+                        [
+                            "s_m_title",
+                            "i_i_glide_posenum",
+                            "r_i_docking_score",
+                            "r_i_combind_score",
+                            "r_i_glide_emodel",
+                            "r_i_glide_energy",
+                            "r_i_glide_gscore",
+                            "r_i_glide_ligand_efficiency",
+                            "POSE",
+                        ]
                     ]
-                ]
+                else:
+                    data = data[
+                        [
+                            "s_m_title",
+                            "i_i_glide_posenum",
+                            "r_i_docking_score",
+                            "r_i_combind_score",
+                            "r_i_glide_emodel",
+                            "r_i_glide_energy",
+                            "r_i_glide_gscore",
+                            "r_i_glide_ligand_efficiency",
+                        ]
+                    ]
                 # save it with the same name
                 data.to_csv(os.path.join(self.work_dir, f"{filename}.csv"), index=False)
                 logger.info("Data filter_dataation completed.")

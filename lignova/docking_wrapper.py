@@ -409,15 +409,19 @@ def dock_ligands(
     return docked_ligand
 
 
-def run_combind(docked_ligand: DockedLigand, context: CombindContext) -> str:
+def run_combind(
+    docked_ligand: DockedLigand, context: CombindContext, screen: bool = False
+) -> str:
     """
     Run the combind program to get the top poses
     Parameters
     ----------
-    docked_ligand : DockedLigand
+    docked_ligand : DockedLigand | list[DockedLigand]
         The docked ligand to be scored
     context : GlideContext
         The context object with information about the scoring
+    screen : bool (default=false)
+        If true, we use combindVS to screen the ligands and generate features
     Returns
     -------
     str
@@ -439,18 +443,51 @@ def run_combind(docked_ligand: DockedLigand, context: CombindContext) -> str:
             combind.featurize(
                 docking_filepaths=docked_ligand.file_path,
                 file_name=docked_ligand.file_id,
+                screen=screen,
             )
-
         logger.debug(
             f"Fetures generated for {docked_ligand.file_id}.Selecting top poses"
         )
-        if not os.path.exists(
-            os.path.join(context.work_dir, docked_ligand.file_id + "_poses.csv")
-        ):
-            combind.select_pose(
-                docked_ligand.file_id + "_poses",
-                os.path.join(context.work_dir, docked_ligand.file_id + "_features"),
+        if not (
+            os.path.exists(
+                os.path.join(context.work_dir, docked_ligand.file_id + "_poses.csv")
+                or os.path.join(context.work_dir, docked_ligand.file_id + "_screen.npy")
             )
+        ):
+            if screen:
+                combind.compute_combind_score(
+                    features_dir=os.path.join(
+                        context.work_dir, docked_ligand.file_id + "_features"
+                    ),
+                    filename=docked_ligand.file_id,
+                )
+                combind.apply_combind_score(
+                    docking_filepath=docked_ligand.file_path,
+                    combind_score_file=docked_ligand.file_path.replace(
+                        ".maegz", "_screen.npy"
+                    ),
+                    output_filename=docked_ligand.file_id,
+                )
+                combind.extract_data_csv(
+                    docking_file=os.path.join(
+                        context.work_dir,
+                        docked_ligand.file_id + "_combind_sorted.maegz",
+                    ),
+                    filename=docked_ligand.file_id + "_poses",
+                    top_poses=True,
+                )
+            else:
+                combind.select_pose(
+                    docked_ligand.file_id + "_poses",
+                    os.path.join(context.work_dir, docked_ligand.file_id + "_features"),
+                )
+        if os.path.exists(
+            os.path.join(context.work_dir, docked_ligand.file_id + "_combind.maegz")
+        ):
+            os.remove(
+                os.path.join(context.work_dir, docked_ligand.file_id + "_combind.maegz")
+            )
+        logger.debug(f"Top poses selected csv for {docked_ligand.file_id} is written")
     except Exception as exc:
         logger.error(f"Error in scoring ligand {docked_ligand.file_id}")
         raise exc
@@ -730,17 +767,14 @@ if __name__ == "__main__":
     RMSD_FILE_WATER = "rmsd_values_water.csv"
     RMSD_FILE_NO_WATER = "rmsd_values_no_water.csv"
     # pdbids = get_pdb_ids_from_parquet(PARQUET_FILENAME)
-    pdbids = pd.read_csv("merged_data.csv")["PDB_ID"].values
+    pdbids = pd.read_csv("rmsd_values_no_water_old.csv")["PDB_ID"].values
     # add 2dux and 3aox to the pdbids
     pdbids = list(pdbids)
-    pdbids.append("2DUX")
-    pdbids.append("3AOX")
     failed = []
     count = 0
     total_ligands_docked = 0
     logger.info(f"The number of pdb ids to dock into is {len(pdbids)}")
     logger.info(f"The pdb ids are {pdbids}")
-
     # Check if the rmsd file exists
     if os.path.exists(RMSD_FILE_NO_WATER):
         rmsd_df = pd.read_csv(RMSD_FILE_NO_WATER)
@@ -793,21 +827,42 @@ if __name__ == "__main__":
             prep_prot = prep_proteins(
                 f"raw/{pdbid.lower()}.pdb", prep_context, lig_name
             )
+            screen = False
             logger.info(f"The prepared protein is {prep_prot.file_path}")
             final_lig = dock_ligands(prep_prot, result, prep_context)
             logger.info(f"The docked ligand is {final_lig.file_path}")
             combind_context = CombindContext.get_current()
             combind_context.work_dir = "./nt_water"
             combind_context.set_current(combind_context)
-            raw_combind_result = run_combind(final_lig, combind_context)
-            final_combind_res = get_top_combind_pose(
-                raw_combind_result, final_lig, combind_context
-            )
+            raw_combind_result = run_combind(final_lig, combind_context, screen=screen)
+            if screen:
+                combind_data = pd.read_csv(raw_combind_result)
+                # remove the row with prepared in the s_m_title column
+                combind_data = combind_data[
+                    ~combind_data["s_m_title"].str.contains("prepared")
+                ]
+                combind_data = combind_data.rename(columns={"s_m_title": "ID"})
+                # save the csv file with the new column names as docked_ligand.file_id + "temp.csv"
+                combind_data.to_csv(
+                    final_lig.file_path.replace(".maegz", "_screen.csv"), index=False
+                )
+                new_combind_result = final_lig.file_path.replace(
+                    ".maegz", "_screen.csv"
+                )
+                final_combind_res = get_top_combind_pose(
+                    new_combind_result, final_lig, combind_context
+                )
+            else:
+                final_combind_res = get_top_combind_pose(
+                    raw_combind_result, final_lig, combind_context
+                )
+            logger.info(f"The top poses are {final_combind_res.file_path}")
             rmsd_target_file = extract_pdb_top_poses(
                 final_combind_res,
                 combind_context,
                 pdb_ligands["s_m_title"].values[0],
             )
+            logger.info(f"The rmsd target file is {rmsd_target_file}")
             RMSD_VAL = calc_rmsd_spyrmsd(
                 ref_lig_obj,
                 rmsd_target_file,
