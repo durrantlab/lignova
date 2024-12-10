@@ -32,7 +32,7 @@ DEFAULT_REHTREAT = "True"
 DEFAULT_SAMPLEWATER = "True"
 DEFUALT_MINIMIZE_ADJ_H = "True"
 DEFAULT_LIG_EPIK = "True"
-DEFAULT_DOCKING_METHOD = "rigid"
+DEFAULT_DOCKING_METHOD = "confgen"
 
 
 # pylint: disable-next=too-many-instance-attributes
