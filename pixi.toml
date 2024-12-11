@@ -20,19 +20,19 @@ lignova = { path = ".", editable = true }
 [tasks]
 
 [dependencies]
-python = ">=3.9,<3.13"
-h5py = ">=3.12.1,<4"
-numpy = ">=1.23.2,<2"
-pubchempy = ">=1.0.4,<2"
-rdkit = ">=2024.9.2,<2025"
-loguru = ">=0.7.2,<0.8"
-mdanalysis = ">=2.1.0,<3"
-pandas = ">=2.2.3,<3"
-scipy = ">=1.14.1,<2"
-spyrmsd = ">=0.8.0,<0.9"
-pyarrow = ">=18.0.0,<19"
-gemmi = ">=0.6.4,<0.7"
-fasteners = ">=0.17.3,<0.18"
+python = "*"
+h5py = "*"
+numpy = "*"
+pubchempy = "*"
+rdkit = "*"
+loguru = "*"
+mdanalysis = "*"
+pandas = "*"
+scipy = "*"
+spyrmsd = "*"
+pyarrow = "*"
+gemmi = "*"
+fasteners = "*"
 
 [feature.dev.dependencies]
 black = ">=24.10.0,<25"
