@@ -1,12 +1,26 @@
+r"""Tests for protein structure class and relevant functions."""
 import os
-import shutil
 
-import pytest
 
-from lignova.io import *
-from lignova.structure.editing import *
+from lignova.structure.editing import select_water ,read_cif, convert_cif2pdb
 from lignova.structure.protein import Protein
-from lignova.structure.utils import *
+from lignova.structure.utils import (
+    get_mda_universe,
+    select_chains,
+    is_xray_structure,
+    separate_protein_ligand,
+    select_residues,
+    get_rcsb_data,
+    find_resolution,
+    has_covalent_bonds,
+    has_ligands,
+    get_entity_ids,
+    pdb_has_mutation,
+    validate_pdb,
+    validate_ligands,
+    get_ligand_names,
+    get_smiles,
+)
 
 # Ensures we execute from file directory (for relative paths).
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -20,6 +34,7 @@ context_protein_6Oav = {
 
 
 def prep_dirs():
+    r"""Prepare directories."""
     os.makedirs(context_protein_6Oav["write_dir"])
 
 
@@ -27,8 +42,27 @@ if not os.path.exists(context_protein_6Oav["write_dir"]):
     prep_dirs()
 
 
-if not os.path.exists(context_protein_6Oav["write_dir"]):
-    prep_dirs()
+def test_select_water():
+    r"""test Select water atoms."""
+    protein = Protein()
+    protein.load(
+        pdb_id="1GYY",
+        write=True,
+        write_path=context_protein_6Oav["write_dir"] + "/1GYY.pdb",
+    )
+    protein_p = get_mda_universe(protein.file_path)
+
+    surface_water = select_water(protein_p, water_selection="surface", ligand="FHC")
+    bridging_water = select_water(
+        protein_p, water_selection="interfacial", ligand="FHC"
+    )
+    assert bridging_water.atoms.issubset(surface_water.atoms)
+    assert len(bridging_water.atoms) == 4
+    # check that chain residd 2149 is in bridging water
+    assert 2149 in [atom.resid for atom in bridging_water.atoms]
+    assert 2107 in [atom.resid for atom in surface_water.atoms]
+    assert 2008 in [atom.resid for atom in surface_water.atoms]
+    assert 2150 in [atom.resid for atom in surface_water.atoms]
 
 
 def test_get_pdb_6oav():
@@ -39,11 +73,11 @@ def test_get_pdb_6oav():
     assert pdb_test == pdb_ref
 
 
-def test_load_from_pdb_id_6oav():
+def testload_6oav():
     r"""Load PDB from RCSB"""
     protein = Protein()
-    # protein._load_from_pdb_id("6OAV",write=True,write_path=context_protein_6Oav["write_dir"]+'/6oav.pdb')
-    protein._load_from_pdb_id(pdb_id="6OAV")
+    # protein.load("6OAV",write=True,write_path=context_protein_6Oav["write_dir"]+'/6oav.pdb')
+    protein.load(pdb_id="6OAV")
     with open(context_protein_6Oav["file_path"], encoding="utf-8") as f:
         pdb_ref = f.read()
     pdb_test = protein.pdb
@@ -51,145 +85,146 @@ def test_load_from_pdb_id_6oav():
 
 
 def test_get_mda_universe():
+    r"""Test get MDAnalysis universe"""
     protein = Protein()
-    protein._load_from_pdb_id(
+    protein.load(
         pdb_id="6OAV",
         write=True,
         write_path=context_protein_6Oav["write_dir"] + "/6oav.pdb",
     )
-    protein_p = get_mda_universe(protein._pdb_file_path)
+    protein_p = get_mda_universe(protein.file_path)
     assert len(set(protein_p.segments.segids)) == 1
 
 
 def test_select_chains():
+    r"""Test select chains"""
     protein = Protein()
-    protein._load_from_pdb_id(
+    protein.load(
         pdb_id="6OAV",
         write=True,
         write_path=context_protein_6Oav["write_dir"] + "/6oav.pdb",
     )
-    protein_p = get_mda_universe(protein._pdb_file_path)
+    protein_p = get_mda_universe(protein.file_path)
     protein_p = select_chains(protein_p)
     assert set(protein_p.segments.segids) == set("A")
 
 
 def test_is_xray_structure():
+    r"""Test if structure is X-ray"""
     protein = Protein()
-    protein._load_from_pdb_id(
+    protein.load(
         pdb_id="6OAV",
         write=True,
         write_path=context_protein_6Oav["write_dir"] + "/6oav.pdb",
     )
-    assert is_xray_structure(protein._pdb_file_path)
-
-
-def test_is_xray_structure():
-    protein = Protein()
-    protein._load_from_pdb_id(
-        pdb_id="6OAV",
-        write=True,
-        write_path=context_protein_6Oav["write_dir"] + "/6oav.pdb",
-    )
-    assert is_xray_structure(protein._pdb_file_path)
+    assert is_xray_structure(protein.file_path)
 
 
 def test_separate_protein_ligand():
+    r"""Test separate protein and ligand"""
     protein = Protein()
-    protein._load_from_pdb_id(
+    protein.load(
         pdb_id="6OAV",
         write=True,
         write_path=context_protein_6Oav["write_dir"] + "/6oav.pdb",
     )
-    protein_p, ligand_p = separate_protein_ligand(protein._pdb_file_path)
+    protein_p, ligand_p = separate_protein_ligand(protein.file_path)
     assert len(set(protein_p.segments.segids)) == 1
     assert ligand_p.resnames.all() == "M3A"
-
-
-def test_separate_protein_ligand():
-    protein = Protein()
-    protein._load_from_pdb_id(
+    protein.load(
         pdb_id="4ZBG",
         write=True,
         write_path=context_protein_6Oav["write_dir"] + "/4zbg.pdb",
     )
-    protein_p, ligand_p = separate_protein_ligand(protein._pdb_file_path)
+    protein_p, ligand_p = separate_protein_ligand(protein.file_path)
     assert len(set(protein_p.segments.segids)) == 1
     assert ligand_p.resnames.all() == "ACO"
 
 
 def test_select_residues():
+    r"""Test select residues"""
     protein = Protein()
-    protein._load_from_pdb_id(
+    protein.load(
         pdb_id="6OAV",
         write=True,
         write_path=context_protein_6Oav["write_dir"] + "/6oav.pdb",
     )
-    protein_p = get_mda_universe(protein._pdb_file_path)
+    protein_p = get_mda_universe(protein.file_path)
     protein_p = select_residues(protein_p, residues=["M3A"])
     assert protein_p.resnames.all() == "M3A"
 
 
 def test_get_rcsb_data():
+    r"""Test get RCSB data"""
     data = get_rcsb_data(context_protein_6Oav["id"])
     assert data["exptl"][0]["method"] == "X-RAY DIFFRACTION"
 
 
 def test_find_resolution():
+    r"""Test find resolution"""
     data = get_rcsb_data(context_protein_6Oav["id"])
     assert find_resolution(context_protein_6Oav["id"], data) == 1.939
 
 
 def test_has_covalent_bond():
+    r"""Test if structure has covalent bonds"""
     assert not has_covalent_bonds(context_protein_6Oav["id"])
 
 
 def test_has_ligands():
+    r"""Test if structure has ligands"""
     assert has_ligands(context_protein_6Oav["id"])
 
 
 def test_get_entity_ids():
+    r"""Test get entity ids"""
     entity = get_entity_ids(context_protein_6Oav["id"])
     assert entity["polymer"][0] == "1"
     assert entity["nonpolymer"][0] == "2"
 
 
 def test_pdb_has_mutation():
+    r"""Test if PDB has mutation"""
     assert pdb_has_mutation(context_protein_6Oav["id"])
     assert pdb_has_mutation("3c5e")
     assert not pdb_has_mutation("4uxl")
 
 
 def test_validate_pdb():
+    r"""Test validate PDB"""
     assert not validate_pdb(context_protein_6Oav["id"])
     assert not validate_pdb("3c5e")
     assert validate_pdb("4uxl")
 
 
 def test_validate_ligands():
+    r"""Test validate ligands"""
     assert validate_ligands(context_protein_6Oav["id"])
     assert validate_ligands("4uxl")
     assert not validate_ligands("4zbg")
 
 
 def test_get_ligand_names():
+    r"""Test get ligand names"""
     protein = Protein()
-    protein._load_from_pdb_id(
+    protein.load(
         pdb_id="6OAV",
         write=True,
         write_path=context_protein_6Oav["write_dir"] + "/6oav.pdb",
     )
-    ligands = get_ligand_names(protein._pdb_file_path)
+    ligands = get_ligand_names(protein.file_path)
     assert ligands == ["M3A"]
 
 
 def test_get_smiles():
+    r"""Test get SMILES"""
     protein = Protein()
-    protein._load_from_pdb_id(
+    protein.load(
         pdb_id="6OAV",
         write=True,
         write_path=context_protein_6Oav["write_dir"] + "/6oav.pdb",
     )
-    ligand = get_ligand_names(protein._pdb_file_path)[0]
+    ligand = get_ligand_names(protein.file_path)[0]
     smiles = get_smiles(ligand)
     assert isinstance(smiles, dict)
     assert smiles["smiles"] == "c1ccc(cc1)NC(=O)n2c(nc(n2)Nc3ccc(cc3)C#N)N"
@@ -197,6 +232,7 @@ def test_get_smiles():
 
 
 def test_read_cif():
+    r"""Test read CIF"""
     protein = Protein(context_protein_6Oav["cif_file"])
     protein.load()
     data = read_cif(protein.file_path)
@@ -207,6 +243,7 @@ def test_read_cif():
 
 
 def test_convert_cif2pdb():
+    r"""Test convert CIF to PDB"""
     protein = Protein(context_protein_6Oav["cif_file"])
     protein.load()
     convert_cif2pdb(

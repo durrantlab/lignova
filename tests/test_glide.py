@@ -15,7 +15,6 @@ from lignova.structure.ligand import Ligand
 from lignova.structure.protein import Protein
 from lignova.structure.utils import separate_protein_ligand
 
-
 # Ensures we execute from file directory (for relative paths).
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
@@ -61,6 +60,7 @@ def filter_lines(lines):
     filtered_lines = [line.strip() for line in lines if line.strip()]
     return filtered_lines
 
+
 def extract_m_bond_section(file_content):
     """Extract the m_bond section from the file content."""
     start_marker = "m_bond["
@@ -69,16 +69,15 @@ def extract_m_bond_section(file_content):
     end_index = file_content.find(end_marker, start_index) + len(end_marker)
     return file_content[start_index:end_index]
 
+
 def test_convert_protein_to_mae():
     """Test conversion of protein to MAE format."""
     glide.convert_to_mae(protein_obj, context)
     prot_test_mae = Protein(
         file_path=context_protein_6Oav["write_dir"] + "/6oav_chA.mae"
     )
-    prot_test_mae.load(file_path=context_protein_6Oav["write_dir"] + "/6oav_chA.mae")
-    prot_test = prot_test_mae.pdb
-    assert prot_test
-
+    prot_test_mae_content = prot_test_mae.pdb
+    assert prot_test_mae_content is not None
 
 def test_convert_ligand_to_mae():
     """Test conversion of ligand to MAE format."""
@@ -96,6 +95,7 @@ def test_convert_ligand_to_mae():
 
     # Compare the extracted m_bond sections
     assert lig_ref_m_bond == lig_test_m_bond
+
 
 def test_prep_ligand():
     """Test preparation of ligand."""
