@@ -7,7 +7,7 @@ authors = [
 ]
 license = "Apache-2.0"
 readme = "README.md"
-channels = ["conda-forge"]
+channels = ["conda-forge", "bioconda"]
 platforms = ["linux-64", "osx-64"]
 
 [environments]
@@ -33,6 +33,7 @@ spyrmsd = ">=0.8.0,<0.9"
 pyarrow = ">=18.0.0,<19"
 gemmi = ">=0.6.4,<0.7"
 fasteners = ">=0.17.3,<0.18"
+mmseqs2 = ">=16.747c6,<17"
 
 [feature.dev.dependencies]
 black = ">=24.10.0,<25"
