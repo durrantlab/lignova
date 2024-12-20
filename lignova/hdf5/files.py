@@ -34,7 +34,7 @@ class FormatManager(ABC):
         self,
         path: Optional[str] = None,
         schema: Optional[pa.schema] = None,
-        columns: str| list |None = None,
+        columns: str | list | None = None,
     ) -> Iterable:
         r"""Read data from a file."""
         raise NotImplementedError()

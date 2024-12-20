@@ -1,4 +1,5 @@
 r"""Test Tanimoto clustering."""
+
 import os
 
 from loguru import logger

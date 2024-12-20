@@ -1,4 +1,5 @@
 r"""Test the docking analysis module for calculating RMSD."""
+
 import os
 
 from loguru import logger
@@ -11,10 +12,10 @@ from lignova.analysis.utils import (
 )
 from lignova.docking.contexts import GlideContext
 from lignova.docking.utils import manipulate_complexes
+from lignova.structure.editing import write_mda_universe
 from lignova.structure.ligand import DockedLigand
 from lignova.structure.protein import Protein
 from lignova.structure.utils import separate_protein_ligand
-from lignova.structure.editing import write_mda_universe
 
 # Ensures we execute from file directory (for relative paths).
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -47,7 +48,6 @@ context.write_dir = context_protein_6Oav["write_dir"]
 context.set_current(context)
 
 
-
 # get the complex for the docking file
 # manipulate_complexes(context_protein_6Oav["docked_ligand_filepath"])
 def test_manipulate_complexes():
@@ -77,10 +77,11 @@ def test_interconvert_mae_sdf():
         os.path.join(context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv.sdf")
     )
 
+
 def test_obabel_convert():
     r"""Test the conversion of file formats using Open Babel."""
     output_filename = os.path.join(context_protein_6Oav["write_dir"], "6oav.sdf")
-    obabel_convert(context_protein_6Oav['file_path'], output_filename)
+    obabel_convert(context_protein_6Oav["file_path"], output_filename)
     assert os.path.exists(os.path.join(context_protein_6Oav["write_dir"], "6oav.sdf"))
 
 
@@ -116,7 +117,7 @@ def test_rmsd_obabel():
     output_filename = os.path.join(
         context_protein_6Oav["write_dir"], "6oav_m3a_rmsd_obabel"
     )
-    _ = rmsd.rmsd_obabel(output_filename=output_filename, save=True)   
+    _ = rmsd.rmsd_obabel(output_filename=output_filename, save=True)
     assert os.path.exists(output_filename + ".txt")
 
 

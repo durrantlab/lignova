@@ -123,7 +123,7 @@ def test_prep_ligand():
 
 def test_prepprotein():
     """Test preparation of protein."""
-    prot_mae = Protein(context_protein_6Oav["write_dir"]+ "/6oav_chA.mae")
+    prot_mae = Protein(context_protein_6Oav["write_dir"] + "/6oav_chA.mae")
     prepared = glide.PrepProtein(prot_mae, context)
     prep_info = prepared.get_info(context)
     # read the grid log file and get the OUTERBOX value and the grid center

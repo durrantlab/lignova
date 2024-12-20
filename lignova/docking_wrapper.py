@@ -829,7 +829,7 @@ if __name__ == "__main__":
             logger.info(f"The prepared protein is {prep_prot.file_path}")
             final_lig = dock_ligands(prep_prot, result, prep_context)
             logger.info(f"The docked ligand is {final_lig.file_path}")
-            #check if the length of ligand_info is greater than 5 skip the combind screening
+            # check if the length of ligand_info is greater than 5 skip the combind screening
             if len(ligand_info) > 5:
                 continue
             combind_context = CombindContext.get_current()

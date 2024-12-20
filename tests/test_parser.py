@@ -67,6 +67,7 @@ def test_write_attributes():
     assert os.path.exists(file_path)
     assert parser.read_attributes("dataset_2") == attributes
 
+
 def test_read_attributes():
     r"""Test reading attributes from HDF5 files."""
     parser = HDF5Parser(file_path)
@@ -82,11 +83,10 @@ def test_find_file_stats():
     parser.find_file_stats()
     statfile = file_path.replace(".hdf5", "_stats.txt")
     assert os.path.exists(statfile)
-    with open(statfile, "r",encoding="utf-8") as f:
+    with open(statfile, "r", encoding="utf-8") as f:
         stats = f.read()
     assert "File Path: " in stats
     assert stats.split("\n")[0] == f"File Path: {file_path}"
-    
 
 
 def test_parquet_create():

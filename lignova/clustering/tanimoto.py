@@ -26,7 +26,7 @@ class TanimotoClustering:
         ----------
             rdkit.DataStructs.cDataStructs.ExplicitBitVect: Fingerprint.
         """
-        morgan_fp=rdFingerprintGenerator.GetMorganGenerator(radius=radius)
+        morgan_fp = rdFingerprintGenerator.GetMorganGenerator(radius=radius)
         mol = Chem.MolFromSmiles(smiles)
         if mol is None:
             logger.error(f"Invalid SMILES: {smiles}")

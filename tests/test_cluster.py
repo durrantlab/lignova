@@ -1,6 +1,6 @@
 r"""Test protein clustering module."""
-import os
 
+import os
 
 from lignova.clustering import mmseqs_cluster, mmseqs_parser
 
@@ -40,7 +40,8 @@ def test_mmseqs_clustering():
         os.path.join(context_filepaths["write_dir"], "clusters_rep_seq.fasta")
     )
     with open(
-        os.path.join(context_filepaths["write_dir"], "clusters_rep_seq.fasta"),encoding='utf-8'
+        os.path.join(context_filepaths["write_dir"], "clusters_rep_seq.fasta"),
+        encoding="utf-8",
     ) as f:
         lines = f.readlines()
     assert os.path.exists(

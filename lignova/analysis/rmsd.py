@@ -42,7 +42,6 @@ class RMSD:
         self.reference = reference
         self.context = context
 
-
     def rmsd_mda(self, selection: str = "not resname HOH") -> Iterable[float]:
         r"""Calculate RMSD between docked ligand and reference ligand using MDAnalysis.
         Parameters

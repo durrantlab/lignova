@@ -1,4 +1,5 @@
 r"""Test the Combind class & its methods."""
+
 import csv
 import os
 
@@ -82,11 +83,13 @@ def test_select_pose():
             context_protein_6Oav["write_dir"], "6oav_m3a_features"
         ),
     )
-    with open(context_protein_6Oav["ref_csv_file"], "r",encoding= "utf-8") as file:
+    with open(context_protein_6Oav["ref_csv_file"], "r", encoding="utf-8") as file:
         reader = csv.DictReader(file)
         ref_csv = list(reader)
     with open(
-        os.path.join(context_protein_6Oav["write_dir"], "6oav_m3a.csv"), "r",encoding="utf-8"
+        os.path.join(context_protein_6Oav["write_dir"], "6oav_m3a.csv"),
+        "r",
+        encoding="utf-8",
     ) as file:
         reader = csv.DictReader(file)
         test_csv = list(reader)
