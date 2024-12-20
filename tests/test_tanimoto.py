@@ -1,11 +1,10 @@
+r"""Test Tanimoto clustering."""
 import os
 
-import pytest
 from loguru import logger
-from rdkit import Chem, DataStructs
+from rdkit import DataStructs
 
 from lignova.clustering.tanimoto import TanimotoClustering
-from lignova.structure.utils import get_smiles, separate_protein_ligand
 
 # Ensures we execute from file directory (for relative paths).
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -27,6 +26,7 @@ TanimotoClustering = TanimotoClustering()
 
 
 def test_get_morgan_fingerprint():
+    r"""Test the get_morgan_fingerprint method."""
     smiles = "C1=CC=CC=C1"
     fingerprint = TanimotoClustering.get_morgan_fingerprint(smiles)
     assert isinstance(fingerprint, DataStructs.cDataStructs.ExplicitBitVect)
@@ -34,6 +34,7 @@ def test_get_morgan_fingerprint():
 
 
 def test_tanimoto_similarity_single_mol():
+    r"""Test the tanimoto_similarity method. with a single molecule."""
     smiles1 = "CC(=O)N1CCC(CC1)C2=NC3=CC=CC=C3N=C2OC4CN(C4)C5=NC6=CC=CC=C6C=C5"
     smiles2 = "CC[C@@H](C(=O)N[C@@H](C1CCCCC1)C(=O)N2C[C@H]3CCCN3C[C@H]2C(=O)N[C@@H]4CCOC5=CC=CC=C45)NC"
     fingerprint1 = TanimotoClustering.get_morgan_fingerprint(smiles1)
@@ -44,6 +45,7 @@ def test_tanimoto_similarity_single_mol():
 
 
 def test_tanimoto_similarity_multiple_mols():
+    r"""Test the tanimoto_similarity method with multiple molecules."""
     smiles1 = [
         "CC(=O)N1CCC(CC1)C2=NC3=CC=CC=C3N=C2OC4CN(C4)C5=NC6=CC=CC=C6C=C5",
         "CC[C@@H](C(=O)N[C@@H](C1CCCCC1)C(=O)N2C[C@H]3CCCN3C[C@H]2C(=O)N[C@@H]4CCOC5=CC=CC=C45)NC",
@@ -61,6 +63,7 @@ def test_tanimoto_similarity_multiple_mols():
 
 
 def test_cal_distance():
+    r"""Test the cal_distance method."""
     smiles1 = [
         "CC(=O)N1CCC(CC1)C2=NC3=CC=CC=C3N=C2OC4CN(C4)C5=NC6=CC=CC=C6C=C5",
         "CC[C@@H](C(=O)N[C@@H](C1CCCCC1)C(=O)N2C[C@H]3CCCN3C[C@H]2C(=O)N[C@@H]4CCOC5=CC=CC=C45)NC",
@@ -81,6 +84,7 @@ def test_cal_distance():
 
 
 def test_cluster_tanimoto():
+    r"""Test the cluster_tanimoto method."""
     smiles = [
         "COC1=CC=C(C=C1)CNC(=O)CCCNS(=O)(=O)C2=CC=CC3=NON=C32",
         "CC(=O)N1CCC(CC1)C2=NC3=CC=CC=C3N=C2OC4CN(C4)C5=NC6=CC=CC=C6C=C5",

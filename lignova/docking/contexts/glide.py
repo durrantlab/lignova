@@ -1,12 +1,10 @@
 r""" Implementation of the GlideContext class containing the configuration for Glide docking."""
 
-from typing import Optional, Union
-
 import os
 
 from loguru import logger
 
-_default_glide_context: "Optional[GlideContext]" = None
+_default_glide_context: "Optional[GlideContext" = None
 
 DEFAULT_COMMAND = os.environ.get("SCHRODINGER", None)
 DEFAULT_POSES_PER_LIG = "100"
@@ -26,12 +24,12 @@ DEFAULT_POSTDOCK_N_POSES = "100"
 DEFAULT_WRITE_DIR = "./tmp/6oav"
 DEFAULT_LIG_MAX_MW = "500"
 DEFAULT_PROT_WATER_DIST = "5.0"
-DEFAULT_FILLSIDECHAINS = "True"
-DEFAULT_DISULFIDES = "True"
-DEFAULT_REHTREAT = "True"
-DEFAULT_SAMPLEWATER = "True"
-DEFUALT_MINIMIZE_ADJ_H = "True"
-DEFAULT_LIG_EPIK = "True"
+DEFAULT_FILLSIDECHAINS = True
+DEFAULT_DISULFIDES = True
+DEFAULT_REHTREAT = True
+DEFAULT_SAMPLEWATER = True
+DEFUALT_MINIMIZE_ADJ_H = True
+DEFAULT_LIG_EPIK = True
 DEFAULT_DOCKING_METHOD = "confgen"
 
 
@@ -42,31 +40,31 @@ class GlideContext:
     # pylint: disable-next=too-many-arguments,too-many-locals
     def __init__(
         self,
-        command: Union[str, None],
+        command: str | None,
         forcefield: str,
-        docking_protocol: Union[str, None],
-        n_enhanced_sampling: Union[None, str],
-        lig_ph: [str, None],
-        lig_pht: Union[None, str],
-        lig_forcefield: Union[str, None],
-        lig_stereoisomers: Union[str, None],
-        epik_ph: Union[None, str],
-        epik_pht: Union[str, None],
-        prot_rmsd: Union[str, None],
-        propka_ph: Union[str, None],
-        grid_innerbox: Union[None, str],
-        postdock_nposes: Union[None, str],
-        write_dir: Union[str, None],
-        lig_max_mw: Union[str, None],
-        prot_watdist: Union[str, None],
-        poses_per_lig: Union[str, None],
-        fillsidechains: Union[bool, None],
-        disulfides: Union[bool, None],
-        rehtreat: Union[bool, None],
-        samplewater: Union[bool, None],
-        minimize_adj_h: Union[bool, None],
-        lig_epik: Union[bool, None],
-        docking_method: Union[str, None],
+        docking_protocol: str | None,
+        n_enhanced_sampling: None | str,
+        lig_ph: str | None,
+        lig_pht: None | str,
+        lig_forcefield: str | None,
+        lig_stereoisomers: str | None,
+        epik_ph: None | str,
+        epik_pht: str | None,
+        prot_rmsd: str | None,
+        propka_ph: str | None,
+        grid_innerbox: None | str,
+        postdock_nposes: None | str,
+        write_dir: str | None,
+        lig_max_mw: str | None,
+        prot_watdist: str | None,
+        poses_per_lig: str | None,
+        fillsidechains: bool | None,
+        disulfides: bool | None,
+        rehtreat: bool | None,
+        samplewater: bool | None,
+        minimize_adj_h: bool | None,
+        lig_epik: bool | None,
+        docking_method: str | None,
     ):
         if not os.environ.get("SCHRODINGER") or command is None:
             logger.critical(

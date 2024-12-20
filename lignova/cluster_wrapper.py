@@ -693,7 +693,7 @@ if __name__ == "__main__":
     # check the duplicates in the final_parq file interms of Compound ID and Smiles
     duplicates = final_data[final_data.duplicated(subset=["Compound ID"])]
     # save the unique data to a new parquet file named unique_final_ligand_cluster.parquet
-    unique_data = data.drop_duplicates(subset=["Compound ID"])
+    unique_data = final_data.drop_duplicates(subset=["Compound ID"])
     unique_parq = ParquetParser("unique_final_ligand_cluster.parquet", schema)
     unique_parq.write(unique_data, schema)
     logger.info(

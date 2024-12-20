@@ -1,10 +1,8 @@
 import os
 
-import h5py
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-import pyarrow.parquet as pq
 from loguru import logger
 
 from lignova.hdf5.parquet import ParquetParser
@@ -25,6 +23,7 @@ parquet_file_path = os.path.join(context_hdf5_parser["write_dir"], "test.parquet
 
 
 def prep_dirs():
+    """Prepare directories for writing files."""
     os.makedirs(context_hdf5_parser["write_dir"])
 
 
@@ -37,12 +36,14 @@ os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 
 def test_create():
+    r"""Test the creation of HDF5 files."""
     parser = HDF5Parser(file_path)
     parser.create()
     assert os.path.exists(file_path)
 
 
 def test_write():
+    r"""Test writing data to HDF5 files."""
     parser = HDF5Parser(file_path)
     data = np.array([1, 2, 3])
     parser.write(data, "dataset")
@@ -51,13 +52,23 @@ def test_write():
 
 
 def test_read():
+    r"""Test reading data from HDF5 files."""
     parser = HDF5Parser(file_path)
     data = np.array([1, 2, 3])
     result = parser.read("dataset")
     assert np.array_equal(result, data)
 
 
+def test_write_attributes():
+    r"""Test writing attributes to HDF5 files."""
+    parser = HDF5Parser(file_path)
+    attributes = {"attr7": "value1", "attr8": "value2"}
+    parser.write_attributes("dataset_2", attributes)
+    assert os.path.exists(file_path)
+    assert parser.read_attributes("dataset_2") == attributes
+
 def test_read_attributes():
+    r"""Test reading attributes from HDF5 files."""
     parser = HDF5Parser(file_path)
     attributes = {"attr1": "value1", "attr2": "value2"}
     parser.write_attributes("dataset_1", attributes)
@@ -65,31 +76,28 @@ def test_read_attributes():
     assert result == attributes
 
 
-def test_write_attributes():
-    parser = HDF5Parser(file_path)
-    attributes = {"attr7": "value1", "attr8": "value2"}
-    parser.write_attributes("dataset_2", attributes)
-    assert os.path.exists(file_path)
-    assert parser.read_attributes("dataset_2") == attributes
-
-
 def test_find_file_stats():
+    r"""Test finding file stats."""
     parser = HDF5Parser(file_path)
     parser.find_file_stats()
     statfile = file_path.replace(".hdf5", "_stats.txt")
     assert os.path.exists(statfile)
-    with open(statfile, "r") as f:
+    with open(statfile, "r",encoding="utf-8") as f:
         stats = f.read()
     assert "File Path: " in stats
+    assert stats.split("\n")[0] == f"File Path: {file_path}"
+    
 
 
 def test_parquet_create():
+    r"""Test the creation of Parquet files."""
     parser = ParquetParser(parquet_file_path, pa.schema([]))
     parser.create()
     assert os.path.exists(parquet_file_path)
 
 
 def test_parquet_write():
+    r"""Test writing data to Parquet files."""
     # Define the schema for the nested structure
     schema = pa.schema(
         [
@@ -139,6 +147,7 @@ def test_parquet_write():
 
 
 def test_parquet_read():
+    r"""Test reading data from Parquet files."""
     schema = pa.schema(
         [
             ("id", pa.int64()),
@@ -184,6 +193,7 @@ def test_parquet_read():
 
 
 def test_filter_data():
+    r"""Test filtering data from Parquet files."""
     schema = pa.schema(
         [
             ("id", pa.int64()),

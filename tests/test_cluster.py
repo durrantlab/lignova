@@ -1,7 +1,6 @@
+r"""Test protein clustering module."""
 import os
 
-import pytest
-from loguru import logger
 
 from lignova.clustering import mmseqs_cluster, mmseqs_parser
 
@@ -16,6 +15,7 @@ context_filepaths = {
 
 
 def prep_dirs():
+    r"""Prepare directories for writing files."""
     os.makedirs(context_filepaths["write_dir"])
 
 
@@ -40,7 +40,7 @@ def test_mmseqs_clustering():
         os.path.join(context_filepaths["write_dir"], "clusters_rep_seq.fasta")
     )
     with open(
-        os.path.join(context_filepaths["write_dir"], "clusters_rep_seq.fasta")
+        os.path.join(context_filepaths["write_dir"], "clusters_rep_seq.fasta"),encoding='utf-8'
     ) as f:
         lines = f.readlines()
     assert os.path.exists(
@@ -56,6 +56,7 @@ def test_mmseqs_clustering():
 
 
 def test_mmseqs_parser():
+    r"""Test mmseqs parser."""
     mmseqs_cluster(
         context_filepaths["query_filepath"],
         context_filepaths["reference_filepath"],

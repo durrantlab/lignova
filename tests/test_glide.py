@@ -79,6 +79,7 @@ def test_convert_protein_to_mae():
     prot_test_mae_content = prot_test_mae.pdb
     assert prot_test_mae_content is not None
 
+
 def test_convert_ligand_to_mae():
     """Test conversion of ligand to MAE format."""
     glide.convert_to_mae(lig_object, context)
@@ -122,13 +123,8 @@ def test_prep_ligand():
 
 def test_prepprotein():
     """Test preparation of protein."""
-    prot_mae = Protein(
-        file_path=os.path.join(context_protein_6Oav["write_dir"], "6oav_chA.mae")
-    )
+    prot_mae = Protein(context_protein_6Oav["write_dir"]+ "/6oav_chA.mae")
     prepared = glide.PrepProtein(prot_mae, context)
-    prepared.load(
-        file_path=context_protein_6Oav["write_dir"] + "/6oav_chA_protein_prepared.mae"
-    )
     prep_info = prepared.get_info(context)
     # read the grid log file and get the OUTERBOX value and the grid center
     outerbox_ref = None

@@ -1,25 +1,25 @@
 r"""Tests for protein structure class and relevant functions."""
+
 import os
 
-
-from lignova.structure.editing import select_water ,read_cif, convert_cif2pdb
+from lignova.structure.editing import convert_cif2pdb, read_cif, select_water
 from lignova.structure.protein import Protein
 from lignova.structure.utils import (
-    get_mda_universe,
-    select_chains,
-    is_xray_structure,
-    separate_protein_ligand,
-    select_residues,
-    get_rcsb_data,
     find_resolution,
+    get_entity_ids,
+    get_ligand_names,
+    get_mda_universe,
+    get_rcsb_data,
+    get_smiles,
     has_covalent_bonds,
     has_ligands,
-    get_entity_ids,
+    is_xray_structure,
     pdb_has_mutation,
-    validate_pdb,
+    select_chains,
+    select_residues,
+    separate_protein_ligand,
     validate_ligands,
-    get_ligand_names,
-    get_smiles,
+    validate_pdb,
 )
 
 # Ensures we execute from file directory (for relative paths).

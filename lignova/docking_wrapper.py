@@ -2,7 +2,6 @@ r"Implementation for the wrapper for the docking program Schrodinger GLIDE."
 from typing import Optional
 
 import os
-import random
 import time
 
 import MDAnalysis as mda
@@ -771,8 +770,9 @@ if __name__ == "__main__":
     # add 2dux and 3aox to the pdbids
     pdbids = list(pdbids)
     failed = []
-    count = 0
-    total_ligands_docked = 0
+    COUNT = 0
+    TOTAL_LIGANDS_DOCKED = 0
+    SCREEN = False
     logger.info(f"The number of pdb ids to dock into is {len(pdbids)}")
     logger.info(f"The pdb ids are {pdbids}")
     # Check if the rmsd file exists
@@ -782,7 +782,6 @@ if __name__ == "__main__":
         logger.info(f"The rmsd dictionary is {rmsd_dict}")
     else:
         rmsd_dict = {}
-
     for pdbid in pdbids:
         # check if the pdb id is in the rmsd dictionary
         if pdbid in rmsd_dict:
@@ -827,15 +826,17 @@ if __name__ == "__main__":
             prep_prot = prep_proteins(
                 f"raw/{pdbid.lower()}.pdb", prep_context, lig_name
             )
-            screen = False
             logger.info(f"The prepared protein is {prep_prot.file_path}")
             final_lig = dock_ligands(prep_prot, result, prep_context)
             logger.info(f"The docked ligand is {final_lig.file_path}")
+            #check if the length of ligand_info is greater than 5 skip the combind screening
+            if len(ligand_info) > 5:
+                continue
             combind_context = CombindContext.get_current()
             combind_context.work_dir = "./nt_water"
             combind_context.set_current(combind_context)
-            raw_combind_result = run_combind(final_lig, combind_context, screen=screen)
-            if screen:
+            raw_combind_result = run_combind(final_lig, combind_context, screen=SCREEN)
+            if SCREEN:
                 combind_data = pd.read_csv(raw_combind_result)
                 # remove the row with prepared in the s_m_title column
                 combind_data = combind_data[
@@ -871,10 +872,10 @@ if __name__ == "__main__":
             )
             rmsd_dict[pdbid] = RMSD_VAL
             logger.info(f"The RMSD value is {RMSD_VAL}")
-            count += 1
-            total_ligands_docked += len(ligand_info)
-            if count % 10 == 0:
-                logger.info(f"Writing the rmsd values to the csv file")
+            COUNT += 1
+            TOTAL_LIGANDS_DOCKED += len(ligand_info)
+            if COUNT % 10 == 0:
+                logger.info("Writing the rmsd values to the csv file")
                 rmsd_df = pd.DataFrame(rmsd_dict.items(), columns=["PDB_ID", "RMSD"])
                 rmsd_df.to_csv(RMSD_FILE_NO_WATER, index=False)
         except Exception as error:
@@ -882,7 +883,7 @@ if __name__ == "__main__":
             failed.append(pdbid)
         pdb_ligand_name = pdb_ligands["s_m_title"].values[0]
         logger.debug(
-            f"The pdb id is {pdbid} which had {pdb_ligand_name} pdb & {len(pubchem_lig)} pubchem ligands"
+            f"The pdb id is {pdbid}: {pdb_ligand_name} pdb & {len(pubchem_lig)} ligands"
         )
     # save the failed pdb ids to a text file
     if len(failed) != 0 and not os.path.exists("nt_water/failed_pdb_ids.txt"):
@@ -900,5 +901,5 @@ if __name__ == "__main__":
     end_time = time.time()
     elapsed_time = end_time - start_time
     logger.info(f"Total time taken: {elapsed_time:.2f} seconds")
-    logger.info(f"Total number of ligands docked: {total_ligands_docked}")
-    logger.info(f"Total number of proteins docked: {count}")
+    logger.info(f"Total number of ligands docked: {TOTAL_LIGANDS_DOCKED}")
+    logger.info(f"Total number of proteins docked: {COUNT}")

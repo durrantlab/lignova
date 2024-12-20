@@ -1,6 +1,6 @@
 r"""Implementation for a base class for file parsers."""
 
-from typing import Optional, Union
+from typing import Optional
 
 import os
 from abc import ABC, abstractmethod
@@ -34,7 +34,7 @@ class FormatManager(ABC):
         self,
         path: Optional[str] = None,
         schema: Optional[pa.schema] = None,
-        columns: Optional[Union[str, list]] = None,
+        columns: str| list |None = None,
     ) -> Iterable:
         r"""Read data from a file."""
         raise NotImplementedError()

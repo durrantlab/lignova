@@ -1,7 +1,5 @@
 """Implementation of protein class."""
 
-from typing import Union
-
 import requests
 from loguru import logger
 
@@ -51,7 +49,7 @@ class Protein(Structure):
         return response.text
 
     def _load_from_pdb_id(
-        self, pdb_id: str, write: bool = False, write_path: Union[None, str] = None
+        self, pdb_id: str, write: bool = False, write_path: None | str = None
     ) -> None:
         r"""Load structural information for a protein from RCSB.
         Parameters
@@ -74,18 +72,18 @@ class Protein(Structure):
             self._pdb_text = pdb_text
 
     @property
-    def pdb(self) -> Union[str, None]:
+    def pdb(self) -> str | None:
         r"""Return the PDB text."""
         if self._pdb_text is None:
             self.load(self.file_path)
-        return self._pdb_text       
+        return self._pdb_text
 
     def load(
         self,
-        file_path: Union[str, None] = None,
+        file_path: str | None = None,
         write: bool = False,
-        write_path: Union[None, str] = None,
-        pdb_id: Union[str, None] = None,
+        write_path: None | str = None,
+        pdb_id: str | None = None,
     ) -> None:
         r"""Load structural information for a protein.
 

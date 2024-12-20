@@ -42,60 +42,6 @@ class RMSD:
         self.reference = reference
         self.context = context
 
-    def rmsd_schrodinger(
-        self,
-        output_filename: str | TextIO,
-        cuttoff: int | float | None = None,
-        asl: str = "ligand",
-        do_align: bool = False,
-        neutral_sccafold: bool = False,
-    ):
-        r"""Calculate RMSD between docked ligand and reference ligand using Schrodinger.
-        Parameters
-        ----------
-        output_filename : str | TextIO
-            Output file name.
-        cuttoff : int | float | None
-            Cuttoff for RMSD. Default is None.
-        asl : str
-            Atom selection language for RMSD calculations. Default is "ligand".
-        do_align : bool
-            Align the docked ligand to the reference ligand. Default is True.
-        neutral_sccafold : bool
-            Neutralize the ligand. Default is False.
-        """
-        command = [self.context.command + "/run", "rmsd.py", "-a", asl]
-        if neutral_sccafold:
-            command.append("-use_neutral_scaffold")
-        if cuttoff is not None:
-            command.append("-r")
-            command.append(str(cuttoff))
-        if do_align:  # Update this line as well
-            command.append("-m")
-        command.extend(
-            ["-c", output_filename, self.reference.file_path, self.ligand.file_path]
-        )
-
-        try:
-            with subprocess.Popen(
-                command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                universal_newlines=True,
-            ) as process:
-                stdout, stderr = process.communicate()
-            if process.returncode == 0:
-                logger.info(f"RMSD calculation completed for {self.ligand.file_id}")
-                logger.info(f"Output:\n{stdout}")
-            else:
-                logger.error(f"RMSD calculation failed for {self.ligand.file_id}")
-                logger.error(f"Error Output:\n{stderr}")
-                raise subprocess.CalledProcessError(
-                    process.returncode, " ".join(command)
-                )
-        except Exception as e:
-            logger.error(f"An error occurred during rmsd calculation: {str(e)}")
-            raise e
 
     def rmsd_mda(self, selection: str = "not resname HOH") -> Iterable[float]:
         r"""Calculate RMSD between docked ligand and reference ligand using MDAnalysis.
@@ -222,7 +168,6 @@ class RMSD:
             if process.returncode == 0:
                 logger.info(f"RMSD calculation completed for {self.ligand.file_id}")
                 logger.info(f"Output:\n{stdout}")
-                logger.debug(f"Error Output:\n{stderr}")
             else:
                 logger.error(f"RMSD calculation failed for {self.ligand.file_id}")
                 logger.error(f"Error Output:\n{stderr}")
