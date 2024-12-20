@@ -250,3 +250,43 @@ def test_convert_cif2pdb():
         protein.file_path, os.path.join(context_protein_6Oav["write_dir"], "6qsw.pdb")
     )
     assert os.path.exists(os.path.join(context_protein_6Oav["write_dir"], "6qsw.pdb"))
+
+
+def test_separate_protein_ligand_water():
+    r"""Test separate protein ligand with different water selection"""
+    protein = Protein()
+    protein.load(
+        pdb_id="1GYY",
+        write=True,
+        write_path=context_protein_6Oav["write_dir"] + "/1GYY.pdb",
+    )
+    protein_surf, ligand_suf = separate_protein_ligand(
+        protein.file_path, water_selection="surface", remove_water=False
+    )
+    protein_bridge, ligand_bridge = separate_protein_ligand(
+        protein.file_path, water_selection="interfacial", remove_water=False
+    )
+    protein_all, ligand_all = separate_protein_ligand(
+        protein.file_path, water_selection="all", remove_water=False
+    )
+    assert (
+        ligand_suf.resnames.all()
+        == "FHC"
+        == ligand_bridge.resnames.all()
+        == ligand_all.resnames.all()
+    )
+    assert (
+        len(set(protein_surf.segments.segids))
+        == 2
+        == len(set(protein_bridge.segments.segids))
+        == len(set(protein_all.segments.segids))
+    )
+    assert 2107 in [
+        atom.resid for atom in protein_surf.atoms if atom.resname == "HOH"
+    ] and 2107 in [atom.resid for atom in protein_all.atoms if atom.resname == "HOH"]
+    assert 2008 in [
+        atom.resid for atom in protein_surf.atoms if atom.resname == "HOH"
+    ] and 2008 in [atom.resid for atom in protein_all.atoms if atom.resname == "HOH"]
+    assert 2149 in [
+        atom.resid for atom in protein_bridge.atoms if atom.resname == "HOH"
+    ] and 2149 in [atom.resid for atom in protein_all.atoms if atom.resname == "HOH"]
