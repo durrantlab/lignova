@@ -12,8 +12,7 @@ from .files import FormatManager
 class ParquetParser(FormatManager):
     r"""Class for parsing Parquet files.
 
-    Parameters:
-    ----------
+    Args:
         file_path (str): Path to the Parquet file.
     """
 
@@ -32,13 +31,13 @@ class ParquetParser(FormatManager):
 
     def read(self, column: str | list | None = None) -> ds.Dataset:
         r"""Read a Parquet file using PyArrow.
-        parameters:
-        ----------
+
+        Args:
 
             columns: str | list | None
                 Columns to read from the Parquet file.
+
         Returns:
-        ----------
             dataset: pyarrow.Dataset
         """
         # Read the Parquet file
@@ -50,8 +49,8 @@ class ParquetParser(FormatManager):
 
     def write(self, data: pd.DataFrame | list, data_scheme: pa.Schema) -> None:
         r"""Write data to a Parquet file using PyArrow.
-        Parameters:
-        ----------
+
+        Args:
             data : pd.DataFrame
                 Data to write to the Parquet file.
             schema : pa.Schema
@@ -75,12 +74,11 @@ class ParquetParser(FormatManager):
     def convert_to_table(self, column_names: str | list | None = None) -> pa.Table:
         r"""Convert data to a PyArrow Table.
 
-        Parameters:
-        ----------
+        Args:
             column_names: str | list | None
                 Columns to convert to a PyArrow Table.
+
         Returns:
-        ----------
             table: pa.Table
         """
         if column_names is None:
@@ -93,12 +91,11 @@ class ParquetParser(FormatManager):
     def convert_to_pandas(self, column_names: str | list | None = None) -> pd.DataFrame:
         r"""Convert data to a pandas DataFrame.
 
-        Parameters:
-        ----------
+        Args:
             column_names: str | list | None
                 Columns to convert to a pandas DataFrame.
+
         Returns:
-        ----------
             df: pd.DataFrame
         """
         if column_names is None:
@@ -111,14 +108,13 @@ class ParquetParser(FormatManager):
     def filter_data(self, condition: callable, column: str) -> pd.DataFrame:
         r"""Filter data based on a column value.
 
-        Parameters:
-        ----------
+        Args:
             condition: callable
                 Condition to filter the data.
             column: str
                 Column to filter the data.
+
         Returns:
-        ----------
             df: pd.DataFrame
         """
         data = self.read()

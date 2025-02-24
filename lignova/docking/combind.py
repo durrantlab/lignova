@@ -29,14 +29,14 @@ class Combind(CombindContext):
         screen: bool = False,
     ):
         r"""Featurize the docking files.
-        Parameters
-        ----------
-        docking_filepaths : str, list
-            Path to the docking file from GLIDE. Can be a single file or a list of two files.
-        file_name : str
-            Name of the output file.
-        max_poses : int, optional, default=1000000
-        screen : bool, optional, default=False
+
+        Args:
+            docking_filepaths : str, list
+                Path to the docking file from GLIDE. Can be a single file or a list of two files.
+            file_name : str
+                Name of the output file.
+            max_poses : int, optional, default=1000000
+            screen : bool, optional, default=False
         """
         if isinstance(docking_filepaths, str):
             docking_filepaths = [docking_filepaths]
@@ -116,12 +116,12 @@ class Combind(CombindContext):
 
     def select_pose(self, file_name: str | TextIO, features_dir: str):
         r"""Select the best pose from the docking file.
-        Parameters
-        ----------
-        file_name : str, file-like object
-            Name of the output file.
-        features_dir : str
-            name of the features directory.
+
+        Args:
+            file_name : str, file-like object
+                Name of the output file.
+            features_dir : str
+                name of the features directory.
         """
         command1 = [
             self.activate,
@@ -162,14 +162,14 @@ class Combind(CombindContext):
         extract_filename: str,
     ):
         r"""Get the top ligand pose after combind prediction.
-        Parameters
-        ----------
-        docking_filepath : str, file-like object
-            Path to the docking file from GLIDE.
-        combind_csv : str, file-like object
-            Path to the combind csv file.
-        extract_filename : str
-            Name of the output file.
+
+        Args:
+            docking_filepath : str, file-like object
+                Path to the docking file from GLIDE.
+            combind_csv : str, file-like object
+                Path to the combind csv file.
+            extract_filename : str
+                Name of the output file.
         """
         command1 = [
             self.activate,
@@ -208,12 +208,12 @@ class Combind(CombindContext):
 
     def compute_combind_score(self, features_dir: str, filename: str):
         r"""Compute the combind score.
-        Parameters
-        ----------
-        features_dir : str
-            Path of the features directory.
-        filename : str
-            Name of the output npy file.
+
+        Args:
+            features_dir : str
+                Path of the features directory.
+            filename : str
+                Name of the output npy file.
         """
         command1 = [
             self.activate,
@@ -253,16 +253,16 @@ class Combind(CombindContext):
         sort: bool = True,
     ):
         r"""Apply the combind score to the docking file.
-        Parameters
-        ----------
-        docking_filepath : str, file-like object
-            Path to the docking file from GLIDE.
-        combind_score_file : str, file-like object
-            Path to the combind score file.
-        output_filename : str, file-like object
-            name of the output file.
-        sort : bool, optional, default=True
-            Sort the output file by the combind score.
+
+        Args:
+            docking_filepath : str, file-like object
+                Path to the docking file from GLIDE.
+            combind_score_file : str, file-like object
+                Path to the combind score file.
+            output_filename : str, file-like object
+                name of the output file.
+            sort : bool, optional, default=True
+                Sort the output file by the combind score.
         """
         command1 = [
             self.activate,
@@ -325,16 +325,16 @@ class Combind(CombindContext):
     ):
         r"""To extract the scores from schrodinger docking file including
         combind if run after apply_combind_score function.
-        Parameters
-        ----------
-        docking_file : str, file-like object
-            Path to the docking file from GLIDE.
-        filename : str, file-like object
-            name of the output file.
-        filter_data : bool, optional, default=True
-            filter_data the docking file to include only scores.
-        top_poses : bool, optional, default=False
-            If True, extract the data of the top poses per ligand only.
+
+        Args:
+            docking_file : str, file-like object
+                Path to the docking file from GLIDE.
+            filename : str, file-like object
+                name of the output file.
+            filter_data : bool, optional, default=True
+                filter_data the docking file to include only scores.
+            top_poses : bool, optional, default=False
+                If True, extract the data of the top poses per ligand only.
         """
         # check if the docking file exists
         if not os.path.exists(docking_file):

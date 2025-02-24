@@ -20,14 +20,14 @@ class Docking(ABC):
     ) -> Iterable[DockedLigand] | DockedLigand:
         r"""Dock one or multiple ligands to a single target.
 
-        Parameters
-        ----------
-        target
-            Prepared protein that ligands will be docked to.
-        ligand
-            Prepared ligand(s) that will be docked into `target`
-        context
-            Docking configuration context for specific program.
+
+        Args:
+            target
+                Prepared protein that ligands will be docked to.
+            ligand
+                Prepared ligand(s) that will be docked into `target`
+            context
+                Docking configuration context for specific program.
 
         """
         raise NotImplementedError()

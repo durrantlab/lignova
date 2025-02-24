@@ -27,13 +27,10 @@ def is_xray_structure(pdb: str | TextIO) -> bool:
     """
     Check if the PDB file was generated from X-ray diffraction data.
 
-    Parameters:
-    -----------
-    pdb : str or file-like
-        Path to the PDB file. or file-like object. or just pdb id
+    Arg:
+        pdb : Path to the PDB file. or file-like object. or just pdb id
+
     Returns:
-    --------
-    bool
         True if the PDB was generated from X-ray data, False otherwise.
     """
     # check if the pdb is a file or a pdb id
@@ -63,23 +60,22 @@ def chery_pick_ligand(
     ligand: str,
     remove_water: bool = True,
     water_selection: Literal["surface", "interfacial", "all"] | None = None,
-) -> tuple["Protein", "Ligand"]:
+) -> Literal["Protein", "Ligand"]:
     r"""Cherry pick a ligand from a PDB file.
-    Parameters
-    ----------
-    pdb : str or file-like
-        Path to the PDB file or file-like object.
-    ligand : str
-        The ligand to cherry pick.
-    remove_water : bool
-        Remove crystallographic waters from the protein structures. Default is True.
-    water_selection : str
-        The selection of water molecules to keep. Default is "none".
-    Returns
-    -------
-    Protein
+
+    Args:
+        pdb : str or file-like
+            Path to the PDB file or file-like object.
+        ligand : str
+            The ligand to cherry pick.
+        remove_water : bool
+            Remove crystallographic waters from the protein structures. Default is True.
+        water_selection : str
+            The selection of water molecules to keep. Default is "none".
+
+    Returns:
         Universe object containing the protein.
-    Ligand
+
         Universe object containing the ligand.
     """
     if water_selection is None and remove_water is False:
@@ -135,24 +131,23 @@ def separate_protein_ligand(
     remove_water: bool | None = True,
     keep_het_chain: str | list | None = None,
     water_selection: Literal["surface", "interfacial", "all"] | None = None,
-) -> tuple["Protein", "Ligand"]:
+) -> Literal["Protein", "Ligand"]:
     r"""Separate protein and ligand from a PDB file.
-    Parameters
-    ----------
-    pdb : str or file-like
-        Path to the PDB file or file-like object.
-    remove_water : bool
-        Remove crystallographic waters from the protein structures. Default is True.
-    keep_het_chain : str or list
-        Chain(s) to keep their HETATM in the protein structure.
-        Default is None. If None, all HETATM will be kept.
-    water_selection : str
-        The selection of water molecules to keep if remove_water is False. Default is "none".
-    Returns
-    -------
-    Protein
+
+    Args:
+        pdb : str or file-like
+            Path to the PDB file or file-like object.
+        remove_water : bool
+            Remove crystallographic waters from the protein structures. Default is True.
+        keep_het_chain : str or list
+            Chain(s) to keep their HETATM in the protein structure.
+            Default is None. If None, all HETATM will be kept.
+        water_selection : str
+            The selection of water molecules to keep if remove_water is False. Default is "none".
+
+    Returns:
         Universe object containing the protein.
-    Ligand
+
         Universe object containing the ligand.
     """
     save_prot = None
@@ -246,15 +241,14 @@ def separate_protein_ligand(
 
 def check_ligand(pdb: str | TextIO, reference: str | TextIO) -> bool:
     r"""Compare the ligand in the PDB file with the ligand in the reference file.
-    Parameters
-    ----------
-    pdb : str or file-like
-        Path to the PDB file or file-like object.
-    reference : str or file-like
-        Path to the csv file or file-like object.
-    Returns
-    -------
-    bool
+
+    Args:
+        pdb : str or file-like
+            Path to the PDB file or file-like object.
+        reference : str or file-like
+            Path to the csv file or file-like object.
+
+    Returns:
         True if the ligand is the same in the two PDB files, False otherwise.
     """
     # get the filename from the path
@@ -289,12 +283,12 @@ def check_ligand(pdb: str | TextIO, reference: str | TextIO) -> bool:
 def get_rcsb_data(pdb_id: str):
     r"""
     Get entry data for a given PDB ID using the RCSB API.
-    Parameters:
-    ----------
-    pdb_id (str): The PDB ID to retrieve the entry data for.
+
+    Args:
+        pdb_id (str): The PDB ID to retrieve the entry data for.
+
     Returns:
-    -------
-    dict: The entry data for the given PDB ID.
+        The entry data for the given PDB ID.
     """
 
     url = f"https://data.rcsb.org/rest/v1/core/entry/{pdb_id}"
@@ -309,15 +303,14 @@ def get_rcsb_data(pdb_id: str):
 
 def find_resolution(pdb_id: str, rcsb_data: dict | None = None) -> float:
     r"""Find the resolution of a PDB file using the RCSB API.
-    Parameters
-    ----------
-    pdb_id : str
-        The PDB ID to find the resolution for.
-    rcsb_data : dict or None
-        The data for the PDB ID from the RCSB API. If None, the data will be fetched.
-    Returns
-    -------
-    float
+
+    Args:
+        pdb_id : str
+            The PDB ID to find the resolution for.
+        rcsb_data : dict or None
+            The data for the PDB ID from the RCSB API. If None, the data will be fetched.
+
+    Returns:
         The resolution of the PDB file.
     """
     if rcsb_data is not None:
@@ -331,15 +324,14 @@ def find_resolution(pdb_id: str, rcsb_data: dict | None = None) -> float:
 
 def has_covalent_bonds(pdb: str, rcsb_data: dict | None = None) -> bool:
     r"""Check if the PDB file has covalent bonds or not.
-    Parameters
-    ----------
-    pdb : str
-        the PDB id needed to be checked.
-    rcsb_data : dict or None
-        The data for the PDB ID from the RCSB API. If None, the data will be fetched.
-    Returns
-    -------
-    bool
+
+    Args:
+        pdb : str
+            the PDB id needed to be checked.
+        rcsb_data : dict or None
+            The data for the PDB ID from the RCSB API. If None, the data will be fetched.
+
+    Returns:
         True if the PDB file has covalent bonds, False otherwise.
     """
     if rcsb_data is not None:
@@ -352,15 +344,14 @@ def has_covalent_bonds(pdb: str, rcsb_data: dict | None = None) -> bool:
 
 def has_ligands(pdb: str, rcsb_data: dict | None = None) -> bool:
     r"""Check if the PDB file has ligands or not.
-    Parameters
-    ----------
-    pdb : str
-        the PDB id needed to be checked.
-    rcsb_data : dict or None
-        The data for the PDB ID from the RCSB API. If None, the data will be fetched.
-    Returns
-    -------
-    bool
+
+    Args:
+        pdb : str
+            the PDB id needed to be checked.
+        rcsb_data : dict or None
+            The data for the PDB ID from the RCSB API. If None, the data will be fetched.
+
+    Returns:
         True if the PDB file has ligands which can be ions/additatives, False otherwise.
     """
     if rcsb_data is not None:
@@ -374,18 +365,17 @@ def has_ligands(pdb: str, rcsb_data: dict | None = None) -> bool:
 
 def get_entity_ids(pdb_id: str, rcsb_data: dict | None = None) -> dict[str, list[str]]:
     r"""Get the entity IDs for a given PDB ID using the RCSB API.
-    Parameters
-    ----------
-    pdb_id : str
-        The PDB ID to retrieve the entity IDs for.
-    rcsb_data : dict or None
-        The data for the PDB ID from the RCSB API. If None, the data will be fetched.
-    Returns
-    -------
-    dict
+
+    Args:
+        pdb_id : str
+            The PDB ID to retrieve the entity IDs for.
+        rcsb_data : dict or None
+            The data for the PDB ID from the RCSB API. If None, the data will be fetched.
+
+    Returns:
         The entity IDs for the given PDB ID as a dictionary.
-        The keys are the entity type and the values are the entity numbers.
-    rcsb_data : dict or None
+            The keys are the entity type and the values are the entity numbers.
+
         The data for the PDB ID from the RCSB API. If None, the data will be fetched.
     """
     if rcsb_data is not None:
@@ -406,15 +396,14 @@ def get_entity_ids(pdb_id: str, rcsb_data: dict | None = None) -> dict[str, list
 
 def pdb_has_mutation(pdb_id: str, rcsb_data: dict | None = None) -> bool:
     r"""Check if a PDB file has mutations or not
-    Parameters
-    ----------
-    pdb : str
-        Path to the PDB file.
-    rcsb_data : dict or None
-        The data for the PDB ID from the RCSB API. If None, the data will be fetched.
-    Returns
-    -------
-    bool
+
+    Args:
+        pdb : str
+            Path to the PDB file.
+        rcsb_data : dict or None
+            The data for the PDB ID from the RCSB API. If None, the data will be fetched.
+
+    Returns:
         True if the PDB file has mutations, False otherwise.
     """
     if rcsb_data is not None:
@@ -442,15 +431,14 @@ def pdb_has_mutation(pdb_id: str, rcsb_data: dict | None = None) -> bool:
 
 def get_nonpolymer_names(pdb_id: str, rcsb_data: dict | None = None) -> list:
     r"""Get the names of the non-polymer entities in a PDB file.
-    Parameters
-    ----------
-    pdb_id : str
-        The PDB ID to retrieve the non-polymer entity names for.
-    rcsb_data : dict or None
-        The data for the PDB ID from the RCSB API. If None, the data will be fetched.
-    Returns
-    -------
-    list
+
+    Args:
+        pdb_id : str
+            The PDB ID to retrieve the non-polymer entity names for.
+        rcsb_data : dict or None
+            The data for the PDB ID from the RCSB API. If None, the data will be fetched.
+
+    Returns:
         The names of the non-polymer entities in the PDB file.
     """
     if rcsb_data is not None:
@@ -478,15 +466,14 @@ def validate_ligands(
     pdb: str, impurities: list | None = ProteinContext.get_current().impurities
 ) -> bool:
     r"""Validate the ligands from pdb id using the impurities list.
-    Parameters
-    ----------
-    pdb : str
-        The PDB ID to validate.
-    impurities : list or None
-        List of impurities to check against. Default is impurities from the ProteinContext.
-    Returns
-    -------
-    bool
+
+    Args:
+        pdb : str
+            The PDB ID to validate.
+        impurities : list or None
+            List of impurities to check against. Default is impurities from the ProteinContext.
+
+    Returns:
         True if the ligands are valid, False otherwise.
     """
     ligands = get_nonpolymer_names(pdb)
@@ -499,15 +486,14 @@ def validate_ligands(
 
 def validate_pdb(pdb_id: str) -> bool:
     r"""Validate a PDB file using the RCSB API.
-    Parameters
-    ----------
-    pdb_id : str
-        The PDB ID to validate.
-    Returns
-    -------
-    bool
+
+    Args:
+        pdb_id : str
+            The PDB ID to validate.
+
+    Returns:
         True if the PDB file is valid (i.e has ligand,
-        no covalent bond and no mutation), False otherwise.
+            no covalent bond and no mutation), False otherwise.
     """
     data = get_rcsb_data(pdb_id)
     if len(data) == 0:
@@ -531,13 +517,12 @@ def validate_pdb(pdb_id: str) -> bool:
 
 def get_ligand_names(pdb: str | TextIO) -> list:
     r"""Get the names of the ligands in a PDB file.
-    Parameters
-    ----------
-    pdb : str or file-like
-        Path to the PDB file or file-like object.
-    Returns
-    -------
-    list
+
+    Args:
+        pdb : str or file-like
+            Path to the PDB file or file-like object.
+
+    Returns:
         The names of the ligands in the PDB file.
     """
     _, ligand = separate_protein_ligand(pdb)
@@ -558,13 +543,12 @@ def get_ligand_names(pdb: str | TextIO) -> list:
 
 def get_smiles(ligand_resname: str | TextIO) -> dict[str, str]:
     r"""Get the SMILES string of a ligand from a PDB file.
-    Parameters
-    ----------
-    ligand_resname : str or file-like
-        The residue name of the ligand.
-    Returns
-    -------
-    str
+
+    Args:
+        ligand_resname : str or file-like
+            The residue name of the ligand.
+
+    Returns:
         The SMILES string of the ligand.
     """
     url = f"https://data.rcsb.org/rest/v1/core/chemcomp/{ligand_resname}"
@@ -597,14 +581,13 @@ def get_smiles(ligand_resname: str | TextIO) -> dict[str, str]:
 
 def map_genid_to_pdb(gene_ids: list[str]) -> list[dict]:
     r"""Map a list of gene IDs to PDB IDs using the UniProt ID Mapping API.
-    Parameters
-    ----------
-    gene_ids : list of str
-        The list of gene IDs to map.
-    Returns
-    -------
-        list of dict
-            The mapping of each gene ID to the PDB ID and other attributes.
+
+    Args:
+        gene_ids : list of str
+            The list of gene IDs to map.
+
+    Returns:
+        The mapping of each gene ID to the PDB ID and other attributes.
     """
     url = "https://rest.uniprot.org/idmapping/run"
     payload = {"from": "GeneID", "to": "UniProtKB", "ids": ",".join(gene_ids)}

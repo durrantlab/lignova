@@ -9,11 +9,11 @@ from loguru import logger
 from lignova.hdf5.pubchem import PubChemAPI
 
 
-def process_hdf5_file(hdf5_file_path: str):
+def process_hdf5_file(hdf5_file_path: str) -> None:
     r"""Process the HDF5 file.
-    Parameters:
-    ----------
-        hdf5_file_path (str): Path to the HDF5 file.
+
+    Args:
+        hdf5_file_path : Path to the HDF5 file.
     """
 
     # open hdf5 file
@@ -74,11 +74,11 @@ def process_hdf5_file(hdf5_file_path: str):
     logger.info(f"cids with no smiles: {len(list(set(no_smiles)))}")
 
 
-def complete_hdf5(hdf5_file_path: str):
+def complete_hdf5(hdf5_file_path: str) -> None:
     r"""Complete the HDF5 file.
-    Parameters:
-    ----------
-        hdf5_file_path (str): Path to the HDF5 file.
+
+    Args:
+        hdf5_file_path : Path to the HDF5 file.
     """
     try:
         # Open HDF5 file
@@ -126,9 +126,3 @@ def complete_hdf5(hdf5_file_path: str):
         logger.error(f"Value error (possibly from PubChemAPI): {e}")
     except Exception as e:
         logger.error(f"Unexpected error occurred: {e}")
-
-
-if __name__ == "__main__":
-    HDF5_FILEPATH = "../PubChem_data_edited.hdf5"
-    process_hdf5_file(HDF5_FILEPATH)
-    complete_hdf5(HDF5_FILEPATH)

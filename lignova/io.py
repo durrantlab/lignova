@@ -10,12 +10,11 @@ from loguru import logger
 
 def get_file_ext(file_path: str) -> str:
     r"""Get the file extension from a file path.
-    Parameters
-    ----------
-    file_path
-        Path to file.
-        Returns
-        -------
+
+    Args:
+        file_path : Path to file.
+
+    Returns:
         File extension.
     """
     return os.path.splitext(file_path)[-1]
@@ -28,19 +27,13 @@ def write_text(
 ) -> str:
     r"""General method to write text files.
 
-    Parameters
-    ----------
-    text
-        Text to write to file.
-    write_path
-        Path to write to file. If ``None``, then a ``NamedTemporaryFile`` will
-        be created instead.
-    file_ext
-        Specify the file extension if ``write_path`` is ``None``.
+    Args:
+        text : Text to write to file.
+        write_path : Path to write to file. If `None`, then a `NamedTemporaryFile` will
+            be created instead.
+        file_ext : Specify the file extension if `write_path` is `None`.
 
-    Returns
-    -------
-
+    Returns:
         Path to file that was just written.
     """
     if write_path is None:

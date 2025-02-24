@@ -40,8 +40,8 @@ from lignova.structure.utils import (
 
 def create_fasta_file(hdf5_file: str, fasta_file: str) -> None:
     r"""Create a FASTA file from the HDF5 file.
-    Parameters
-    ----------
+
+    Args:
     hdf5_file : str
         Path to the HDF5 file.
     fasta_file : str
@@ -73,14 +73,13 @@ def create_fasta_file(hdf5_file: str, fasta_file: str) -> None:
 
 def fasta_parser(fasta: str | TextIO, delimiter: str | None = None) -> list:
     r"""Parse FASTA files to get the protein ids
-    Parameters
-    ----------
+
+    Args:
     fasta : str |TextIO
         Path to the FASTA file.
     delimiter : str| None
         Delimiter to split the protein id from the FASTA header. Default is None.
-    Returns
-    -------
+    Returns:
     list
         List of protein ids.
     """
@@ -107,8 +106,8 @@ def fasta_parser(fasta: str | TextIO, delimiter: str | None = None) -> list:
 
 def pdb_validations(csvfilenames: str) -> None:
     r"""Validate the PDB files for the proteins in the CSV file.
-    Parameters
-    ----------
+
+    Args:
     csvfilenames : str
         Path to the CSV file containing the protein ids.
     """
@@ -167,14 +166,13 @@ def clean_cluster_files(cluster_filepath: str, valid_csvpath: str) -> None:
     """
     Clean the cluster file by removing the clusters with no raw
     no members and the clusters with invalid PDB ids.
-    Parameters
-    ----------
+
+    Args:
     cluster_filepath : str
         Path to the parsed mmseq cluster file.
     valid_csvpath : str
         Path to the csv mapping the gene ids to the valid PDB ids.
-    Returns
-    -------
+    Returns:
     None
     """
     # check if the cluster file exists
@@ -230,8 +228,8 @@ def clean_cluster_files(cluster_filepath: str, valid_csvpath: str) -> None:
 
 def make_protein_cluster_file(new_file: ParquetParser, cluster_csv: str) -> None:
     r"""Make a  parquet cluster file with the new lines.
-    Parameters
-    ----------
+
+    Args:
     new_file : ParquetParser
         Parquet object. if the file not found, it will be created.
     cluster_csv : str
@@ -272,12 +270,12 @@ def make_protein_cluster_file(new_file: ParquetParser, cluster_csv: str) -> None
 
 def hdf5_raw_file_parser(hdf5_file: str) -> tuple[dict, dict]:
     r"""Parse the HDF5 file to get the protein ids and the ligand ids.
-    Parameters
-    ----------
+
+    Args:
     hdf5_file : str
         Path to the HDF5 file.
-    Returns
-    -------
+
+    Returns:
     tuple
         Tuple of dictionaries containing the protein ids and the ligand ids.
     """
@@ -308,8 +306,8 @@ def add_compounds(
     overwrite: bool = True,
 ) -> None:
     r"""Add the compounds to the parquet file.
-    Parameters
-    ----------
+
+    Args:
     original_file : ParquetParser
         ParquetParser object of the original file.
     data_source : tuple
@@ -357,8 +355,8 @@ def make_ligand_cluster_file(
     initial_data: list | None = None,
 ) -> None:
     r"""Make a new Parquet file for the ligand clustering.
-    Parameters
-    ----------
+
+    Args:
     old_parquet : ParquetParser
         ParquetParser object of the old file.
     new_file_name : ParquetParser
@@ -492,8 +490,8 @@ def add_smiles_cluster(
     old_parquet: ParquetParser, similarity_cutoff: float, new_parquet: ParquetParser
 ):
     r"""Clustering smiles and Adding the smiles cluster to the parquet file.
-    Parameters
-    ----------
+
+    Args:
     old_parquet : ParquetParser
         ParquetParser object of the old file.
     similarity_cutoff : float
@@ -568,6 +566,7 @@ def add_smiles_cluster(
     new_parquet.write(final_result, new_parquet.schema)
 
 
+# TODO: Turn into a run function for CLI
 if __name__ == "__main__":
     HDF5_FILE = "../PubChem_data_edited.hdf5"
     FASTA_FILE = "../protein_sequences.fasta"

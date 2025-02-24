@@ -43,19 +43,15 @@ from lignova.structure.utils import (
 # and the RMSD values <= 2.5 Angstroms
 
 
-def get_pdb_ids_from_parquet(
-    file_path: str, schema: Optional[pa.schema] = None
-) -> list:
+def get_pdb_ids_from_parquet(file_path: str, schema: pa.schema | None = None) -> list:
     r"""
     Get the pdb ids from the parquet file
-    Parameters
-    ----------
-    file_path : str
-        The path to the parquet file
-    Returns
-    -------
-    pdb_ids : list
-        The list of pdb ids
+
+    Args:
+        file_path : The path to the parquet file
+
+    Returns:
+        The list of pdb ids.
     """
     if not os.path.exists(file_path):
         logger.error(f"The file {file_path} does not exist")
@@ -85,18 +81,15 @@ def extract_parquet_clusters(
 ) -> pd.DataFrame:
     r"""
     Read the parquet file containing the clustered protein and ligand information
-    Parameters
-    ----------
-    file_path : str
-        The path to the parquet file
-    pdb_id : str
-        The pdb id of the protein of interest
-    same_ligand_cluster : bool (default=True)
-        If true, only return the members in the same ligand cluster as the protein of interest
-        not only the same protein cluster
-    Returns
-    -------
-    members : pd.DataFrame
+
+    Args:
+        file_path : The path to the parquet file
+        pdb_id : The pdb id of the protein of interest
+        same_ligand_cluster : If true, only return the members in the same ligand cluster as the protein of interest
+            not only the same protein cluster
+
+    Returns:
+
         The dataframe containing the protein and ligand information
     """
     if not os.path.exists(file_path):
@@ -131,31 +124,24 @@ def parse_ligand_members(
     datatype: str = "pdb",
 ) -> pd.DataFrame | mda.Universe:
     r"""Parse the cluster members information to write the ligand file
-    Parameters
-    ----------
-    cluster_members : pd.DataFrame
-        The dataframe containing the information about the ligand members in the cluster
-        extracted from the parquet file
-    pdb_id : str
-        The pdb id of the protein of interest
-    output_path : str
-        The path to the output ligand file to be written
-    find_pdb_ligand : bool (default=False)
-        If true, we extract the crystallographic ligand from the pdb file
-        if false, we extract the pubchem ligand from the smiles string
-        and write it to the output file
-    input_dir : str | None (default=None)
-        The path to the directory containing the pdb files
-    water : bool (default=True)
-        If true, we remove the water molecules from the ligand file extracted from the pdb file
-    combine : bool (default=False)
-        If true, we combine PDB and PubChem ligands into one csv file
-    datatype : str (default="pdb")
-        The type of data to be written to the output file when find_pdb_ligand is True
-        if can be "pdb" or "panadas"
-    Returns
-    -------
-    ligand : pd.DataFrame | mda.Universe
+
+    Args:
+        cluster_members : The dataframe containing the information about the ligand members in the cluster
+            extracted from the parquet file
+        pdb_id : The pdb id of the protein of interest
+        output_path : str
+            The path to the output ligand file to be written
+        find_pdb_ligand : If true, we extract the crystallographic ligand from the pdb file
+            if false, we extract the pubchem ligand from the smiles string
+            and write it to the output file
+        input_dir : The path to the directory containing the pdb files
+        water : If true, we remove the water molecules from the ligand file extracted from the pdb file
+        combine : If true, we combine PDB and PubChem ligands into one csv file
+        datatype : The type of data to be written to the output file when find_pdb_ligand is True
+            if can be "pdb" or "panadas"
+
+    Returns:
+        TODO:
     """
     # split the cluster members into pdb and pubchem ligands
     all_pdb_ligands = cluster_members[
@@ -218,19 +204,14 @@ def parse_ligand_members(
     return ligand
 
 
-def get_pdb_coordinates(pdb_id: str, work_dir: str):
+def get_pdb_coordinates(pdb_id: str, work_dir: str) -> None:
     """
     This function takes a list of PDB IDs and downloads the PDB files to a specified directory
     if they pass the validation test. (no mutation, has ligand, no covalent bond, x-ray structures,)
-    Parameters
-    ----------
-    pdb_id : str|
-        The PDB ids to be downloaded
-    work_dir : str
-        The working directory where the PDB file will be downloaded.
-    Returns
-    -------
-    None.
+
+    Args:
+        pdb_id : The PDB ids to be downloaded
+        work_dir : The working directory where the PDB file will be downloaded.
     """
     current_dir = os.getcwd()
     protein = Protein()
@@ -271,17 +252,14 @@ def prep_ligands(
 ) -> PreparedLigand:
     r"""
     Prepare the ligands for docking
-    Parameters
-    ----------
-    ligand_file : pd.DataFrame | mda.Universe
-        The ligand data to be prepared
-    context : GlideContext | None
-        The context object with information about the preparation
-    file_name : str
-        The name of the file to be written
-    Returns
-    -------
-    PreparedLigand
+
+    Args:
+        ligand_file : The ligand data to be prepared
+        context : The context object with information about the preparation
+        file_name : The name of the file to be written
+
+    Returns:
+        TODO:
     """
     glide = Glide()
     if not os.path.exists(context.write_dir):
@@ -322,17 +300,14 @@ def prep_proteins(
 ) -> PreparedProtein:
     """
     Prepare the protein for docking
-    Parameters
-    ----------
-    pdb_file : str
-        The path to the pdb file
-    context : GlideContext
-        The context object with information about the preparation
-    lig_asl : str | None (default=None)
-        The ligand asl file to be used in the preparation i.e the ligand residue name
-    Returns
-    -------
-    PreparedProtein
+
+    Args:
+        pdb_file : The path to the pdb file
+        context : The context object with information about the preparation
+        lig_asl : The ligand asl file to be used in the preparation i.e the ligand residue name
+
+    Returns:
+        TODO:
     """
     temp_prot = Protein(file_path=pdb_file)
     if not os.path.exists(context.write_dir):
@@ -371,17 +346,17 @@ def dock_ligands(
 ) -> None:
     r"""
     Dock the ligands to the protein
-    Parameters
-    ----------
-    prepped_protein : PreparedProtein
-        The prepared protein to dock the ligand to
-    prepped_ligand : PreparedLigand
-        The prepared ligand to be docked
-    context : GlideContext
-        The context object with information about the docking
-    Returns
-    -------
-    DockedLigand
+
+    Args:
+        prepped_protein : PreparedProtein
+            The prepared protein to dock the ligand to
+        prepped_ligand : PreparedLigand
+            The prepared ligand to be docked
+        context : GlideContext
+            The context object with information about the docking
+
+    Returns:
+        TODO:
     """
     glide = Glide()
     if not os.path.exists(context.write_dir):
@@ -413,17 +388,17 @@ def run_combind(
 ) -> str:
     """
     Run the combind program to get the top poses
-    Parameters
-    ----------
-    docked_ligand : DockedLigand | list[DockedLigand]
-        The docked ligand to be scored
-    context : GlideContext
-        The context object with information about the scoring
-    screen : bool (default=false)
-        If true, we use combindVS to screen the ligands and generate features
-    Returns
-    -------
-    str
+
+    Args:
+        docked_ligand : DockedLigand | list[DockedLigand]
+            The docked ligand to be scored
+        context : GlideContext
+            The context object with information about the scoring
+        screen : bool (default=false)
+            If true, we use combindVS to screen the ligands and generate features
+
+    Returns:
+        TODO:
     """
     combind = Combind(
         command=context.command,
@@ -497,17 +472,17 @@ def get_top_combind_pose(
     combind_csv: str, glide_docking_file: DockedLigand, context: CombindContext
 ) -> DockedLigand:
     r"""Parse the combind docking results to get the top pose
-    Parameters
-    ----------
-    combind_csv : str
-        The path to the combind docking results CSV file
-    glide_docking_file : DockedLigand
-        The DockedLigand object containing the glide docking results
-    context : CombindContext
-        The context object with information about the combind docking
-    Returns
-    -------
-    DockedLigand
+
+    Args:
+        combind_csv : str
+            The path to the combind docking results CSV file
+        glide_docking_file : DockedLigand
+            The DockedLigand object containing the glide docking results
+        context : CombindContext
+            The context object with information about the combind docking
+
+    Returns:
+        TODO:
     """
     if not os.path.exists(context.work_dir):
         logger.warning(f"The directory {context.work_dir} does not exist.Creating it")
@@ -548,17 +523,17 @@ def extract_pdb_top_poses(
     combind_result: DockedLigand, context: CombindContext, pdb_lig: str | None = None
 ):
     r"""Parse the combind docking results top poses to get each complex in a separate file
-    Parameters
-    ----------
-    combind_result : DockedLigand
-        The DockedLigand object containing the combind docking results
-    context : CombindContext
-        The context object with information about the combind docking
-    pdb_lig : str | None (default=None)
-        The id of the pdb ligand to be extracted from the complex
-    Returns
-    -------
-    DockedLigand
+
+    Args:
+        combind_result : DockedLigand
+            The DockedLigand object containing the combind docking results
+        context : CombindContext
+            The context object with information about the combind docking
+        pdb_lig : str | None (default=None)
+            The id of the pdb ligand to be extracted from the complex
+
+    Returns:
+        TODO:
     """
     combind = Combind(
         command=context.command,
@@ -667,19 +642,19 @@ def calc_rmsd_spyrmsd(
 ):
     """
     Calculate the symmetry corrected RMSD between the reference and target ligands
-    Parameters
-    ----------
-    reference_file : DockedLigand
-        The object containing the reference complex i.e protein and ligand
-    target_file : DockedLigand
-        The object containing the target complex i.e protein and ligand
-    context : GlideContext
-        The context object with information about the pre calculation prossessing
-    ligand_name : str (default=None)
-        The name of the ligand to be extracted from the complex
-    Returns
-    -------
-    rmsd : float
+
+    Args:
+        reference_file : DockedLigand
+            The object containing the reference complex i.e protein and ligand
+        target_file : DockedLigand
+            The object containing the target complex i.e protein and ligand
+        context : GlideContext
+            The context object with information about the pre calculation prossessing
+        ligand_name : str (default=None)
+            The name of the ligand to be extracted from the complex
+
+    Returns:
+        TODO:
     """
     if not os.path.exists(reference_file.file_path):
         logger.error(f"The file {reference_file.file_path} does not exist")
@@ -760,6 +735,7 @@ def calc_rmsd_spyrmsd(
     return res
 
 
+# TODO: Remove this into a run function for CLI
 if __name__ == "__main__":
     start_time = time.time()
     PARQUET_FILENAME = "final_ligand_cluster_0.7_Tc.parquet"

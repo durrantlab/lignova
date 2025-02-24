@@ -26,17 +26,13 @@ class Structure(ABC):
         pdb_id: str | None = None,
     ) -> None:
         r"""Load structural data from a variety of sources.
-        Parameters
-        ----------
-        file_path
-            Path to file to load.
-        write
-            Keep structure in file and load when requested. If ``False``, this will
-            keep the structure in memory.
-        write_path
-            Path to write to file.
-        pdb_id
-            Four-letter code to load structure from RCSB.
+
+        Args:
+            file_path : Path to file to load.
+            write : Keep structure in file and load when requested. If ``False``, this will
+                keep the structure in memory.
+            write_path : Path to write to file.
+            pdb_id : Four-letter code to load structure from RCSB.
         """
         raise NotImplementedError()
 
@@ -46,15 +42,13 @@ class Prepared:
 
     def get_info(self, context):
         r"""This function gives information about the prepared structure.
-        Parameters
-        ----------
-        context
-            Context object with information about the preparation.
-        Returns
-        -------
-        dict
+
+        Args:
+            context : Context object with information about the preparation.
+
+        Returns:
             Dictionary with information about the preparation depending
-            on the type of structure.
+                on the type of structure.
         """
         prot_info = {
             "forcefield": context.forcefield,

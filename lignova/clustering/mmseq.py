@@ -25,29 +25,29 @@ def mmseqs_cluster(
 ) -> TextIO:
     """
     Cluster sequences using MMSeqs2 https://mmseqs.com/latest/userguide.pdf
-    Parameters
-    ----------
-    query_fasta : str| TextIO
-        Path to the query FASTA file.
-    reference_fasta : str| None
-        Path to the reference FASTA file. Default is None.
-    cluster_threshold : float
-        Cluster threshold. Default is 0.9.
-    sort : bool
-        Sort the output. Default is True.
-    coverage_mode : int
-        Coverage mode. Default is 0. See MMSeqs2 documentation for more details.
-    sensitivity : float
-        Sensitivity. Default is 7.0.
-    outfile_name_suffix : str
-        Suffix for the output file and path.
-        Default is "clusters" saved in the current working directory.
-    tmp_dir : str
-        Temporary directory. Default is "/tmp" saved in the current working directory.
-    cluster_mode : int
-        Cluster mode. Default is 0. See MMSeqs2 documentation for more details.
-    self_match : bool
-        Include self-matches. Default is True.
+
+    Args:
+        query_fasta : str| TextIO
+            Path to the query FASTA file.
+        reference_fasta : str| None
+            Path to the reference FASTA file. Default is None.
+        cluster_threshold : float
+            Cluster threshold. Default is 0.9.
+        sort : bool
+            Sort the output. Default is True.
+        coverage_mode : int
+            Coverage mode. Default is 0. See MMSeqs2 documentation for more details.
+        sensitivity : float
+            Sensitivity. Default is 7.0.
+        outfile_name_suffix : str
+            Suffix for the output file and path.
+            Default is "clusters" saved in the current working directory.
+        tmp_dir : str
+            Temporary directory. Default is "/tmp" saved in the current working directory.
+        cluster_mode : int
+            Cluster mode. Default is 0. See MMSeqs2 documentation for more details.
+        self_match : bool
+            Include self-matches. Default is True.
     """
     # check if the query and reference fasta files exist
     if not os.path.exists(query_fasta):
@@ -126,17 +126,15 @@ def mmseqs_parser(
 ) -> pd.DataFrame:
     """
     Parse MMSeq2 output TSV file.
-    Parameters
-    ----------
-    tsv_filename : str
-        Path to the MMSeq2 output TSV file.
-    save : bool
-        Save the parsed clusters to a file. Default is False.
-    save_filename : str
-       File Path to save the parsed clusters. Default is None.
-    Returns
-    -------
-    pd.DataFrame
+
+    Args:
+        tsv_filename : str
+            Path to the MMSeq2 output TSV file.
+        save : bool
+            Save the parsed clusters to a file. Default is False.
+        save_filename : str
+        File Path to save the parsed clusters. Default is None.
+    Returns:
         DataFrame containing the parsed MMSeq2 output.
 
     """

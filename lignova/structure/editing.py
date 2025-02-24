@@ -22,20 +22,15 @@ def select_water(
 ) -> mda.Universe:
     r"""Select specific water molecules from the structure.
 
-    Parameters
-    ----------
-    pdb
-        MDAnalysis universe to process or path to PDB file.
-    water_selection
-        Selection of water molecules to keep.
-        surface: Water molecules on the second hydration shell.
-            i.e 3.6 A from the ligand but not in direct contact with the protein. ()
-        interfacial: Water molecules on the first hydration shell.
-            i.e 3.6 A from the ligand and in direct contact with the protein.
-    ligand
-        Ligand to calculate the distance from.
-    water_distance
-        Distance to select water molecules. Default is 3.6 A.
+    Args:
+        pdb : MDAnalysis universe to process or path to PDB file.
+        water_selection : Selection of water molecules to keep.
+            surface: Water molecules on the second hydration shell.
+                i.e 3.6 A from the ligand but not in direct contact with the protein. ()
+            interfacial: Water molecules on the first hydration shell.
+                i.e 3.6 A from the ligand and in direct contact with the protein.
+        ligand : Ligand to calculate the distance from.
+        water_distance : Distance to select water molecules. Default is 3.6 A.
     """
     if isinstance(pdb, str):
         pdb = get_mda_universe(pdb)
@@ -68,12 +63,9 @@ def select_chains(
 ) -> mda.Universe:
     r"""Select specific chains.
 
-    Parameters
-    ----------
-    u
-        MDAnalysis universe to process.
-    chains
-        Chains to keep.
+    Args:
+        u : MDAnalysis universe to process.
+        chains : Chains to keep.
     """
     n_chains = len(set(mda_univ.segments.segids))
     logger.info("There are {} chains in the structure", n_chains)
@@ -93,12 +85,9 @@ def select_chains(
 def validate_chains(mda_univ: mda.Universe, chains: str | Iterable[str]) -> bool:
     r"""Validate chains.
 
-    Parameters
-    ----------
-    u
-        MDAnalysis universe to process.
-    chains
-        Chains to validate.
+    Args:
+        u : MDAnalysis universe to process.
+        chains : Chains to validate.
     """
     if isinstance(chains, str):
         chains = [chains]
@@ -114,12 +103,9 @@ def remove_residues(
 ) -> mda.Universe:
     r"""Remove residues from structure.
 
-    Parameters
-    ----------
-    u
-        MDAnalysis universe to process.
-    residues
-        types of residues to remove.
+    Args:
+        u : MDAnalysis universe to process.
+        residues : types of residues to remove.
     """
     if isinstance(residues, str):
         residues = [residues]
@@ -130,10 +116,8 @@ def remove_residues(
 def merge_universes(mda_univs: list) -> mda.Universe:
     r"""Merge multiple MDAnalysis universes.
 
-    Parameters
-    ----------
-    u
-        list of MDAnalysis universes to merge.
+    Args:
+        u : list of MDAnalysis universes to merge.
     """
 
     if isinstance(mda_univs, list) and len(mda_univs) > 1:
@@ -158,12 +142,9 @@ def select_residues(
 ) -> mda.Universe:
     r"""Select residues from structure.
 
-    Parameters
-    ----------
-    u
-        MDAnalysis universe to process.
-    residues
-        types of residues or the residues id to select.
+    Args:
+        u : MDAnalysis universe to process.
+        residues : types of residues or the residues id to select.
     """
     if isinstance(residues, str):
         residues = [residues]
@@ -182,10 +163,8 @@ def select_residues(
 def remove_hetatoms(mda_univ: mda.Universe) -> mda.Universe:
     r"""Remove hetero atoms.
 
-    Parameters
-    ----------
-    u
-        MDAnalysis universe to process.
+    Args:
+        u : MDAnalysis universe to process.
     """
     return mda_univ.select_atoms("not record_type HETATM")
 
@@ -195,12 +174,9 @@ def filter_hetatoms(
 ) -> mda.Universe:
     r"""Filter hetero atoms.
 
-    Parameters
-    ----------
-    u
-        MDAnalysis universe to process.
-    keep_het_chain
-        Chains to keep their HETATM and remove other HETATMs. Default is None.
+    Args:
+        u : MDAnalysis universe to process.
+        keep_het_chain : Chains to keep their HETATM and remove other HETATMs. Default is None.
     """
     if keep_het_chain is None:
         return mda_univ.select_atoms("record_type HETATM")
@@ -215,12 +191,9 @@ def filter_hetatoms(
 def find_common_atoms(mda_univ1: mda.Universe, mda_univ2: mda.Universe) -> Iterable:
     r"""Find common atoms between two MDAnalysis universes.
 
-    Parameters
-    ----------
-    u1
-        MDAnalysis universe to process.
-    u2
-        MDAnalysis universe to process.
+    Args:
+        u1 : MDAnalysis universe to process.
+        u2 : MDAnalysis universe to process.
 
     """
     # Get the atom types for each ligand
@@ -235,12 +208,9 @@ def find_common_atoms(mda_univ1: mda.Universe, mda_univ2: mda.Universe) -> Itera
 def select_common_atoms(mda_univ: mda.Universe, common_atoms: Iterable) -> mda.Universe:
     r"""Select common atoms.
 
-    Parameters
-    ----------
-    u
-        MDAnalysis universe to process.
-    common_atoms
-        types of atoms to select.
+    Args:
+        u : MDAnalysis universe to process.
+        common_atoms : types of atoms to select.
     """
     selection = " or ".join([f"name {atom}" for atom in common_atoms])
     return mda_univ.select_atoms(selection)
@@ -249,39 +219,32 @@ def select_common_atoms(mda_univ: mda.Universe, common_atoms: Iterable) -> mda.U
 def write_mda_universe(mda_univ: mda.Universe, file_path: str) -> TextIO:
     r"""Write MDAnalysis universe to file.
 
-    Parameters
-    ----------
-    u
-        MDAnalysis universe to process.
-    file_path
-        File to write to.
+    Args:
+        u : MDAnalysis universe to process.
+        file_path : File to write to.
     """
     return mda_univ.write(file_path)
 
 
-def read_cif(file_path: str) -> "gemmi.Structure":  # Use string annotation
+def read_cif(file_path: str) -> "gemmi.Structure":
     r"""Read CIF file.
-    Parameters
-    ----------
-    file_path
-        Path to CIF file.
-    Returns
-    -------
-    gemmi.Structure
+
+    Args:
+        file_path : Path to CIF file.
+
+    Returns:
         Structure object.
     """
     # pylint: disable=c-extension-no-member
     return gemmi.read_structure(file_path)
 
 
-def convert_cif2pdb(file_path: str, write_path: str):
+def convert_cif2pdb(file_path: str, write_path: str) -> None:
     r"""Convert CIT file to PDB file
-    Parameters
-    ----------
-    file_path
-        Path to cif file.
-    write_path
-        Path to write PDB file.
+
+    Args:
+        file_path : Path to cif file.
+        write_path : Path to write PDB file.
     """
     # pylint: disable=c-extension-no-member
     cif_structure = read_cif(file_path)

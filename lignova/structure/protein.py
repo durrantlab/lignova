@@ -18,13 +18,11 @@ class Protein(Structure):
     @staticmethod
     def get_pdb_from_rcsb(pdb_id: str) -> str:
         r"""Download a PDB file from the RCSB PDB database.
-        Parameters
-        ----------
-        pdb_id
-            PDB ID of the protein to download.
-        Returns
-        -------
-        str of PDB file
+
+        Args:
+            pdb_id : PDB ID of the protein to download.
+
+        Returns:
             The PDB file as a string.
         """
         pdb_url = f"https://files.rcsb.org/download/{pdb_id}.pdb"
@@ -52,15 +50,12 @@ class Protein(Structure):
         self, pdb_id: str, write: bool = False, write_path: None | str = None
     ) -> None:
         r"""Load structural information for a protein from RCSB.
-        Parameters
-        ----------
-        pdb_id
-            PDB ID to load structure from RCSB.
-        write
-            Keep structure in file and load when requested. If ``False``, this will
-            keep the structure in memory.
-        write_path
-            Path to write to file
+
+        Args:
+            pdb_id : PDB ID to load structure from RCSB.
+            write : Keep structure in file and load when requested. If ``False``, this will
+                keep the structure in memory.
+            write_path : Path to write to file
         """
         pdb_text = Protein.get_pdb_from_rcsb(pdb_id)
         if write:
@@ -87,18 +82,13 @@ class Protein(Structure):
     ) -> None:
         r"""Load structural information for a protein.
 
-        Parameters
-        ----------
-        file_path
-            Path to file to load.
-        write
-            Keep structure in file and load when requested. If ``False``, this will
-            keep the structure in memory.
-        write_path
-            Path to write to file. If ``None``, then a ``NamedTemporaryFile`` will
-            be created instead.
-        pdb_id
-            Four-letter code to load structure from RCSB.
+        Args:
+            file_path : Path to file to load.
+            write : Keep structure in file and load when requested. If ``False``, this will
+                keep the structure in memory.
+            write_path : Path to write to file. If ``None``, then a ``NamedTemporaryFile`` will
+                be created instead.
+            pdb_id : Four-letter code to load structure from RCSB.
         """
         if file_path is not None:
             self.file_path = file_path

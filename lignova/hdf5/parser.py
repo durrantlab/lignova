@@ -14,8 +14,7 @@ from .files import FormatManager
 class HDF5Parser(FormatManager):
     r"""Class for parsing HDF5 files.
 
-    Parameters:
-    ----------
+    Args:
         file_path (str): Path to the HDF5 file.
 
     Attributes:
@@ -29,12 +28,12 @@ class HDF5Parser(FormatManager):
 
     def read(self, path: str) -> np.ndarray | List[np.ndarray]:
         r"""Read a dataset or a group from the HDF5 file.
-            Parameters:
-        ----------
+
+        Args:
             path: str
                 Path to the dataset or group to read.
+
         Returns:
-        ----------
             np.ndarray | List[np.ndarray]: Data from the dataset or group.
         """
 
@@ -55,8 +54,7 @@ class HDF5Parser(FormatManager):
     def write(self, data: np.ndarray | List[np.ndarray], data_scheme: str) -> None:
         r"""Write data to the HDF5 file.
 
-        Parameters:
-        ----------
+        Args:
             data : np.ndarray | List[np.ndarray]
                 Data to write. If the dataset already exists, the data will be appended to the dataset.
             data_scheme : str
@@ -81,13 +79,11 @@ class HDF5Parser(FormatManager):
     def read_attributes(self, dataset: str) -> Tuple[dict, dict]:
         r"""Read attributes from the dataset.
 
-        Parameters:
-        ----------
+        Args:
             dataset : str
                 Name of the dataset to read attributes from.
 
         Returns:
-        ----------
             Tuple[dict, dict]: Tuple containing attributes and their values.
         """
         # check if the file exists
@@ -105,8 +101,7 @@ class HDF5Parser(FormatManager):
     def write_attributes(self, dataset: str, attributes: dict) -> None:
         r"""Write attributes to the dataset.
 
-        Parameters:
-        ----------
+        Args:
             dataset : str
                 Name of the dataset to write attributes to i.e. the group.
                 If the dataset does not exist, it will be created.
@@ -152,13 +147,13 @@ class HDF5Parser(FormatManager):
     def is_path_valid(self, path):
         r"""Check if the path exists in the HDF5 file.
         Note that this is a recursive function. Thus takes a long time to run on large files.
-        Parameters:
-        ----------
+
+        Args:
             path: str
                 Path to check in the HDF5 file.
+
         Returns:
-        ----------
-            bool: True if the path exists in the HDF5 file, False otherwise.
+            True if the path exists in the HDF5 file, False otherwise.
         """
         valid_path = False
 

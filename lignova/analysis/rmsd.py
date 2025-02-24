@@ -29,14 +29,14 @@ class RMSD:
     ):
         r"""Initialize RMSD class.
 
-        Parameters
-        ----------
-        ligand: Iterable[DockedLigand] | DockedLigand
-            Docked ligand(s) Object that will be analyzed.
-        reference: Iterable[Protein] | Protein
-            Reference ligand(s) in a Protein object that will be used for comparison.
-        context: GlideContext object
-            Docking context.
+
+        Args:
+            ligand: Iterable[DockedLigand] | DockedLigand
+                Docked ligand(s) Object that will be analyzed.
+            reference: Iterable[Protein] | Protein
+                Reference ligand(s) in a Protein object that will be used for comparison.
+            context: GlideContext object
+                Docking context.
         """
         self.ligand = ligand
         self.reference = reference
@@ -44,15 +44,12 @@ class RMSD:
 
     def rmsd_mda(self, selection: str = "not resname HOH") -> Iterable[float]:
         r"""Calculate RMSD between docked ligand and reference ligand using MDAnalysis.
-        Parameters
-        ----------
-        selection : str
-            Atom selection language for RMSD calculations.
-            Default is "record_type HETATM and not resname HOH".
 
-        Returns
-        -------
-        List[float]
+        Args:
+            selection : Atom selection language for RMSD calculations.
+                Default is "record_type HETATM and not resname HOH".
+
+        Returns:
             List of RMSD values for each frame in the trajectory.
         """
         # check if the ligand is pdb or maegz
@@ -139,16 +136,16 @@ class RMSD:
         """Calculate RMSD between reference and target file using OpenBabel,
         taking into account the symmetry of the molecules.
 
-        Parameters
-        ----------
-        firstonly : bool
-            Only calculate the RMSD for the first structure in the reference file. Default is True.
-        save : bool
-            Write the RMSD to a txt file. Default is False.
-        minimize : bool
-            Compute minimum RMSD. Default is False.
-        output_filename : str | TextIO | None
-            Output file name if csv is true. Default is None.
+
+        Args:
+            firstonly : bool
+                Only calculate the RMSD for the first structure in the reference file. Default is True.
+            save : bool
+                Write the RMSD to a txt file. Default is False.
+            minimize : bool
+                Compute minimum RMSD. Default is False.
+            output_filename : str | TextIO | None
+                Output file name if csv is true. Default is None.
         """
         command = ["obrms", "-x"]
         if firstonly:
@@ -199,14 +196,14 @@ class RMSD:
     ):
         r"""Calculate RMSD between reference and target file using Spyrmsd,
         taking into account the symmetry of the molecules.
-        Parameters
-        ----------
-        symmetry : bool
-            Use symmetry information. Default is True.
-        hydrogens : bool
-            Include hydrogens in the calculation. Default is False.
-        superimpose : bool
-            Superimpose the molecules. Default is False. (i.e perform in-place RMSD)
+
+        Args:
+            symmetry : bool
+                Use symmetry information. Default is True.
+            hydrogens : bool
+                Include hydrogens in the calculation. Default is False.
+            superimpose : bool
+                Superimpose the molecules. Default is False. (i.e perform in-place RMSD)
         """
         # python -m spyrmsd -m -n [self.reference.file_path, self.ligand.file_path
         command = ["python", "-m", "spyrmsd"]

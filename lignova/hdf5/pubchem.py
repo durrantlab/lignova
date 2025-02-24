@@ -9,12 +9,10 @@ from loguru import logger
 class PubChemAPI:
     r"""Class for parsing PubChem API.
 
-    Parameters:
-    ----------
+    Args:
         api_key (str): PubChem API key.
 
     Attributes:
-    ----------
         api_key (str): PubChem API key.
         format (str): Data format (JSON).
 
@@ -31,15 +29,13 @@ class PubChemAPI:
     def get_cids_info(self, cid: int, properties: list) -> dict:
         r"""Get compound information from PubChem API.
 
-        Parameters:
-        ----------
+        Args:
             cid : int
                 PubChem Compound ID.
             properties : list
                 List of properties to retrieve.
 
         Returns:
-        ----------
             dict: Compound information.
         """
         if len(properties) == 0:
@@ -74,14 +70,13 @@ class PubChemAPI:
     def get_binding_affinity(self, aid: int, cid: list[int]) -> dict:
         r"""Get binding affinity information from PubChem API.
 
-        Parameters:
-        ----------
+        Args:
             aid : int
                 PubChem Assay ID.
             cid : List[int]
                 List of PubChem Compound IDs.
+
         Returns:
-        ----------
             dict: Binding affinity information.
         """
         url = f"{self.api_key}/assay/aid/{str(aid)}/concise/{self.retrieve_format}"

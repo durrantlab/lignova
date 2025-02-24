@@ -27,14 +27,10 @@ class Ligand(Structure):
     ) -> None:
         r"""Load structural information for a ligand.
 
-        Parameters
-          ----------
-             file_path : str | None
-                 Path to ligand file.
-             write_path : str | None
-                 Path to write the ligand file to disk.
-             pdb_id : str | None
-                 PDB ID of ligand to download.
+        Args:
+            file_path : Path to ligand file.
+            write_path : Path to write the ligand file to disk.
+            pdb_id : PDB ID of ligand to download.
         """
         if file_path is not None:
             # read in file
