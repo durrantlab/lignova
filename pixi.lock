@@ -697,6 +697,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomlkit-0.13.2-pyha770c72_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/twine-5.1.1-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/types-requests-2.32.0.20241016-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing-extensions-4.12.2-hd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.12.2-pyha770c72_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2024b-hc8b5060_0.conda
@@ -971,6 +972,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomlkit-0.13.2-pyha770c72_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/twine-5.1.1-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/types-requests-2.32.0.20241016-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing-extensions-4.12.2-hd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.12.2-pyha770c72_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2024b-hc8b5060_0.conda
@@ -8494,6 +8496,30 @@ packages:
 - kind: conda
   name: mmseqs2
   version: 16.747c6
+  build: pl5321h8b377d6_1
+  build_number: 1
+  subdir: osx-64
+  url: https://conda.anaconda.org/bioconda/osx-64/mmseqs2-16.747c6-pl5321h8b377d6_1.tar.bz2
+  sha256: 21d78bee6dc788e6b9b378faac0e9d89e50bc46048ed73fc0f9cc95aefed3753
+  md5: 458c326fbf225f64300a9aa1a8d8684a
+  depends:
+  - aria2
+  - bzip2 >=1.0.8,<2.0a0
+  - gawk
+  - libcxx >=18
+  - libzlib >=1.3.1,<2.0a0
+  - llvm-openmp >=18.1.8
+  - llvm-openmp >=19.1.5
+  - perl >=5.32.1,<5.33.0a0 *_perl5
+  - wget
+  - zlib
+  license: MIT
+  purls: []
+  size: 4081658
+  timestamp: 1733856297128
+- kind: conda
+  name: mmseqs2
+  version: 16.747c6
   build: pl5321hd6d6fdc_1
   build_number: 1
   subdir: linux-64
@@ -8512,6 +8538,30 @@ packages:
   - wget
   - zlib
   license: MIT
+  size: 116867456
+  timestamp: 1733852345499
+- kind: conda
+  name: mmseqs2
+  version: 16.747c6
+  build: pl5321hd6d6fdc_1
+  build_number: 1
+  subdir: linux-64
+  url: https://conda.anaconda.org/bioconda/linux-64/mmseqs2-16.747c6-pl5321hd6d6fdc_1.tar.bz2
+  sha256: bf4e408186397515c651cd8f201523a8f2bab38d6145c0ca63c1b3afc358c944
+  md5: fc54b260b9f3790b12bc03883c7508d2
+  depends:
+  - _openmp_mutex >=4.5
+  - aria2
+  - bzip2 >=1.0.8,<2.0a0
+  - gawk
+  - libgcc >=13
+  - libstdcxx >=13
+  - libzlib >=1.3.1,<2.0a0
+  - perl >=5.32.1,<5.33.0a0 *_perl5
+  - wget
+  - zlib
+  license: MIT
+  purls: []
   size: 116867456
   timestamp: 1733852345499
 - kind: conda
@@ -11900,6 +11950,24 @@ packages:
   - pkg:pypi/twine?source=hash-mapping
   size: 33938
   timestamp: 1719431080574
+- kind: conda
+  name: types-requests
+  version: 2.32.0.20241016
+  build: pyhd8ed1ab_1
+  build_number: 1
+  subdir: noarch
+  noarch: python
+  url: https://conda.anaconda.org/conda-forge/noarch/types-requests-2.32.0.20241016-pyhd8ed1ab_1.conda
+  sha256: 9f51f64ff6ac687345d630ebc9832597b3de982b7722083e1a95e860444de959
+  md5: 1267a1ede84d862fb1198b933458a3c1
+  depends:
+  - python >=3.9
+  - urllib3 >=2
+  license: Apache-2.0 AND MIT
+  purls:
+  - pkg:pypi/types-requests?source=hash-mapping
+  size: 26239
+  timestamp: 1733275158937
 - kind: conda
   name: typing-extensions
   version: 4.12.2

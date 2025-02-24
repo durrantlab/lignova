@@ -46,6 +46,7 @@ bump-my-version = ">=0.28.1,<0.29"
 pytest = ">=8.3.3,<9"
 pytest-cov = ">=6.0.0,<7"
 coverage = ">=7.6.4,<8"
+types-requests = ">=2.32.0.20241016,<3"
 
 [feature.dev.tasks]
 mdlint = { cmd = ["markdownlint-cli2", '"**/*.{md,markdown}"', "--fix", "--config", ".markdownlint.yaml", "||", "true"] }
