@@ -1,7 +1,5 @@
 r"""Implementation for different Schrodinger's suplementary functions."""
 
-from typing import Union
-
 import glob
 import os
 import subprocess
@@ -14,8 +12,8 @@ from ..docking.contexts import GlideContext
 def manipulate_complexes(
     input_file: str,
     context: str = GlideContext.get_current(),
-    outfile_name: Union[None, str] = "manipulate_outp.maegz",
-    mode: Union[None, str] = "merge",
+    outfile_name: None | str = "manipulate_outp.maegz",
+    mode: None | str = "merge",
 ):
     r"""Convert docking file to complexes format and saving in write_dir.
     Parameters

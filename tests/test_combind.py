@@ -1,17 +1,15 @@
+r"""Test the Combind class & its methods."""
+
 import csv
-import glob
 import os
-import shutil
 
 import numpy as np
-import pytest
 
 from lignova.docking.combind import Combind
 from lignova.docking.contexts.combind import CombindContext
 
 # Ensures we execute from file directory (for relative paths).
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
-#    "docking_results_path": "/home/mma121/PubChem_small/try_schrodinger/lignova/tests/tmp/6oav/6oav_A_M3A_lig_docking_pv.maegz",
 
 context_protein_6Oav = {
     "id": "6OAV",
@@ -25,6 +23,7 @@ context_protein_6Oav = {
 
 
 def prep_dirs():
+    r"""Prepare directories for writing files."""
     os.makedirs(context_protein_6Oav["write_dir"])
 
 
@@ -33,6 +32,7 @@ if not os.path.exists(context_protein_6Oav["write_dir"]):
 
 
 def test_combindcontext():
+    r"""Test the CombindContext class to check if the necessary virtual environment is set correctly."""
     combind = CombindContext.get_current()
     assert combind.command == "/home/mma121/PubChem_small/combind"
     assert combind.work_dir == context_protein_6Oav["write_dir"]
@@ -41,6 +41,7 @@ def test_combindcontext():
 
 
 def test_featurize():
+    r"""Test the featurize method of the Combind class."""
     context = CombindContext.get_current()
     combind = Combind(
         command=context.command,
@@ -68,6 +69,7 @@ def test_featurize():
 
 
 def test_select_pose():
+    r"""Test the select_pose method of the Combind class."""
     context = CombindContext.get_current()
     combind = Combind(
         command=context.command,
@@ -81,11 +83,13 @@ def test_select_pose():
             context_protein_6Oav["write_dir"], "6oav_m3a_features"
         ),
     )
-    with open(context_protein_6Oav["ref_csv_file"], "r") as file:
+    with open(context_protein_6Oav["ref_csv_file"], "r", encoding="utf-8") as file:
         reader = csv.DictReader(file)
         ref_csv = list(reader)
     with open(
-        os.path.join(context_protein_6Oav["write_dir"], "6oav_m3a.csv"), "r"
+        os.path.join(context_protein_6Oav["write_dir"], "6oav_m3a.csv"),
+        "r",
+        encoding="utf-8",
     ) as file:
         reader = csv.DictReader(file)
         test_csv = list(reader)
@@ -96,6 +100,7 @@ def test_select_pose():
 
 
 def test_get_3d_top_pose():
+    r"""Test the get_3d_top_pose method of the Combind class."""
     context = CombindContext.get_current()
     combind = Combind(
         command=context.command,
@@ -114,6 +119,7 @@ def test_get_3d_top_pose():
 
 
 def test_compute_combind_score():
+    r"""Test the compute_combind_score method of the Combind class."""
     context = CombindContext.get_current()
     combind = Combind(
         command=context.command,
@@ -133,6 +139,7 @@ def test_compute_combind_score():
 
 
 def test_apply_combind_score():
+    r"""Test the apply_combind_score method of the Combind class."""
     context = CombindContext.get_current()
     combind = Combind(
         command=context.command,
@@ -164,6 +171,7 @@ def test_apply_combind_score():
 
 
 def test_extract_data_csv():
+    r"""Test the extract_data_csv method of the Combind class."""
     context = CombindContext.get_current()
     combind = Combind(
         command=context.command,

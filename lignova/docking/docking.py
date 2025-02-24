@@ -1,7 +1,5 @@
 r"""Implements the Docking class."""
 
-from typing import Union
-
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 
@@ -17,9 +15,9 @@ class Docking(ABC):
     def run(
         self,
         target: PreparedProtein,
-        ligand: Union[Iterable[PreparedLigand], PreparedLigand],
-        context: Union[GlideContext, None],
-    ) -> Union[Iterable[DockedLigand], DockedLigand]:
+        ligand: Iterable[PreparedLigand] | PreparedLigand,
+        context: GlideContext | None,
+    ) -> Iterable[DockedLigand] | DockedLigand:
         r"""Dock one or multiple ligands to a single target.
 
         Parameters

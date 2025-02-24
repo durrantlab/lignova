@@ -1,6 +1,7 @@
+r"""Test the docking analysis module for calculating RMSD."""
+
 import os
 
-import pytest
 from loguru import logger
 
 from lignova.analysis.rmsd import RMSD
@@ -9,11 +10,12 @@ from lignova.analysis.utils import (
     obabel_convert,
     obabel_result_parser,
 )
-from lignova.docking import Glide
 from lignova.docking.contexts import GlideContext
 from lignova.docking.utils import manipulate_complexes
+from lignova.structure.editing import write_mda_universe
 from lignova.structure.ligand import DockedLigand
 from lignova.structure.protein import Protein
+from lignova.structure.utils import separate_protein_ligand
 
 # Ensures we execute from file directory (for relative paths).
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -29,6 +31,7 @@ context_protein_6Oav = {
 
 
 def prep_dirs():
+    r"""Prepare directories for writing files."""
     os.makedirs(context_protein_6Oav["write_dir"])
 
 
@@ -36,12 +39,19 @@ if not os.path.exists(context_protein_6Oav["write_dir"]):
     prep_dirs()
 
 
+if not os.path.exists(context_protein_6Oav["write_dir"]):
+    prep_dirs()
+
+
+context = GlideContext.get_current()
+context.write_dir = context_protein_6Oav["write_dir"]
+context.set_current(context)
+
+
 # get the complex for the docking file
 # manipulate_complexes(context_protein_6Oav["docked_ligand_filepath"])
 def test_manipulate_complexes():
-    context = GlideContext.get_current()
-    context.write_dir = context_protein_6Oav["write_dir"]
-    context.set_current(context)
+    r"""Test the manipulation of complexes as it is used in the rmsd calculation functions."""
     manipulate_complexes(
         context_protein_6Oav["docked_ligand_filepath"],
         context=context,
@@ -53,30 +63,8 @@ def test_manipulate_complexes():
     )
 
 
-if not os.path.exists(context_protein_6Oav["write_dir"]):
-    prep_dirs()
-
-"""
-# convert pdb to mae using the convert_to_mae function in glide.py
-protein = Protein(context_protein_6Oav["file_path"])
-protein.load(file_path=context_protein_6Oav["file_path"])
-glide = Glide()
-"""
-context = GlideContext.get_current()
-
-"""
-def test_rmsd():
-    ligand = DockedLigand(context_protein_6Oav["docked_ligand_filepath"])
-    reference = Protein(os.path.join(context_protein_6Oav["write_dir"], "6oav.mae"))
-    rmsd = RMSD(ligand, reference, context)
-    output_filename = os.path.join(
-        context_protein_6Oav["write_dir"], "6oav_m3a_rmsd"
-    )
-    rmsd.rmsd_schrodinger(output_filename)
-"""
-
-
 def test_interconvert_mae_sdf():
+    r"""Test the interconversion of MAE to SDF."""
     # Call the interconvert_mae_sdf function
     interconvert_mae_sdf(
         test_file=context_protein_6Oav["docked_ligand_filepath"],
@@ -90,7 +78,15 @@ def test_interconvert_mae_sdf():
     )
 
 
+def test_obabel_convert():
+    r"""Test the conversion of file formats using Open Babel."""
+    output_filename = os.path.join(context_protein_6Oav["write_dir"], "6oav.sdf")
+    obabel_convert(context_protein_6Oav["file_path"], output_filename)
+    assert os.path.exists(os.path.join(context_protein_6Oav["write_dir"], "6oav.sdf"))
+
+
 def test_rmsd_mda():
+    r"""Test the RMSD calculation using MDAnalysis."""
     ligand = DockedLigand(context_protein_6Oav["docked_ligand_filepath"])
     reference = Protein(context_protein_6Oav["file_path"])
     # Create an instance of the RMSD class
@@ -103,6 +99,7 @@ def test_rmsd_mda():
 
 
 def test_rmsd_obabel():
+    r"""Test the RMSD calculation using Open Babel."""
     ligand = DockedLigand(
         os.path.join(
             context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv_complexes.pdb"
@@ -120,11 +117,12 @@ def test_rmsd_obabel():
     output_filename = os.path.join(
         context_protein_6Oav["write_dir"], "6oav_m3a_rmsd_obabel"
     )
-    values = rmsd.rmsd_obabel(output_filename=output_filename, save=True)
+    _ = rmsd.rmsd_obabel(output_filename=output_filename, save=True)
     assert os.path.exists(output_filename + ".txt")
 
 
 def test_obabel_parser():
+    r"""Test the Open Babel result parser."""
     ligand = DockedLigand(
         os.path.join(
             context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv_complexes.pdb"
@@ -143,13 +141,11 @@ def test_obabel_parser():
     values = obabel_result_parser(res)
     print(values)
     assert isinstance(values, dict)
-    assert list(values.values()) == [0.0]
+    assert list(values.values()) == [[0.0]]
 
 
 def test_manipulate_complexes_lig_sep():
-    context = GlideContext.get_current()
-    context.write_dir = context_protein_6Oav["write_dir"]
-    context.set_current(context)
+    r"""Test the manipulation of complexes to split ligand."""
     manipulate_complexes(
         context_protein_6Oav["complexes_filepath"],
         context=context,

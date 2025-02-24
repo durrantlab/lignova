@@ -5622,7 +5622,6 @@ packages:
   - liblapacke 3.9.0 26_linux64_openblas
   - blas * openblas
   license: BSD-3-Clause
-  license_family: BSD
   purls: []
   size: 16393
   timestamp: 1734432564346
@@ -5644,7 +5643,6 @@ packages:
   - blas * openblas
   - liblapacke 3.9.0 26_osx64_openblas
   license: BSD-3-Clause
-  license_family: BSD
   purls: []
   size: 16611
   timestamp: 1734432938741
@@ -5859,7 +5857,6 @@ packages:
   - liblapacke 3.9.0 26_linux64_openblas
   - blas * openblas
   license: BSD-3-Clause
-  license_family: BSD
   purls: []
   size: 16336
   timestamp: 1734432570482
@@ -5879,7 +5876,6 @@ packages:
   - blas * openblas
   - liblapacke 3.9.0 26_osx64_openblas
   license: BSD-3-Clause
-  license_family: BSD
   purls: []
   size: 16579
   timestamp: 1734432954376
@@ -5985,7 +5981,6 @@ packages:
   - __glibc >=2.17,<3.0.a0
   - libgcc >=13
   license: MIT
-  license_family: MIT
   purls: []
   size: 72255
   timestamp: 1734373823254
@@ -6000,7 +5995,6 @@ packages:
   depends:
   - __osx >=10.13
   license: MIT
-  license_family: MIT
   purls: []
   size: 69309
   timestamp: 1734374105905
@@ -6688,7 +6682,6 @@ packages:
   - liblapacke 3.9.0 26_linux64_openblas
   - blas * openblas
   license: BSD-3-Clause
-  license_family: BSD
   purls: []
   size: 16338
   timestamp: 1734432576650
@@ -6708,7 +6701,6 @@ packages:
   - blas * openblas
   - liblapacke 3.9.0 26_osx64_openblas
   license: BSD-3-Clause
-  license_family: BSD
   purls: []
   size: 16588
   timestamp: 1734432968940
@@ -8224,7 +8216,6 @@ packages:
   - python >=3.9
   - pyyaml >=5.1
   license: MIT
-  license_family: MIT
   purls:
   - pkg:pypi/mkdocs-get-deps?source=hash-mapping
   size: 14757

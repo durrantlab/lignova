@@ -1,6 +1,6 @@
-import os
+r"""Test PubChem API."""
 
-from loguru import logger
+import os
 
 from lignova.hdf5.pubchem import PubChemAPI
 

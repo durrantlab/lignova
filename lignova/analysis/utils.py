@@ -1,6 +1,6 @@
 """Implementation of utility functions for the analysis module."""
 
-from typing import TextIO, Union
+from typing import TextIO
 
 import os
 import subprocess
@@ -11,20 +11,20 @@ from ..docking.contexts import GlideContext
 
 
 def interconvert_mae_sdf(
-    test_file: Union[str, TextIO],
+    test_file: str | TextIO,
     output_filename: str,
-    ntruct: Union[int, str, None] = None,
+    ntruct: int | str | None = None,
     context: GlideContext = GlideContext.get_current(),
 ):
     r"""Convert ligand(s) to SDF format.
 
     Parameters
     ----------
-    test_file : Union[str, TextIO]
+    test_file :  str| TextIO
         Test file name or file object.
     output_filename : str
         Output file name.
-    ntruct : Union[int, str, None]
+    ntruct :  int| str| None
         Number of structures to convert. Default 1:5 i.e the first 5 structures.
     context : GlideContext
         Docking context to run the command.
@@ -86,12 +86,12 @@ def interconvert_mae_sdf(
         raise e
 
 
-def obabel_convert(test_file: Union[str, TextIO], output_filename: str):
+def obabel_convert(test_file: str | TextIO, output_filename: str):
     """Convert ligand(s) from MAE format to SDF format using obabel.
 
     Parameters
     ----------
-    test_file : Union[str, TextIO]
+    test_file :  str| TextIO
         Test file name or file object.
     output_filename : str
         Output file name.
@@ -120,10 +120,9 @@ def obabel_convert(test_file: Union[str, TextIO], output_filename: str):
         raise e
 
 
-# TODO:FIX THIS SO IT DOENS'T LOOK FOR A MINIMUM VALUE MAYBE?
 def obabel_result_parser(output):
     """
-    Parses the output from the obabel command and returns the minimum value found per line.
+    Parses the output from the obabel command and returns the numeric values found per line.
 
     Parameters
     ----------
@@ -133,27 +132,27 @@ def obabel_result_parser(output):
     -------
     dict
         A dictionary where the keys are arbitrary numbers (1, 2, 3, ...)
-        and the values are the minimum values found per line.
+        and the values are lists of numeric values found per line.
     """
     # Split the output into lines
     lines = output.strip().split("\n")
 
-    # Initialize a dictionary to store the minimum values per line
-    min_values = {}
+    # Initialize a dictionary to store the numeric values per line
+    values = {}
 
     # Iterate through each line and extract the numeric values
     for i, line in enumerate(lines, start=1):
         parts = line.split(",")
-        min_value = float("inf")  # Initialize to positive infinity
+        line_values = []
         for part in parts:
             part = part.strip()
             if part != "inf":
                 try:
                     value = float(part)
-                    min_value = min(min_value, value)
+                    line_values.append(value)
                 except ValueError:
                     pass  # Ignore parts that cannot be converted to float
-        # Store the minimum value for the current line in the dictionary
-        min_values[i] = min_value
+        # Store the numeric values for the current line in the dictionary
+        values[i] = line_values
 
-    return min_values
+    return values

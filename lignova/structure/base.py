@@ -1,7 +1,5 @@
 r"""Implementation of structure class."""
 
-from typing import Union
-
 import os
 from abc import ABC, abstractmethod
 
@@ -9,9 +7,7 @@ from abc import ABC, abstractmethod
 class Structure(ABC):
     r"""Base class for any physical structure."""
 
-    def __init__(
-        self, file_path: Union[str, None] = None, file_id: Union[str, None] = None
-    ):
+    def __init__(self, file_path: str | None = None, file_id: str | None = None):
         self.file_path = file_path
         if file_id is None and file_path is not None:
             self.file_name = os.path.basename(file_path)
@@ -24,10 +20,10 @@ class Structure(ABC):
     @abstractmethod
     def load(
         self,
-        file_path: Union[str, None] = None,
+        file_path: str | None = None,
         write: bool = False,
-        write_path: Union[None, str] = None,
-        pdb_id: Union[str, None] = None,
+        write_path: None | str = None,
+        pdb_id: str | None = None,
     ) -> None:
         r"""Load structural data from a variety of sources.
         Parameters

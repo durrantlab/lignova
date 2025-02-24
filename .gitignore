@@ -647,3 +647,5 @@ nt_water/
 raw/
 *.parquet
 *.pkl
+*.csv
+lignova/noon_semi.py

@@ -1,6 +1,6 @@
 r""" Implementation for editing protein structures using MDAnalysis."""
 
-from typing import TextIO
+from typing import Literal, TextIO
 
 from collections.abc import Iterable
 
@@ -12,6 +12,55 @@ from loguru import logger
 def get_mda_universe(pdb) -> mda.Universe:
     r"""Prepare MDAnalysis universe"""
     return mda.Universe(topology=pdb, format="PDB")
+
+
+def select_water(
+    pdb: mda.Universe | str,
+    water_selection: Literal["surface", "interfacial"],
+    ligand: str,
+    water_distance: float = 3.6,
+) -> mda.Universe:
+    r"""Select specific water molecules from the structure.
+
+    Parameters
+    ----------
+    pdb
+        MDAnalysis universe to process or path to PDB file.
+    water_selection
+        Selection of water molecules to keep.
+        surface: Water molecules on the second hydration shell.
+            i.e 3.6 A from the ligand but not in direct contact with the protein. ()
+        interfacial: Water molecules on the first hydration shell.
+            i.e 3.6 A from the ligand and in direct contact with the protein.
+    ligand
+        Ligand to calculate the distance from.
+    water_distance
+        Distance to select water molecules. Default is 3.6 A.
+    """
+    if isinstance(pdb, str):
+        pdb = get_mda_universe(pdb)
+    if len(pdb.select_atoms("resname HOH")) == 0:
+        raise ValueError("No water molecules in the structure")
+    electronegative = (
+        "type O or type N or type F or type Cl or type Br or type I or type S"
+    )
+    water_electronegative = pdb.select_atoms("resname HOH and type O")
+    logger.info(
+        f"Total Number of electronegative atoms in the water: {len(water_electronegative)}"
+    )
+    surface_water = None
+    interfacial_water = None
+    if water_selection == "surface":
+        surface_water = pdb.select_atoms(
+            f"resname HOH and around {water_distance} ((resname {ligand} or protein) and ({electronegative}))"
+        )
+    elif water_selection == "interfacial":
+        interfacial_water = pdb.select_atoms(
+            f"resname HOH and around {water_distance} (resname {ligand} and {electronegative}) and (around {water_distance} protein and {electronegative})"
+        )
+    else:
+        raise ValueError("Invalid water selection")
+    return surface_water if water_selection == "surface" else interfacial_water
 
 
 def select_chains(
@@ -70,7 +119,7 @@ def remove_residues(
     u
         MDAnalysis universe to process.
     residues
-        Names of residues to remove.
+        types of residues to remove.
     """
     if isinstance(residues, str):
         residues = [residues]
@@ -114,10 +163,11 @@ def select_residues(
     u
         MDAnalysis universe to process.
     residues
-        Names of residues or the residues id to select.
+        types of residues or the residues id to select.
     """
     if isinstance(residues, str):
         residues = [residues]
+    selection = ""
     # check if residues is a list of strings
     if all(residue.isdigit() and residue for residue in residues):
         residues = [int(residue) for residue in residues]
@@ -173,7 +223,7 @@ def find_common_atoms(mda_univ1: mda.Universe, mda_univ2: mda.Universe) -> Itera
         MDAnalysis universe to process.
 
     """
-    # Get the atom names for each ligand
+    # Get the atom types for each ligand
     ref_atom_names = [atom.name for atom in mda_univ1.atoms]
     dock_atom_names = [atom.name for atom in mda_univ2.atoms]
 
@@ -190,7 +240,7 @@ def select_common_atoms(mda_univ: mda.Universe, common_atoms: Iterable) -> mda.U
     u
         MDAnalysis universe to process.
     common_atoms
-        Names of atoms to select.
+        types of atoms to select.
     """
     selection = " or ".join([f"name {atom}" for atom in common_atoms])
     return mda_univ.select_atoms(selection)

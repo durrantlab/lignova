@@ -1,6 +1,6 @@
 r""" Implementation of the CombindContext class containing the configuration for Glide docking."""
 
-from typing import Optional, Union
+from typing import Optional
 
 import os
 import subprocess
@@ -20,10 +20,10 @@ class CombindContext:
 
     def __init__(
         self,
-        command: Union[str, None] = None,
-        schrodinger: Union[str, None] = None,
-        work_dir: Union[str, None] = None,
-        schrodinger_env: Union[str, None] = None,
+        command: str | None = None,
+        schrodinger: str | None = None,
+        work_dir: str | None = None,
+        schrodinger_env: str | None = None,
     ):
         """Initialize the combind context."""
         self.work_dir = work_dir

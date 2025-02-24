@@ -1,7 +1,5 @@
 r"""Implements methods for reading and writing files."""
 
-from typing import Union
-
 import os
 from tempfile import NamedTemporaryFile
 
@@ -25,8 +23,8 @@ def get_file_ext(file_path: str) -> str:
 
 def write_text(
     text: str | pd.DataFrame | mda.Universe,
-    write_path: Union[None, str] = None,
-    file_ext: Union[None, str] = None,
+    write_path: None | str = None,
+    file_ext: None | str = None,
 ) -> str:
     r"""General method to write text files.
 

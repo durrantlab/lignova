@@ -51,6 +51,8 @@ class Glide(Docking):
             context.forcefield,
             "-precision",
             context.docking_protocol,
+            "-docking_method",
+            context.docking_method,
             "-nenhanced_sampling",
             context.n_enhanced_sampling,
             "-postdock_npose",

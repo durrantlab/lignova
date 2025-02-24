@@ -1,6 +1,6 @@
 r""" Utility functions for structure module. """
 
-from typing import TextIO
+from typing import Literal, TextIO
 
 import os
 import time
@@ -18,6 +18,7 @@ from .editing import (
     remove_residues,
     select_chains,
     select_residues,
+    select_water,
     validate_chains,
 )
 
@@ -58,7 +59,10 @@ def is_xray_structure(pdb: str | TextIO) -> bool:
 
 
 def chery_pick_ligand(
-    pdb: str | TextIO, ligand: str, remove_water: bool = True
+    pdb: str | TextIO,
+    ligand: str,
+    remove_water: bool = True,
+    water_selection: Literal["surface", "interfacial", "all"] | None = None,
 ) -> tuple["Protein", "Ligand"]:
     r"""Cherry pick a ligand from a PDB file.
     Parameters
@@ -67,6 +71,10 @@ def chery_pick_ligand(
         Path to the PDB file or file-like object.
     ligand : str
         The ligand to cherry pick.
+    remove_water : bool
+        Remove crystallographic waters from the protein structures. Default is True.
+    water_selection : str
+        The selection of water molecules to keep. Default is "none".
     Returns
     -------
     Protein
@@ -74,6 +82,9 @@ def chery_pick_ligand(
     Ligand
         Universe object containing the ligand.
     """
+    if water_selection is None and remove_water is False:
+        logger.warning("No water selection specified. Retaining all water molecules.")
+        raise ValueError("Please specify a water selection.")
     pdb_obj = get_mda_universe(pdb)
     water_object = select_residues(pdb_obj, residues=["HOH"])
     # check if the ligand is in chain A and
@@ -83,6 +94,7 @@ def chery_pick_ligand(
     chains = list(set(pdb_obj.segments.segids))
     chains.sort()
     index = 0
+    save_prot = None
     while (
         len(ligand_obj) == 0
         or ligand not in ligand_obj.resnames
@@ -101,12 +113,20 @@ def chery_pick_ligand(
     if remove_water:
         save_prot = merge_universes([remove_hetatoms(pdb_obj), ligand_obj])
     else:
-        save_prot = merge_universes(
-            [remove_hetatoms(pdb_obj), ligand_obj, water_object]
-        )
-        logger.warning(
-            f"Crystallographic waters retained in protein: {set(filter_hetatoms(save_prot).resnames)}."
-        )
+        if water_selection == "all":
+            save_prot = merge_universes(
+                [remove_hetatoms(pdb_obj), ligand_obj, water_object]
+            )
+        elif water_selection == "surface":
+            surface_water = select_water(pdb_obj, ligand, water_selection)
+            save_prot = merge_universes(
+                [remove_hetatoms(pdb_obj), ligand_obj, surface_water]
+            )
+        elif water_selection == "interfacial":
+            interfacial_water = select_water(pdb_obj, ligand, water_selection)
+            save_prot = merge_universes(
+                [remove_hetatoms(pdb_obj), ligand_obj, interfacial_water]
+            )
     return save_prot, ligand_obj
 
 
@@ -114,6 +134,7 @@ def separate_protein_ligand(
     pdb: str | TextIO,
     remove_water: bool | None = True,
     keep_het_chain: str | list | None = None,
+    water_selection: Literal["surface", "interfacial", "all"] | None = None,
 ) -> tuple["Protein", "Ligand"]:
     r"""Separate protein and ligand from a PDB file.
     Parameters
@@ -125,6 +146,8 @@ def separate_protein_ligand(
     keep_het_chain : str or list
         Chain(s) to keep their HETATM in the protein structure.
         Default is None. If None, all HETATM will be kept.
+    water_selection : str
+        The selection of water molecules to keep if remove_water is False. Default is "none".
     Returns
     -------
     Protein
@@ -132,6 +155,10 @@ def separate_protein_ligand(
     Ligand
         Universe object containing the ligand.
     """
+    save_prot = None
+    if water_selection is None and remove_water is False:
+        logger.warning("No water selection specified. Retaining all water molecules.")
+        raise ValueError("Please specify a water selection.")
     pdb_obj = get_mda_universe(pdb)
     logger.debug(f"Chains in the pdb file: {list(set(pdb_obj.segments.segids))}")
     water_object = select_residues(pdb_obj, residues=["HOH"])
@@ -188,15 +215,32 @@ def separate_protein_ligand(
     additatives = ProteinContext.get_current().crystal_additives
     hetatm = remove_residues(hetatm, residues=additatives)
     actual_ligand = remove_residues(hetatm, residues=["HOH"])
+    ligand_name = actual_ligand.resnames.all()
     if remove_water:
         save_prot = merge_universes([remove_hetatoms(pdb_obj), actual_ligand])
     else:
-        save_prot = merge_universes(
-            [remove_hetatoms(pdb_obj), actual_ligand, water_object]
-        )
         logger.warning(
-            f"Crystallographic Water molecules are not removed from the structure, {set(filter_hetatoms(save_prot).resnames)}."
+            "Crystallographic Water molecules are not removed from the structure."
         )
+        if water_selection == "all":
+            save_prot = merge_universes(
+                [remove_hetatoms(pdb_obj), actual_ligand, water_object]
+            )
+        elif water_selection == "surface":
+            surface_water = select_water(
+                pdb=pdb_obj, ligand=ligand_name, water_selection=water_selection
+            )
+            print(surface_water)
+            save_prot = merge_universes(
+                [remove_hetatoms(pdb_obj), actual_ligand, surface_water]
+            )
+        elif water_selection == "interfacial":
+            interfacial_water = select_water(
+                pdb=pdb_obj, ligand=ligand_name, water_selection=water_selection
+            )
+            save_prot = merge_universes(
+                [remove_hetatoms(pdb_obj), actual_ligand, interfacial_water]
+            )
     return save_prot, actual_ligand
 
 

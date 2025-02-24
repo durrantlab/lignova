@@ -4,6 +4,7 @@ from typing import List
 
 from loguru import logger
 from rdkit import Chem, DataStructs
+from rdkit.Chem import rdFingerprintGenerator
 from rdkit.ML.Cluster import Butina
 
 
@@ -25,12 +26,13 @@ class TanimotoClustering:
         ----------
             rdkit.DataStructs.cDataStructs.ExplicitBitVect: Fingerprint.
         """
+        morgan_fp = rdFingerprintGenerator.GetMorganGenerator(radius=radius)
         mol = Chem.MolFromSmiles(smiles)
         if mol is None:
             logger.error(f"Invalid SMILES: {smiles}")
             return None
 
-        return Chem.rdMolDescriptors.GetMorganFingerprintAsBitVect(mol, radius)
+        return morgan_fp.GetFingerprint(mol)
 
     # pylint: disable=c-extension-no-member
     def tanimoto_similarity(
