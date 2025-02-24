@@ -83,7 +83,8 @@ mkdocs-git-revision-date-localized-plugin = ">=1.2.9,<2"
 
 [feature.docs.pypi-dependencies]
 material-plausible-plugin = ">=0.2.0,<0.3"
-mkdocs-awesome-pages-plugin = ">=2.9.3,<3"
+mkdocs-print-site-plugin = ">=2.6.0,<3"
+mkdocs-awesome-nav = ">=3.0.0, <4"
 
 [feature.docs.tasks]
 docs = { cmd = ["rm", "-rf", "./public/", "&&", "mkdocs", "build", "-d", "public/"] }

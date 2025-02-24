@@ -1,3 +1,10 @@
 nav:
     - Home: index.md
     - API: api
+
+sort:
+  type: natural
+  ignore_case: true
+  by: title
+  direction: asc
+flatten_single_child_sections: true

@@ -54,7 +54,6 @@ plugins:
   - search
   - autorefs
   - material-plausible
-  - table-reader
   - gen-files:
       scripts:
         - docs/gen_ref_pages.py
@@ -64,7 +63,7 @@ plugins:
           paths: ["lignova"]
           options:
             annotations_path: brief
-            docstring_style: numpy
+            docstring_style: google
             docstring_section_style: spacy
             show_if_no_docstring: true
             show_docstring_yields: true
@@ -80,12 +79,26 @@ plugins:
             merge_init_into_class: true
             line_length: 88
             show_root_heading: false
-  - awesome-pages:
-        collapse_single_pages: true
-        strict: false
-        order: asc
-        sort_type: natural
-        order_by: title
+  - git-revision-date-localized:
+      type: iso_datetime
+      timezone: America/Detroit
+      fallback_to_build_date: true
+  - awesome-nav
+  - macros
+  - table-reader
+  - glightbox
+  - mkdocs-jupyter:
+        no_input: False
+        include_requirejs: true
+        include_source: True
+        ignore: ["*.py"]
+        remove_tag_config:
+            remove_input_tags:
+                - hide_code
+
+hooks:
+  - hooks/launchy.py
+colab_base_url: https://colab.research.google.com/github/durrantlab/lignova/blob/main/docs
 
 extra:
   generator: false
@@ -93,12 +106,12 @@ extra:
 extra_css:
   - css/base.css
   - css/colors.css
+  - css/launchy.css
   - css/mkdocstrings.css
+  - css/mol.css
 
 extra_javascript:
   - js/mathjax.js
-  - https://polyfill.io/v3/polyfill.min.js?features=es6
-  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
   - js/d3.js
 
 markdown_extensions:

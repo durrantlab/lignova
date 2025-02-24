@@ -1320,10 +1320,14 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-ng-2.2.2-h5888daf_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstandard-0.23.0-py312hef9b889_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
+      - pypi: https://files.pythonhosted.org/packages/78/b6/6307fbef88d9b5ee7421e68d78a9f162e0da4900bc5f5793f6d3d0e34fb8/annotated_types-0.7.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/4b/02/8db98cdc1a58e0abd6716d5e63244658e6e63513c65f469f34b6f1053fd0/bracex-2.5.post1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/48/9d/797d595dc57bbcb6284584ca7e228ac54b421aa1e864cec15d0f78e02f4b/material_plausible_plugin-0.2.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/97/f0/1434593be83f8c9b3c5cdfa3db2b3b4b8af3eab164a787ad81b5736abcf0/mkdocs_awesome_pages_plugin-2.9.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/c1/c9/6995b9c503c5b434c829bb991056e176551539a29420645d7e726c5c5047/mkdocs_awesome_nav-3.0.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/bb/7a/2a863dfc892f45f309c1d662a24d88d32b6f1b6bf29158dd44278c2e7890/mkdocs_print_site_plugin-2.6.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ef/82/7a9d0550484a62c6da82858ee9419f3dd1ccc9aa1c26a1e43da3ecd20b0d/natsort-8.4.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/f4/3c/8cc1cc84deffa6e25d2d0c688ebb80635dfdbf1dbea3e30c541c8cf4d860/pydantic-2.10.6-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/8d/f0/49129b27c43396581a635d8710dae54a791b17dfc50c70164866bbf865e3/pydantic_core-2.27.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/ab/df/4ee467ab39cc1de4b852c212c1ed3becfec2e486a51ac1ce0091f85f38d7/wcmatch-10.0-py3-none-any.whl
       - pypi: .
       osx-64:
@@ -1637,10 +1641,14 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zlib-ng-2.2.2-hac325c4_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstandard-0.23.0-py312h7122b0e_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.6-h915ae27_0.conda
+      - pypi: https://files.pythonhosted.org/packages/78/b6/6307fbef88d9b5ee7421e68d78a9f162e0da4900bc5f5793f6d3d0e34fb8/annotated_types-0.7.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/4b/02/8db98cdc1a58e0abd6716d5e63244658e6e63513c65f469f34b6f1053fd0/bracex-2.5.post1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/48/9d/797d595dc57bbcb6284584ca7e228ac54b421aa1e864cec15d0f78e02f4b/material_plausible_plugin-0.2.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/97/f0/1434593be83f8c9b3c5cdfa3db2b3b4b8af3eab164a787ad81b5736abcf0/mkdocs_awesome_pages_plugin-2.9.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/c1/c9/6995b9c503c5b434c829bb991056e176551539a29420645d7e726c5c5047/mkdocs_awesome_nav-3.0.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/bb/7a/2a863dfc892f45f309c1d662a24d88d32b6f1b6bf29158dd44278c2e7890/mkdocs_print_site_plugin-2.6.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ef/82/7a9d0550484a62c6da82858ee9419f3dd1ccc9aa1c26a1e43da3ecd20b0d/natsort-8.4.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/f4/3c/8cc1cc84deffa6e25d2d0c688ebb80635dfdbf1dbea3e30c541c8cf4d860/pydantic-2.10.6-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/d6/74/51c8a5482ca447871c93e142d9d4a92ead74de6c8dc5e66733e22c9bba89/pydantic_core-2.27.2-cp312-cp312-macosx_10_12_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/ab/df/4ee467ab39cc1de4b852c212c1ed3becfec2e486a51ac1ce0091f85f38d7/wcmatch-10.0-py3-none-any.whl
       - pypi: .
 packages:
@@ -1675,6 +1683,14 @@ packages:
   purls: []
   size: 23621
   timestamp: 1650670423406
+- kind: pypi
+  name: annotated-types
+  version: 0.7.0
+  url: https://files.pythonhosted.org/packages/78/b6/6307fbef88d9b5ee7421e68d78a9f162e0da4900bc5f5793f6d3d0e34fb8/annotated_types-0.7.0-py3-none-any.whl
+  sha256: 1f02e8b43a8fbbc3f3e0d4f0f4bfc8131bcb4eebe8849b8e5c773f3a1c582a53
+  requires_dist:
+  - typing-extensions>=4.0.0 ; python_full_version < '3.9'
+  requires_python: '>=3.8'
 - kind: conda
   name: annotated-types
   version: 0.7.0
@@ -8172,15 +8188,17 @@ packages:
   size: 24228
   timestamp: 1725295211203
 - kind: pypi
-  name: mkdocs-awesome-pages-plugin
-  version: 2.9.3
-  url: https://files.pythonhosted.org/packages/97/f0/1434593be83f8c9b3c5cdfa3db2b3b4b8af3eab164a787ad81b5736abcf0/mkdocs_awesome_pages_plugin-2.9.3-py3-none-any.whl
-  sha256: 1ba433d4e7edaf8661b15b93267f78f78e2e06ca590fc0e651ea36b191d64ae4
+  name: mkdocs-awesome-nav
+  version: 3.0.0
+  url: https://files.pythonhosted.org/packages/c1/c9/6995b9c503c5b434c829bb991056e176551539a29420645d7e726c5c5047/mkdocs_awesome_nav-3.0.0-py3-none-any.whl
+  sha256: eda804face3aeb641d9eb1d7e5b024532e201235af9bbe21fccee0147a3b257d
   requires_dist:
-  - mkdocs>=1
+  - mkdocs>=1.6.0
   - natsort>=8.1.0
-  - wcmatch>=7
-  requires_python: '>=3.8.1'
+  - pydantic>=2.0.2 ; python_full_version < '3.13'
+  - pydantic>=2.8.1 ; python_full_version >= '3.13'
+  - wcmatch>=8.4
+  requires_python: '>=3.10'
 - kind: conda
   name: mkdocs-gen-files
   version: 0.4.0
@@ -8354,6 +8372,36 @@ packages:
   - pkg:pypi/mkdocs-material-extensions?source=hash-mapping
   size: 16011
   timestamp: 1700695213251
+- kind: pypi
+  name: mkdocs-print-site-plugin
+  version: 2.6.0
+  url: https://files.pythonhosted.org/packages/bb/7a/2a863dfc892f45f309c1d662a24d88d32b6f1b6bf29158dd44278c2e7890/mkdocs_print_site_plugin-2.6.0-py3-none-any.whl
+  sha256: f226686cafb549a6b6fa20b1f7acd50e8da98b16978a7df5df5457168cf2adda
+  requires_dist:
+  - mkdocs-material>=7.3.0
+  - mkdocs-material>=7.3.0 ; extra == 'all'
+  - mkdocs ; extra == 'all'
+  - mkdocs-material ; extra == 'all'
+  - mkdocs-git-revision-date-localized-plugin ; extra == 'all'
+  - build ; extra == 'all'
+  - pytest ; extra == 'all'
+  - pytest-cov ; extra == 'all'
+  - click ; extra == 'all'
+  - mkdocs-windmill ; extra == 'all'
+  - mkdocs-img2fig-plugin ; extra == 'all'
+  - mkdocs-charts-plugin ; extra == 'all'
+  - mkdocs-material>=7.3.0 ; extra == 'base'
+  - mkdocs ; extra == 'dev'
+  - mkdocs-material ; extra == 'dev'
+  - mkdocs-git-revision-date-localized-plugin ; extra == 'dev'
+  - build ; extra == 'dev'
+  - pytest ; extra == 'dev'
+  - pytest-cov ; extra == 'dev'
+  - click ; extra == 'dev'
+  - mkdocs-windmill ; extra == 'dev'
+  - mkdocs-img2fig-plugin ; extra == 'dev'
+  - mkdocs-charts-plugin ; extra == 'dev'
+  requires_python: '>=3.8'
 - kind: conda
   name: mkdocs-table-reader-plugin
   version: 3.1.0
@@ -9975,6 +10023,18 @@ packages:
   purls: []
   size: 110100
   timestamp: 1733195786147
+- kind: pypi
+  name: pydantic
+  version: 2.10.6
+  url: https://files.pythonhosted.org/packages/f4/3c/8cc1cc84deffa6e25d2d0c688ebb80635dfdbf1dbea3e30c541c8cf4d860/pydantic-2.10.6-py3-none-any.whl
+  sha256: 427d664bf0b8a2b34ff5dd0f5a18df00591adcee7198fbd71981054cef37b584
+  requires_dist:
+  - annotated-types>=0.6.0
+  - pydantic-core==2.27.2
+  - typing-extensions>=4.12.2
+  - email-validator>=2.0.0 ; extra == 'email'
+  - tzdata ; python_full_version >= '3.9' and platform_system == 'Windows' and extra == 'timezone'
+  requires_python: '>=3.8'
 - kind: conda
   name: pydantic
   version: 2.10.3
@@ -9996,6 +10056,22 @@ packages:
   - pkg:pypi/pydantic?source=hash-mapping
   size: 317037
   timestamp: 1733316963547
+- kind: pypi
+  name: pydantic-core
+  version: 2.27.2
+  url: https://files.pythonhosted.org/packages/8d/f0/49129b27c43396581a635d8710dae54a791b17dfc50c70164866bbf865e3/pydantic_core-2.27.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+  sha256: 6fb4aadc0b9a0c063206846d603b92030eb6f03069151a625667f982887153e2
+  requires_dist:
+  - typing-extensions>=4.6.0,!=4.7.0
+  requires_python: '>=3.8'
+- kind: pypi
+  name: pydantic-core
+  version: 2.27.2
+  url: https://files.pythonhosted.org/packages/d6/74/51c8a5482ca447871c93e142d9d4a92ead74de6c8dc5e66733e22c9bba89/pydantic_core-2.27.2-cp312-cp312-macosx_10_12_x86_64.whl
+  sha256: 9e0c8cfefa0ef83b4da9588448b6d8d2a2bf1a53c3f1ae5fca39eb3061e2f0b0
+  requires_dist:
+  - typing-extensions>=4.6.0,!=4.7.0
+  requires_python: '>=3.8'
 - kind: conda
   name: pydantic-core
   version: 2.27.1
