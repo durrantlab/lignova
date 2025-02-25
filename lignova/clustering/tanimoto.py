@@ -6,6 +6,7 @@ from loguru import logger
 from rdkit import Chem, DataStructs
 from rdkit.Chem import rdFingerprintGenerator
 from rdkit.ML.Cluster import Butina
+from rdkit.DataStructs.cDataStructs import ExplicitBitVect
 
 
 class TanimotoClustering:
@@ -15,13 +16,12 @@ class TanimotoClustering:
         r"""Initialize the Tanimoto clustering algorithm."""
 
     # pylint: disable=c-extension-no-member,no-member
-    def get_morgan_fingerprint(self, smiles: str, radius: int = 2):
+    def get_morgan_fingerprint(self, smiles: str, radius: int = 2) -> ExplicitBitVect:
         r"""Get the fingerprint of the molecule.
 
         Args:
-            smiles: str
-                Molecule.
-            radius: int
+            smiles: Molecule.
+            radius: TODO:
 
         Returns:
             Fingerprint.
@@ -34,23 +34,16 @@ class TanimotoClustering:
 
         return morgan_fp.GetFingerprint(mol)
 
-    # pylint: disable=c-extension-no-member
     def tanimoto_similarity(
         self,
-        mol1: (
-            DataStructs.cDataStructs.ExplicitBitVect
-            | List[DataStructs.cDataStructs.ExplicitBitVect]
-        ),
-        mol2: DataStructs.cDataStructs.ExplicitBitVect,
-    ):
+        mol1: ExplicitBitVect | list[ExplicitBitVect],
+        mol2: ExplicitBitVect,
+    ) -> float | list[float]:
         r"""Calculate the Tanimoto similarity between two fingerprints.
 
         Args:
-            mol1: rdkit.DataStructs.cDataStructs.ExplicitBitVect |
-            List[rdkit.DataStructs.cDataStructs.ExplicitBitVect]
-                First molecule fingerprint or list of fingerprints.
-            mol2: rdkit.DataStructs.cDataStructs.ExplicitBitVect | None
-                Second molecule fingerprint or None.
+            mol1 : First molecule fingerprint or list of fingerprints.
+            mol2 : Second molecule fingerprint or None.
 
         Returns:
             Tanimoto similarity.
