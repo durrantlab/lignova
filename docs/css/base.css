@@ -16,3 +16,7 @@
     margin-bottom: 1in;
     margin-left: 0in;
 }
+
+.md-typeset h2 {
+    line-height: 1.13;
+}
