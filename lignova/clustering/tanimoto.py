@@ -83,12 +83,10 @@ class TanimotoClustering:
         r"""Cluster the SMILES based on Tanimoto similarity using butina algorithm.
 
         Args:
-            tanimoto_score: Dict[str, float]
-                Dictionary of SMILES or compound identifiers and their Tanimoto similarity scores.
-            smiles: List[str]
-                List of SMILES or compound identifiers.
-            similarity_threshold: float
-                Similarity threshold.
+            tanimoto_score: Dictionary of SMILES or compound identifiers and
+                their Tanimoto similarity scores.
+            smiles: List of SMILES or compound identifiers.
+            similarity_threshold: Similarity threshold.
 
         Returns:
             TODO:

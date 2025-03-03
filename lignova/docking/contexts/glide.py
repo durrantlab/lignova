@@ -74,7 +74,10 @@ class GlideContext:
                 "Schrödinger is not installed or the $SCHRODINGER environment variable is not set."
             )
         self.command = command
+
         self.forcefield = forcefield
+        """Select the forcefield to use in Glide."""
+
         self.docking_protocol = docking_protocol
         self.n_enhanced_sampling = n_enhanced_sampling
         self.lig_ph = lig_ph

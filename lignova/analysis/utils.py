@@ -15,18 +15,14 @@ def interconvert_mae_sdf(
     output_filename: str,
     ntruct: int | str | None = None,
     context: GlideContext = GlideContext.get_current(),
-):
+) -> None:
     r"""Convert ligand(s) to SDF format.
 
     Args:
-        test_file :  str| TextIO
-            Test file name or file object.
-        output_filename : str
-            Output file name.
-        ntruct :  int| str| None
-            Number of structures to convert. Default 1:5 i.e the first 5 structures.
-        context : GlideContext
-            Docking context to run the command.
+        test_file : Test file name or file object.
+        output_filename : Output file name.
+        ntruct : Number of structures to convert. Default 1:5 i.e the first 5 structures.
+        context : Docking context to run the command.
     """
     # GET THE path of the file extension using the os.path.splitext() function
     # if the file extension is .sdf, then the file is in SDF format
@@ -85,18 +81,16 @@ def interconvert_mae_sdf(
         raise e
 
 
-def obabel_convert(test_file: str | TextIO, output_filename: str):
+def obabel_convert(test_file: str | TextIO, output_filename: str) -> None:
     """Convert ligand(s) from MAE format to SDF format using obabel.
 
     Args:
-        test_file :  str| TextIO
-            Test file name or file object.
-        output_filename : str
-            Output file name.
+        test_file : Test file name or file object.
+        output_filename : Output file name.
     """
 
     # Construct the command
-    command = ["obabel", test_file, "-O", output_filename]
+    command: list[str] = ["obabel", test_file, "-O", output_filename]
 
     try:
         with subprocess.Popen(
@@ -123,12 +117,11 @@ def obabel_result_parser(output):
     Parses the output from the obabel command and returns the numeric values found per line.
 
     Args:
-        output : str
-            The output from the obabel command.
+        output : The output from the obabel command.
 
     Returns:
         A dictionary where the keys are arbitrary numbers (1, 2, 3, ...)
-        and the values are lists of numeric values found per line.
+            and the values are lists of numeric values found per line.
     """
     # Split the output into lines
     lines = output.strip().split("\n")
