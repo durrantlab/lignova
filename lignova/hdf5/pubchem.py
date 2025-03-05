@@ -2,6 +2,8 @@ r""" Implementation of the PubChem API parser class.
 https://pubchemdocs.ncbi.nlm.nih.gov/pug-rest
 """
 
+from typing import List
+
 import requests
 from loguru import logger
 
@@ -26,17 +28,15 @@ class PubChemAPI:
         self.api_key = api_key
         self.retrieve_format = retrieve_format
 
-    def get_cids_info(self, cid: int, properties: list) -> dict:
+    def get_cids_info(self, cid: int, properties: List) -> dict:
         r"""Get compound information from PubChem API.
 
         Args:
-            cid : int
-                PubChem Compound ID.
-            properties : list
-                List of properties to retrieve.
+            cid :PubChem Compound ID.
+            properties : List of properties to retrieve.
 
         Returns:
-            dict: Compound information.
+            A dictionary with the Compound information.
         """
         if len(properties) == 0:
             logger.error("No properties provided.")
@@ -67,17 +67,15 @@ class PubChemAPI:
         logger.warning(f"Failed to retrieve compound information for CID {cid}.")
         return {}
 
-    def get_binding_affinity(self, aid: int, cid: list[int]) -> dict:
+    def get_binding_affinity(self, aid: int, cid: List[int]) -> dict:
         r"""Get binding affinity information from PubChem API.
 
         Args:
-            aid : int
-                PubChem Assay ID.
-            cid : List[int]
-                List of PubChem Compound IDs.
+            aid : PubChem Assay ID.
+            cid : List of PubChem Compound IDs.
 
         Returns:
-            dict: Binding affinity information.
+            A dictionary with the Binding affinity information.
         """
         url = f"{self.api_key}/assay/aid/{str(aid)}/concise/{self.retrieve_format}"
         response = requests.get(url, timeout=30)

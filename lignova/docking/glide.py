@@ -8,7 +8,8 @@ import subprocess
 from loguru import logger
 
 from ..structure.ligand import Ligand, PreparedLigand
-from ..structure.protein import PreparedProtein
+from ..structure.protein import PreparedProtein, Protein
+from .contexts import GlideContext
 from .docking import Docking
 
 
@@ -16,25 +17,24 @@ class Glide(Docking):
     r"""Perform docking with `glide_sif.py`.
 
     Command documentation can be found
-    [here](https://www.schrodinger.com/
-    sites/default/files/s3/release/2023-3/
-    Documentation/html/utilities/program_utility_usage/glide_sif.html).
+    [here](https://www.schrodinger.com/sites/default/files/s3/release/2023-3/Documentation/html/utilities/program_utility_usage/glide_sif.html).
     """
 
     def __init__(self) -> None:
         # self.context= GlideContext.get_current()
         pass
 
-    def run(self, target, ligand, context):
+    def run(
+        self, target: PreparedProtein, ligand: PreparedLigand, context: GlideContext
+    ) -> None:
         r"""Dock ligand into protein grid.
 
         Args:
-            target : PreparedProtein
-                The protein structure to dock the ligand into
-            ligand : PreparedLigand
-                The ligand structure to dock into the protein
-            context : GlideContext
-                The context for the glide docking
+            target : The protein structure to dock the ligand into
+            ligand : The ligand structure to dock into the protein
+            context : The context for the glide docking
+        Returns:
+            None
         """
         # ensure that prepped_ligand and grid_file are defined and if not raise an error and exit
         logger.info(ligand.file_path, ligand.file_id)
@@ -121,14 +121,14 @@ class Glide(Docking):
             raise e
 
     @staticmethod
-    def convert_to_mae(input_object, context):
+    def convert_to_mae(input_object: Ligand | Protein, context: GlideContext) -> None:
         r"""Convert from the pdb format to mae format needed for Schrodinger
 
         Args:
-            input_object : Ligand or Protein object
-                The object to be converted to mae format
-            context : GlideContext
-                The context for the glide docking
+            input_object : The object to be converted to mae format
+            context : The context for the glide docking
+        Returns:
+            None
         """
         command = [
             context.command + "/utilities/structconvert",
@@ -151,15 +151,15 @@ class Glide(Docking):
             raise e
 
     @staticmethod
-    def PrepLigand(ligand, context):
+    def PrepLigand(ligand: Ligand, context: GlideContext) -> PreparedLigand:
         r"""Check the extension of the ligand file using the split function and
         Prepare ligands for docking using Schrödinger's LigPrep
 
         Args:
-            ligand : Ligand object
-                The ligand structure to be prepared for docking as a Ligand object
-            context : GlideContext
-                The context for the glide docking
+            ligand : The ligand structure to be prepared for docking as a Ligand object
+            context : The context for the glide docking
+        Returns:
+            The prepared ligand structure needed for docking as a PreparedLigand
         """
         if ligand.file_ext == "pdb":
             Glide().convert_to_mae(ligand, context)
@@ -230,17 +230,18 @@ class Glide(Docking):
         return prep
 
     @staticmethod
-    def PrepProtein(protein, context, ligand_asl: str | None = None):
+    def PrepProtein(
+        protein: Protein, context: GlideContext, ligand_asl: str | None = None
+    ) -> PreparedProtein:
         r"""Prepare protein structures using Schrödinger's Protein Wizard
 
         Args:
-            protein : Protein object
-                The protein structure to be prepared for docking as a Protein object
-            context : GlideContext
-                The context for the glide docking
-            ligand_asl : str
-                The name of the ligand in the protein structure to generate the grid around it
+            protein The protein structure to be prepared for docking as a Protein object
+            context : The context for the glide docking
+            ligand_asl : The name of the ligand in the protein structure to generate the grid around it
                 (i.e ligand residue name). Set to None if the ligand is not known
+        Returns:
+            The prepared protein structure needed for docking as a PreparedProtein
         """
         command = [
             context.command + "/utilities/prepwizard",
@@ -341,14 +342,14 @@ class Glide(Docking):
         return prep
 
     @staticmethod
-    def sort_docking_results(docking_results, context):
+    def sort_docking_results(docking_results: str, context: GlideContext) -> None:
         r"""Sort the docking maegz output based on the glide score
 
         Args:
-            docking_results : str
-                The path to the docking results file
-            context : GlideContext
-                The context for the glide docking
+            docking_results : The path to the docking results file
+            context : The context for the glide docking
+        Returns:
+            None
         """
         command = [
             context.command + "/utilities/glide_sort",

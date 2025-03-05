@@ -14,18 +14,14 @@ def manipulate_complexes(
     context: str = GlideContext.get_current(),
     outfile_name: None | str = "manipulate_outp.maegz",
     mode: None | str = "merge",
-):
+) -> None:
     r"""Convert docking file to complexes format and saving in write_dir.
 
     Args:
-        input_file : str
-            Path to Input file name.
-        context : str
-            Glide context. Default is GlideContext.get_current().
-        outfile_name : str
-            Output file name. Default is input file name with "manipulate_outp.maegz" as suffix.
-        mode : str
-            Mode to convert file. Default is "merge".
+        input_file : Path to Input file name.
+        context : the Glide context. Default is GlideContext.get_current().
+        outfile_name : Output file name. Default is input file name with "manipulate_outp.maegz" as suffix.
+        mode : Mode to convert file. Default is "merge".
             Options are ["merge" - combine PV/EPV structures into complexes,
             ,"split_pv" - extract receptor and ligands from complexes and save as PV
             ,"split_epv" - extract receptor and ligands from complexes and save as EPV
@@ -33,6 +29,8 @@ def manipulate_complexes(
             ,"split_receptor" - extract receptors from complexes
             ,"pv_to_epv" - join multiple PV files into single EPV file
             ,"epv_to_pv" - split EPV file into multiple PV files ]
+    Returns:
+        None
     """
     # check if "out" in the outfile_name and if so throw an error
     if "-out" in outfile_name:
@@ -139,13 +137,9 @@ def convert_to_pdb(
     r"""Convert docking file to pdb format.
 
     Args:
-        input_file : str
-            Path to Input file name.
-
-        context : str
-            Glide context. Default is GlideContext.get_current().
-        n_structures : list | None
-            List of structure indices to convert. If None, converts all structures.
+        input_file : Path to Input file name.
+        context : Glide context. Default is GlideContext.get_current().
+        n_structures : List of structure indices to convert. If None, converts all structures.
     """
     command = [context.command + "/utilities/structconvert", "-use_component_dict"]
     if n_structures:

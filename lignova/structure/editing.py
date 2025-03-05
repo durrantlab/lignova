@@ -26,11 +26,13 @@ def select_water(
         pdb : MDAnalysis universe to process or path to PDB file.
         water_selection : Selection of water molecules to keep.
             surface: Water molecules on the second hydration shell.
-                i.e 3.6 A from the ligand but not in direct contact with the protein. ()
+                i.e 3.6 A from the ligand but not in direct contact with the protein.
             interfacial: Water molecules on the first hydration shell.
-                i.e 3.6 A from the ligand and in direct contact with the protein.
+                i.e 3.6 A from the ligand and in direct contact with the protein. 
         ligand : Ligand to calculate the distance from.
         water_distance : Distance to select water molecules. Default is 3.6 A.
+    Returns:
+        MDAnalysis universe with selected water molecules.
     """
     if isinstance(pdb, str):
         pdb = get_mda_universe(pdb)
@@ -65,7 +67,7 @@ def select_chains(
 
     Args:
         u : MDAnalysis universe to process.
-        chains : Chains to keep.
+        chains : Chains to keep if None then select chain A. Default is None.
     """
     n_chains = len(set(mda_univ.segments.segids))
     logger.info("There are {} chains in the structure", n_chains)
@@ -88,6 +90,8 @@ def validate_chains(mda_univ: mda.Universe, chains: str | Iterable[str]) -> bool
     Args:
         u : MDAnalysis universe to process.
         chains : Chains to validate.
+    Returns:
+        True if chains are present in the structure.
     """
     if isinstance(chains, str):
         chains = [chains]
@@ -106,6 +110,8 @@ def remove_residues(
     Args:
         u : MDAnalysis universe to process.
         residues : types of residues to remove.
+    Returns:
+        MDAnalysis universe for the structure without the specified residues.
     """
     if isinstance(residues, str):
         residues = [residues]
@@ -117,7 +123,10 @@ def merge_universes(mda_univs: list) -> mda.Universe:
     r"""Merge multiple MDAnalysis universes.
 
     Args:
-        u : list of MDAnalysis universes to merge.
+        mda_univs : list of MDAnalysis universes to merge.
+    Returns:
+        Merged MDAnalysis universe.
+        
     """
 
     if isinstance(mda_univs, list) and len(mda_univs) > 1:
@@ -143,8 +152,10 @@ def select_residues(
     r"""Select residues from structure.
 
     Args:
-        u : MDAnalysis universe to process.
+        mda_univ : MDAnalysis universe to process.
         residues : types of residues or the residues id to select.
+    Returns:
+        MDAnalysis universe for the selected residues.
     """
     if isinstance(residues, str):
         residues = [residues]
@@ -164,7 +175,9 @@ def remove_hetatoms(mda_univ: mda.Universe) -> mda.Universe:
     r"""Remove hetero atoms.
 
     Args:
-        u : MDAnalysis universe to process.
+        mda_univ : MDAnalysis universe to process.
+    Returns:
+        MDAnalysis universe with hetero atoms removed.
     """
     return mda_univ.select_atoms("not record_type HETATM")
 
@@ -175,8 +188,10 @@ def filter_hetatoms(
     r"""Filter hetero atoms.
 
     Args:
-        u : MDAnalysis universe to process.
+        mda_univ : MDAnalysis universe to process.
         keep_het_chain : Chains to keep their HETATM and remove other HETATMs. Default is None.
+    Returns:
+        MDAnalysis universe with filtered hetero atoms.
     """
     if keep_het_chain is None:
         return mda_univ.select_atoms("record_type HETATM")
@@ -192,8 +207,10 @@ def find_common_atoms(mda_univ1: mda.Universe, mda_univ2: mda.Universe) -> Itera
     r"""Find common atoms between two MDAnalysis universes.
 
     Args:
-        u1 : MDAnalysis universe to process.
-        u2 : MDAnalysis universe to process.
+        mda_univ1 : MDAnalysis universe to process.
+        mda_univ : MDAnalysis universe to process.
+    Returns:
+        List of common atoms.
 
     """
     # Get the atom types for each ligand
@@ -209,18 +226,20 @@ def select_common_atoms(mda_univ: mda.Universe, common_atoms: Iterable) -> mda.U
     r"""Select common atoms.
 
     Args:
-        u : MDAnalysis universe to process.
+        mda_univ : MDAnalysis universe to process.
         common_atoms : types of atoms to select.
+    Returns:
+        MDAnalysis universe for the selected atoms in the structure.
     """
     selection = " or ".join([f"name {atom}" for atom in common_atoms])
     return mda_univ.select_atoms(selection)
 
 
-def write_mda_universe(mda_univ: mda.Universe, file_path: str) -> TextIO:
+def write_mda_universe(mda_univ: mda.Universe, file_path: str) -> None:
     r"""Write MDAnalysis universe to file.
 
     Args:
-        u : MDAnalysis universe to process.
+        mda_univ : MDAnalysis universe to process.
         file_path : File to write to.
     """
     return mda_univ.write(file_path)

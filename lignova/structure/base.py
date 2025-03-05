@@ -40,7 +40,7 @@ class Structure(ABC):
 class Prepared:
     r"""Base class for prepared structures."""
 
-    def get_info(self, context):
+    def get_info(self, context) -> dict:
         r"""This function gives information about the prepared structure.
 
         Args:

@@ -338,7 +338,7 @@ def has_covalent_bonds(pdb: str, rcsb_data: dict | None = None) -> bool:
         data = rcsb_data
     else:
         data = get_rcsb_data(pdb)
-    logger.debug(data["rcsb_entry_info"]["inter_mol_covalent_bond_count"])
+    # logger.debug(data["rcsb_entry_info"]["inter_mol_covalent_bond_count"])
     return data["rcsb_entry_info"]["inter_mol_covalent_bond_count"] > 0
 
 
@@ -358,8 +358,8 @@ def has_ligands(pdb: str, rcsb_data: dict | None = None) -> bool:
         data = rcsb_data
     else:
         data = get_rcsb_data(pdb)
-    tmp = data["rcsb_entry_info"]["nonpolymer_entity_count"]
-    logger.debug(f"ligand/non polymer count for {pdb} is {tmp}")
+    # tmp = data["rcsb_entry_info"]["nonpolymer_entity_count"]
+    # logger.debug(f"ligand/non polymer count for {pdb} is {tmp}")
     return data["rcsb_entry_info"]["nonpolymer_entity_count"] > 0
 
 
@@ -389,8 +389,8 @@ def get_entity_ids(pdb_id: str, rcsb_data: dict | None = None) -> dict[str, list
     ]
     entity_ids["polymer"] = polymer_entity
     entity_ids["nonpolymer"] = nonpolymer_entity
-    logger.debug(f"Polymer entity IDs: {polymer_entity}")
-    logger.debug(f"Non-polymer entity IDs: {nonpolymer_entity}")
+    # logger.debug(f"Polymer entity IDs: {polymer_entity}")
+    # logger.debug(f"Non-polymer entity IDs: {nonpolymer_entity}")
     return entity_ids
 
 
@@ -424,7 +424,7 @@ def pdb_has_mutation(pdb_id: str, rcsb_data: dict | None = None) -> bool:
         list_of_mutations.append(data["entity_poly"]["rcsb_mutation_count"])
     # check if the values of the list are 0
     if all(i == 0 for i in list_of_mutations):
-        logger.debug(f"Mutations in {pdb_id}: {list_of_mutations}")
+        # logger.debug(f"Mutations in {pdb_id}: {list_of_mutations}")
         return False
     return True
 
@@ -458,7 +458,7 @@ def get_nonpolymer_names(pdb_id: str, rcsb_data: dict | None = None) -> list:
     # exclude ligands with names less than 3 characters from the list
     # highly likely they are ions
     nonpolymer_names = [i for i in nonpolymer_names if len(i) == 3]
-    logger.info(f"Non-polymer entity names: {nonpolymer_names}")
+    # logger.info(f"Non-polymer entity names: {nonpolymer_names}")
     return nonpolymer_names
 
 
@@ -479,8 +479,8 @@ def validate_ligands(
     ligands = get_nonpolymer_names(pdb)
     if len(ligands) == 0:
         return False
-    logger.debug(f"Ligands in {pdb}: {ligands}")
-    logger.debug(all(i in impurities for i in ligands))
+    # logger.debug(f"Ligands in {pdb}: {ligands}")
+    # logger.debug(all(i in impurities for i in ligands))
     return not all(i in impurities for i in ligands)
 
 
@@ -537,7 +537,7 @@ def get_ligand_names(pdb: str | TextIO) -> list:
             i for i in ligand_resname if len(i) == 3 and i not in impurities
         }
         ligand_resname = list(ligand_resname)
-    logger.debug(f"Ligand residue name: {ligand_resname}")
+    # logger.debug(f"Ligand residue name: {ligand_resname}")
     return ligand_resname
 
 
@@ -574,8 +574,8 @@ def get_smiles(ligand_resname: str | TextIO) -> dict[str, str]:
 
     smiles = data["rcsb_chem_comp_descriptor"]["smiles"]
     stereo_smiles = data["rcsb_chem_comp_descriptor"]["smilesstereo"]
-    logger.debug(f"SMILES: {smiles}")
-    logger.debug(f"Stereo SMILES: {stereo_smiles}")
+    # logger.debug(f"SMILES: {smiles}")
+    # logger.debug(f"Stereo SMILES: {stereo_smiles}")
     return {"smiles": smiles, "stereo_smiles": stereo_smiles}
 
 
