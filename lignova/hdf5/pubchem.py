@@ -4,6 +4,8 @@ https://pubchemdocs.ncbi.nlm.nih.gov/pug-rest
 
 from typing import List
 
+import time
+
 import requests
 from loguru import logger
 
@@ -27,6 +29,43 @@ class PubChemAPI:
     ):
         self.api_key = api_key
         self.retrieve_format = retrieve_format
+
+    def get_cids(self, aid: int, active: bool = True) -> List[int]:
+        r"""Get compound IDs from PubChem API.
+
+        Args:
+            aid : PubChem Assay ID.
+            active : Boolean to filter active compounds.
+                Defaults to True.
+        Returns:
+            A list of compound IDs.
+        """
+        url = f"{self.api_key}/assay/aid/{str(aid)}/cids/{self.retrieve_format}"
+        if active:
+            url += "?cids_type=active"
+        else:
+            url += "?cids_type=inactive"
+        response = requests.get(url, timeout=30)
+        if response.status_code == 200:
+            data = response.json()
+            cids = []
+            if "InformationList" in data and "Information" in data["InformationList"]:
+                for entry in data["InformationList"]["Information"]:
+                    if "CID" in entry:
+                        cids.extend(entry["CID"])
+                return list(set(cids))
+        elif response.status_code == 204:
+            status = "active" if active else "inactive"
+            logger.warning(f"No {status} CIDs found for Assay ID: {aid}.")
+        elif response.status_code == 503:
+            # wait for 5 seconds and retry again
+            logger.warning(
+                f"Service unavailable for Assay ID: {aid}. Retrying in 5 seconds."
+            )
+            time.sleep(5)
+            return self.get_cids(aid, active)
+        else:
+            print(f"Failed to fetch CIDs. Status code: {response.status_code}")
 
     def get_cids_info(self, cid: int, properties: List) -> dict:
         r"""Get compound information from PubChem API.
@@ -64,6 +103,16 @@ class PubChemAPI:
                 return compound_info
             logger.warning(f"Failed to find properties information for CID {cid}.")
             return {}
+        elif response.status_code == 204:
+            logger.warning(
+                f"No information found for CID {cid}. Status code: {response.status_code}"
+            )
+            return {}
+        elif response.status_code == 503:
+            # wait for 5 seconds and retry again
+            logger.warning(f"Service unavailable for CID {cid}. Retrying in 5 seconds.")
+            time.sleep(5)
+            return self.get_cids_info(cid, properties)
         logger.warning(f"Failed to retrieve compound information for CID {cid}.")
         return {}
 
@@ -103,7 +152,18 @@ class PubChemAPI:
                 f"Failed to retrieve binding affinity information for CID {cid}."
             )
             return {}
-        logger.warning(
-            f"Failed to retrieve binding affinity information for CID {cid}."
-        )
-        return {}
+        elif response.status_code == 204:
+            logger.warning(
+                f"No binding affinity information found for CID {cid}. Status code: {response.status_code}"
+            )
+            return {}
+        elif response.status_code == 503:
+            # wait for 5 seconds and retry again
+            logger.warning(f"Service unavailable for CID {cid}. Retrying in 5 seconds.")
+            time.sleep(5)
+            return self.get_binding_affinity(aid, cid)
+        else:
+            logger.warning(
+                f"Failed to retrieve binding affinity information for CID {cid}."
+            )
+            return {}
