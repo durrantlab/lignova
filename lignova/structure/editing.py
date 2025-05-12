@@ -1,6 +1,6 @@
 r""" Implementation for editing protein structures using MDAnalysis."""
 
-from typing import Literal, TextIO
+from typing import Literal
 
 from collections.abc import Iterable
 
@@ -10,7 +10,12 @@ from loguru import logger
 
 
 def get_mda_universe(pdb) -> mda.Universe:
-    r"""Prepare MDAnalysis universe"""
+    r"""Prepare MDAnalysis universe
+    Args:
+        pdb : Path to PDB file.
+    Returns:
+        MDAnalysis universe for this pdb.
+    """
     return mda.Universe(topology=pdb, format="PDB")
 
 
@@ -28,7 +33,7 @@ def select_water(
             surface: Water molecules on the second hydration shell.
                 i.e 3.6 A from the ligand but not in direct contact with the protein.
             interfacial: Water molecules on the first hydration shell.
-                i.e 3.6 A from the ligand and in direct contact with the protein. 
+                i.e 3.6 A from the ligand and in direct contact with the protein.
         ligand : Ligand to calculate the distance from.
         water_distance : Distance to select water molecules. Default is 3.6 A.
     Returns:
@@ -126,7 +131,7 @@ def merge_universes(mda_univs: list) -> mda.Universe:
         mda_univs : list of MDAnalysis universes to merge.
     Returns:
         Merged MDAnalysis universe.
-        
+
     """
 
     if isinstance(mda_univs, list) and len(mda_univs) > 1:

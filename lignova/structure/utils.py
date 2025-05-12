@@ -510,7 +510,8 @@ def validate_pdb(pdb_id: str) -> bool:
         return True
 
     logger.warning(
-        f"The PDB file {pdb_id} is not valid. Check ./structure/utils.py functions for more details."
+        f"The PDB file {pdb_id} is not valid. "
+        f"Check ./structure/utils.py functions for more details."
     )
     return False
 

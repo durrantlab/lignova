@@ -18,15 +18,14 @@ class Combind(CombindContext):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.validate():
-            raise ValueError(
-                "Validation failed. Combind intialization aborted")
+            raise ValueError("Validation failed. Combind intialization aborted")
         self.activate = f'source {self.schrodinger_env + "/bin/activate"} && '
 
     def featurize(
         self,
         docking_filepaths: str | List[str],
         file_name: str,
-        max_poses: int = 7000000,
+        max_poses: int = 8500000,
         screen: bool = False,
     ) -> None:
         r"""Featurize the docking files.
@@ -260,7 +259,8 @@ class Combind(CombindContext):
             docking_filepath : Path to the docking file from GLIDE.
             combind_score_file :Path to the combind score file.
             output_filename :  name of the output file.
-            sort : whether to sort the output file based on the combind score or not. Default is True.
+            sort : whether to sort the output file based on the combind score or not.
+                Default is True.
         Returns:
             None
         """
@@ -292,8 +292,7 @@ class Combind(CombindContext):
                     os.path.join(
                         self.work_dir, f"{output_filename}_combind_sorted.maegz"
                     ),
-                    os.path.join(
-                        self.work_dir, f"{output_filename}_combind.maegz"),
+                    os.path.join(self.work_dir, f"{output_filename}_combind.maegz"),
                 ]
                 result = subprocess.run(
                     command,
@@ -304,8 +303,7 @@ class Combind(CombindContext):
                 )
                 logger.info("Combind score application sorting completed.")
                 with open(
-                    os.path.join(
-                        self.work_dir, f"{output_filename}_combind_sort.log"),
+                    os.path.join(self.work_dir, f"{output_filename}_combind_sort.log"),
                     "w",
                     encoding="utf-8",
                 ) as file:
@@ -313,8 +311,7 @@ class Combind(CombindContext):
         except subprocess.CalledProcessError as e:
             error_message = f"Failed to apply or sort the combind score: {e}"
             logger.critical(error_message)
-            raise NotImplementedError(
-                error_message) from e  # Changed this line
+            raise NotImplementedError(error_message) from e
         except Exception as e:
             logger.error(f"Combind score application failed.\n {str(e)}")
             raise
@@ -325,17 +322,19 @@ class Combind(CombindContext):
         filename: str,
         filter_data: bool = True,
         top_poses: bool = False,
-    ):
+    ) -> str:
         r"""To extract the scores from schrodinger docking file including
-        combind if run after apply_combind_score function.
+            combind if run after apply_combind_score function.
 
         Args:
             docking_file :  Path to the docking file from GLIDE.
             filename : name of the output file.
-            filter_data : whether to filter_data the docking file to include only scores or not. Default is True.
-            top_poses : If True, extract the data of the top poses per ligand only. Default is False.
+            filter_data : whether to filter_data the docking file to include only scores or not.
+                Default is True.
+            top_poses : If True, extract the data of the top poses per ligand only.
+                Default is False.
         Returns:
-            None
+            file path where the csv file is saved.
         """
         # check if the docking file exists
         if not os.path.exists(docking_file):
@@ -359,24 +358,20 @@ class Combind(CombindContext):
             logger.info("Data extraction completed.")
             if top_poses:
                 # find the best pose for each ligand in terms of the highest combind score
-                data = pd.read_csv(os.path.join(
-                    self.work_dir, f"{filename}.csv"))
-                # add a column to called POSE with the loacation of the row within the group of ligands
-                # so it would recount when the ligand changes
+                data = pd.read_csv(os.path.join(self.work_dir, f"{filename}.csv"))
+                # add a column to called POSE with the loacation
+                # of the row within the group of ligands so it would recount when the ligand changes
                 data["POSE"] = data.groupby("s_m_title").cumcount() + 1
                 # save the data
                 # group by ligand and find the max combind score and get that row
-                data = data.loc[data.groupby("s_m_title")[
-                    "r_i_combind_score"].idxmax()]
+                data = data.loc[data.groupby("s_m_title")["r_i_combind_score"].idxmax()]
                 logger.debug(data)
                 logger.info("Top poses extracted.")
                 # save it with the same name
-                data.to_csv(os.path.join(self.work_dir,
-                            f"{filename}.csv"), index=False)
+                data.to_csv(os.path.join(self.work_dir, f"{filename}.csv"), index=False)
             if filter_data:
                 # read the csv file and filter_data the scores
-                data = pd.read_csv(os.path.join(
-                    self.work_dir, f"{filename}.csv"))
+                data = pd.read_csv(os.path.join(self.work_dir, f"{filename}.csv"))
                 # if the data has a column called POSE keep it
                 if "POSE" in data.columns:
                     data = data[
@@ -406,11 +401,10 @@ class Combind(CombindContext):
                         ]
                     ]
                 # save it with the same name
-                data.to_csv(os.path.join(self.work_dir,
-                            f"{filename}.csv"), index=False)
+                data.to_csv(os.path.join(self.work_dir, f"{filename}.csv"), index=False)
                 logger.info("Data filter_dataation completed.")
         else:
-            error_message = "Failed to extract the data" + \
-                f"\n{stderr.decode()}."
+            error_message = "Failed to extract the data" + f"\n{stderr.decode()}."
             logger.critical(error_message)
             raise NotImplementedError(error_message)
+        return os.path.join(self.work_dir, f"{filename}.csv")

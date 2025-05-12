@@ -4,7 +4,7 @@ import os
 
 from loguru import logger
 
-_default_glide_context: "Optional[GlideContext" = None
+_default_glide_context: "Optional[GlideContext]" = None
 
 DEFAULT_COMMAND = os.environ.get("SCHRODINGER", None)
 DEFAULT_POSES_PER_LIG = "100"

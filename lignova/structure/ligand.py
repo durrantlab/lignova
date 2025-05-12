@@ -8,7 +8,7 @@ class Ligand(Structure):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._ligand_text = None  
+        self._ligand_text = None
 
     # Define a property to access _ligand_text
     @property
