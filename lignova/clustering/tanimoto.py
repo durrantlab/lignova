@@ -2,6 +2,8 @@ r" Implementation of the tanimoto clustering algorithm."
 
 from typing import List
 
+from collections.abc import Iterable
+
 from loguru import logger
 from rdkit import Chem, DataStructs
 from rdkit.Chem import rdFingerprintGenerator
@@ -36,9 +38,9 @@ class TanimotoClustering:
 
     def tanimoto_similarity(
         self,
-        mol1: ExplicitBitVect | List[ExplicitBitVect],
+        mol1: ExplicitBitVect | Iterable[ExplicitBitVect],
         mol2: ExplicitBitVect,
-    ) -> float | List[float]:
+    ) -> float | Iterable[float]:
         r"""Calculate the Tanimoto similarity between two fingerprints.
 
         Args:
@@ -48,13 +50,13 @@ class TanimotoClustering:
         Returns:
             Tanimoto similarity.
         """
-        if isinstance(mol1, List):
+        if isinstance(mol1, Iterable):
             return DataStructs.cDataStructs.BulkTanimotoSimilarity(mol2, mol1)
 
         return DataStructs.cDataStructs.TanimotoSimilarity(mol1, mol2)
 
     def cal_distance(
-        self, tanimoto_score: List[List[float]] | List[float]
+        self, tanimoto_score: Iterable[List[float]] | Iterable[float]
     ) -> List[float]:
         r"""Calculate the distance between two fingerprints.
 
@@ -76,10 +78,10 @@ class TanimotoClustering:
 
     def cluster_tanimoto(
         self,
-        tanimoto_score: List[float],
-        smiles: List[str],
+        tanimoto_score: Iterable[float],
+        smiles: Iterable[str],
         similarity_threshold: float,
-    ) -> List[List[str]]:
+    ) -> Iterable[List[str]]:
         r"""Cluster the SMILES based on Tanimoto similarity using butina algorithm.
 
         Args:
