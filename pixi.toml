@@ -1,7 +1,7 @@
 [project]
 name = "lignova"
 version = "0.0.0"
-description = "TODO"
+description = "Lignova is a flexible, physics‑driven package for rapid generation of high‑quality protein–ligand complexes."
 authors = [
     "durrantlab <durrantj@pitt.edu>",
 ]
@@ -34,6 +34,7 @@ gemmi = ">=0.6.4,<0.7"
 fasteners = ">=0.17.3,<0.18"
 mmseqs2 = ">=16.747c6,<17"
 pyarrow = ">=19.0.1,<20"
+posebusters = ">=0.4.4,<0.5"
 
 [feature.dev.dependencies]
 black = ">=24.10.0,<25"

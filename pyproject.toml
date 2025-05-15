@@ -23,7 +23,6 @@ dependencies = [
     "pandas>=2.2.3,<3",
     "scipy>=1.14.1,<2",
     "spyrmsd>=0.8.0,<0.9",
-    "pyarrow>=18.0.0,<19",
     "gemmi>=0.6.4,<0.7",
     "fasteners>=0.17.3,<0.18",
 ]
