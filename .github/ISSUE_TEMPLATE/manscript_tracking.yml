@@ -1,0 +1,141 @@
+name: "Manuscript Submission"
+description: "Track a new manuscript through the writing workflow."
+title: "[Manuscript] ${{inputs.title}}"
+labels: ["manuscript", "triage"]
+assignees: [""]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Welcome!** Please complete each section accurately to keep track of your manuscript writing progress.
+        - Use `YYYY‑MM‑DD` for dates.
+        - Use one of the following status options in each section:
+          - Not Started
+          - In Progress
+          - Needs Review
+          - Blocked
+          - Complete
+        - Ensure reviewers are GitHub usernames if needed.
+
+  - type: input
+    id: title
+    attributes:
+      label: Manuscript Title
+      description: The full title of the manuscript
+      placeholder: e.g. “LIGNOVA: an awesome package”
+    validations:
+      required: true
+
+  - type: input
+    id: authors
+    attributes:
+      label: Authors
+      description: List authors, separated by semicolons
+      placeholder: e.g. Alice Smith; Bob Jones
+    validations:
+      required: true
+
+  - type: date
+    id: submission_date
+    attributes:
+      label: Submission Date
+      description: Tentative submission date (format: YYYY-MM-DD)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: status
+    attributes:
+      label: Current Status
+      options:
+        - Draft
+        - Submitted
+        - Under Review
+        - Revision Required
+        - Accepted
+        - Rejected
+        - Not Started
+      description: Select the current status of the manuscript
+      default: 0
+    validations:
+      required: true
+
+  - type: input
+    id: reviewers
+    attributes:
+      label: Reviewer(s)
+      description: GitHub usernames or names
+
+  - type: date
+    id: revision_due
+    attributes:
+      label: Revision Due Date (if applicable)
+      description: Leave empty if not yet requested
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional Notes
+      description: Any extra details, context, or links
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Section-by-Section Progress Tracker
+
+        For each key point in the manuscript, fill out the status, last update, and any relevant notes.  
+        **Status Options:** Not Started / In Progress / Needs Review / Blocked / Reviewed / Complete
+
+        ### Abstract
+
+        | Key Point             | Status       | Last Update | Notes                   |
+        |----------------------|--------------|-------------|-------------------------|
+        | Abstract paragraph   |              |             |                         |
+
+        ### Introduction
+
+        | Key Point                 | Status       | Last Update | Notes                   |
+        |--------------------------|--------------|-------------|-------------------------|
+        | Big Picture              |              |             |                         |
+        | Paper specific problem   |              |             |                         |
+        | Literature review        |              |             |                         |
+        | Paper goal               |              |             |                         |
+
+        ### Methods
+
+        | Key Point               | Status       | Last Update | Notes                   |
+        |------------------------|--------------|-------------|-------------------------|
+        | Methods section 1      |              |             |                         |
+        | Methods section 2      |              |             |                         |
+        | Supplementary methods  |              |             |                         |
+
+        ### Results
+
+        | Key Point           | Status       | Last Update | Notes                   |
+        |--------------------|--------------|-------------|-------------------------|
+        | Result section 1   |              |             |                         |
+        | Result section 2   |              |             |                         |
+        | Result section 3   |              |             |                         |
+
+        ### Discussion
+
+        | Key Point               | Status       | Last Update | Notes                   |
+        |------------------------|--------------|-------------|-------------------------|
+        | Discussion section 1   |              |             |                         |
+        | Discussion section 2   |              |             |                         |
+        | Discussion section 3   |              |             |                         |
+
+        ### Figures / Tables
+
+        | Key Point    | Status       | Last Update | Notes                   |
+        |-------------|--------------|-------------|-------------------------|
+        | Figure 1    |              |             |                         |
+        | Figure 2    |              |             |                         |
+        | Table 1     |              |             |                         |
+
+        ### Conclusion
+
+        | Key Point     | Status       | Last Update | Notes                   |
+        |---------------|--------------|-------------|-------------------------|
+        | Main point 1  |              |             |                         |
