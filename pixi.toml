@@ -35,6 +35,8 @@ fasteners = ">=0.17.3,<0.18"
 mmseqs2 = ">=16.747c6,<17"
 pyarrow = ">=19.0.1,<20"
 posebusters = ">=0.4.4,<0.5"
+pdb2pqr = ">=3.6.1,<4"
+typing-extensions = ">=4.14.1,<5"
 
 [feature.dev.dependencies]
 black = ">=24.10.0,<25"
