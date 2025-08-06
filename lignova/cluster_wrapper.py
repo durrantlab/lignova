@@ -624,7 +624,6 @@ if __name__ == "__main__":
     data_no = list(set(data_no))
     print(len(data_no))
     print(sum)
-    exit()
     # 1. Read the PubChem HDF5 file and extract the fasta sequences
     create_fasta_file(HDF5_FILE, FASTA_FILE)
     # 2. Cluster the fasta sequences using MMseqs2
