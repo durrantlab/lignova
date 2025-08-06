@@ -7,9 +7,10 @@ from collections.abc import Iterable
 import gemmi
 import MDAnalysis as mda
 from loguru import logger
+from MDAnalysis.core.groups import AtomGroup
 
 
-def get_mda_universe(pdb) -> mda.Universe:
+def get_mda_universe(pdb: str) -> mda.Universe:
     r"""Prepare MDAnalysis universe
     Args:
         pdb : Path to PDB file.
@@ -107,9 +108,7 @@ def validate_chains(mda_univ: mda.Universe, chains: str | Iterable[str]) -> bool
     return False
 
 
-def remove_residues(
-    mda_univ: mda.Universe, residues: str | Iterable[str]
-) -> mda.Universe:
+def remove_residues(mda_univ: mda.Universe, residues: str | Iterable[str]) -> AtomGroup:
     r"""Remove residues from structure.
 
     Args:
@@ -124,7 +123,7 @@ def remove_residues(
     return mda_univ.select_atoms(selection)
 
 
-def merge_universes(mda_univs: list) -> mda.Universe:
+def merge_universes(mda_univs: Iterable[mda.Universe]) -> mda.Universe:
     r"""Merge multiple MDAnalysis universes.
 
     Args:
@@ -133,13 +132,12 @@ def merge_universes(mda_univs: list) -> mda.Universe:
         Merged MDAnalysis universe.
 
     """
-
     if isinstance(mda_univs, list) and len(mda_univs) > 1:
         logger.info(f"Merging {len(mda_univs)} MDAnalysis universes")
-        merge_list = []
+        merge_list: list[AtomGroup] = []
         for i in mda_univs:
             # check if the universe is empty
-            if len(i.atoms) == 0:
+            if i.atoms is None or len(i.atoms) == 0:
                 logger.warning("Empty universe found")
                 continue
             # get the atoms from each universe and merge them
@@ -148,7 +146,9 @@ def merge_universes(mda_univs: list) -> mda.Universe:
     else:
         logger.warning("Only one MDAnalysis universe to merge")
         merged = mda_univs[0]
-    return merged.atoms
+    if merged.atoms is None:
+        raise ValueError("Merged universe has no atoms")
+    return mda.Universe.empty(0) if len(merged.atoms) == 0 else merged
 
 
 def select_residues(
@@ -188,7 +188,8 @@ def remove_hetatoms(mda_univ: mda.Universe) -> mda.Universe:
 
 
 def filter_hetatoms(
-    mda_univ: mda.Universe, keep_het_chain: list | str | None = None
+    mda_univ: mda.Universe | mda.AtomGroup,
+    keep_het_chain: list[str] | str | None = None,
 ) -> mda.Universe:
     r"""Filter hetero atoms.
 
@@ -208,7 +209,7 @@ def filter_hetatoms(
     return mda_univ.select_atoms(selection)
 
 
-def find_common_atoms(mda_univ1: mda.Universe, mda_univ2: mda.Universe) -> Iterable:
+def find_common_atoms(mda_univ1: AtomGroup, mda_univ2: AtomGroup) -> Iterable[str]:
     r"""Find common atoms between two MDAnalysis universes.
 
     Args:
@@ -219,15 +220,17 @@ def find_common_atoms(mda_univ1: mda.Universe, mda_univ2: mda.Universe) -> Itera
 
     """
     # Get the atom types for each ligand
-    ref_atom_names = [atom.name for atom in mda_univ1.atoms]
-    dock_atom_names = [atom.name for atom in mda_univ2.atoms]
+    ref_atom_names = [atom.name for atom in mda_univ1.atoms] if mda_univ1.atoms else []
+    dock_atom_names = [atom.name for atom in mda_univ2.atoms] if mda_univ2.atoms else []
 
     # Find the common atoms
     common_atoms = list(set(ref_atom_names) & set(dock_atom_names))
     return common_atoms
 
 
-def select_common_atoms(mda_univ: mda.Universe, common_atoms: Iterable) -> mda.Universe:
+def select_common_atoms(
+    mda_univ: mda.Universe, common_atoms: Iterable[str]
+) -> mda.Universe:
     r"""Select common atoms.
 
     Args:
@@ -247,7 +250,8 @@ def write_mda_universe(mda_univ: mda.Universe, file_path: str) -> None:
         mda_univ : MDAnalysis universe to process.
         file_path : File to write to.
     """
-    return mda_univ.write(file_path)
+    with mda.Writer(file_path, n_atoms=mda_univ.atoms.n_atoms) as writer:
+        writer.write(mda_univ.atoms)
 
 
 def read_cif(file_path: str) -> "gemmi.Structure":

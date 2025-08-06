@@ -11,8 +11,8 @@ from loguru import logger
 from lignova.docking import Glide
 from lignova.docking.contexts import GlideContext
 from lignova.structure.editing import write_mda_universe
-from lignova.structure.ligand import Ligand
-from lignova.structure.protein import Protein
+from lignova.structure.ligand import Ligand, PreparedLigand
+from lignova.structure.protein import PreparedProtein, Protein
 from lignova.structure.utils import separate_protein_ligand
 
 # Ensures we execute from file directory (for relative paths).
@@ -70,6 +70,37 @@ def extract_m_bond_section(file_content):
     return file_content[start_index:end_index]
 
 
+def parse_mae_atom_block(lines):
+    """
+    Extract the atom data rows from an MAE file's m_atom block.
+    Returns a list of token lists, one per atom.
+    """
+    in_block = False
+    in_data = False
+    atoms = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("m_atom["):
+            in_block = True
+            continue
+        if in_block and stripped == ":::":
+            if not in_data:
+                # first ':::' marks start of data
+                in_data = True
+                continue
+            else:
+                # second ':::' marks end of data
+                break
+        if in_data:
+            if not stripped:
+                continue
+            tokens = stripped.split()
+            if len(tokens) < 12:
+                continue
+            atoms.append(tokens)
+    return atoms
+
+
 def test_convert_protein_to_mae():
     """Test conversion of protein to MAE format."""
     glide.convert_to_mae(protein_obj, context)
@@ -107,13 +138,15 @@ def test_prep_ligand():
         context_protein_6Oav["ligand_prepared_path"], "r", encoding="utf-8"
     ) as file:
         lig_ref = file.readlines()
+        lig_ref_atom_block = parse_mae_atom_block(lig_ref)
     with open(
         context_protein_6Oav["write_dir"] + "/6oav_A_M3A_lig_prepared.mae",
         "r",
         encoding="utf-8",
     ) as file:
         lig_test = file.readlines()
-    assert lig_ref[113] == lig_test[113]
+        lig_test_atom_block = parse_mae_atom_block(lig_test)
+    assert lig_ref_atom_block == lig_test_atom_block
     assert prepared.file_name == "6oav_A_M3A_lig_prepared.mae"
     assert prep_info["pH"] == "7.0"
     assert prep_info["pHt"] == "2.0"
@@ -174,10 +207,10 @@ def test_prepprotein():
 
 def test_docking():
     """Test the docking process."""
-    prep_prot = Protein(
+    prep_prot = PreparedProtein(
         file_path=context_protein_6Oav["write_dir"] + "/6oav_chA_grid.zip"
     )
-    prep_lig = Ligand(
+    prep_lig = PreparedLigand(
         file_path=context_protein_6Oav["write_dir"] + "/6oav_A_M3A_lig_prepared.mae"
     )
     glide.run(prep_prot, prep_lig, context)

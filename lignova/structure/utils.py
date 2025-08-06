@@ -5,6 +5,7 @@ from typing import Literal, TextIO
 import os
 import time
 
+import MDAnalysis as mda
 import pandas as pd
 import requests
 from loguru import logger
@@ -131,7 +132,7 @@ def separate_protein_ligand(
     remove_water: bool | None = True,
     keep_het_chain: str | list | None = None,
     water_selection: Literal["surface", "interfacial", "all"] | None = None,
-) -> Literal["Protein", "Ligand"]:
+) -> tuple[mda.Universe, mda.Universe]:
     r"""Separate protein and ligand from a PDB file.
 
     Args:

@@ -42,7 +42,8 @@ class Ligand(Structure):
         if write_path:
             # write to file
             with open(write_path, "w", encoding="utf-8") as file:
-                file.write(self._ligand_text)
+                if self._ligand_text is not None:
+                    _ = file.write(self._ligand_text)
 
 
 class PreparedLigand(Ligand, Prepared):

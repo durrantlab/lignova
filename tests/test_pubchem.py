@@ -36,10 +36,10 @@ def test_get_cids():
 def test_get_cids_info():
     r"""Retrieve SMILES from PubChem"""
     pubchem = PubChemAPI()
-    smiles_test = pubchem.get_cids_info(2244, ["IsomericSMILES", "ExactMass"])
+    smiles_test = pubchem.get_cids_info(2244, ["SMILES", "ExactMass"])
     smiles_ref = "CC(=O)OC1=CC=CC=C1C(=O)O"
     mass_ref = "180.04225873"
-    assert smiles_test["IsomericSMILES"] == smiles_ref
+    assert smiles_test["SMILES"] == smiles_ref
     assert smiles_test["ExactMass"] == mass_ref
 
 

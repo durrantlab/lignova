@@ -1,10 +1,11 @@
 r"""Implementation of combind."""
 
-from typing import List, TextIO
+from typing import TextIO
 
 import glob
 import os
 import subprocess
+from collections.abc import Iterable
 
 import pandas as pd
 from loguru import logger
@@ -23,7 +24,7 @@ class Combind(CombindContext):
 
     def featurize(
         self,
-        docking_filepaths: str | List[str],
+        docking_filepaths: str | Iterable[str],
         file_name: str,
         max_poses: int = 8500000,
         screen: bool = False,

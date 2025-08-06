@@ -11,7 +11,7 @@ from ..docking.contexts import GlideContext
 
 def manipulate_complexes(
     input_file: str,
-    context: str = GlideContext.get_current(),
+    context: GlideContext = GlideContext.get_current(),
     outfile_name: None | str = "manipulate_outp.maegz",
     mode: None | str = "merge",
 ) -> None:

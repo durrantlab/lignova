@@ -25,7 +25,7 @@ class RMSD:
         self,
         ligand: Iterable[DockedLigand] | DockedLigand,
         reference: Iterable[Protein] | Protein,
-        context: GlideContext.get_current(),
+        context: GlideContext = GlideContext.get_current(),
     ):
         r"""Initialize RMSD class.
 
@@ -36,7 +36,7 @@ class RMSD:
             reference: Iterable[Protein] | Protein
                 Reference ligand(s) in a Protein object that will be used for comparison.
             context: GlideContext object
-                Docking context.
+                Docking context. Default is GlideContext.get_current().
         """
         self.ligand = ligand
         self.reference = reference
@@ -139,7 +139,8 @@ class RMSD:
 
         Args:
             firstonly : bool
-                Only calculate the RMSD for the first structure in the reference file. Default is True.
+                Only calculate the RMSD for the first structure in the reference file.
+                    Default is True.
             save : bool
                 Write the RMSD to a txt file. Default is False.
             minimize : bool

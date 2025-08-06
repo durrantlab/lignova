@@ -4,8 +4,9 @@ from typing import TextIO
 
 import os
 import subprocess
-import pandas as pd
 from collections.abc import Iterable
+
+import pandas as pd
 from loguru import logger
 from rdkit.Chem import rdchem, rdmolfiles, rdmolops
 
@@ -284,7 +285,7 @@ def clean_and_standardize_file(file_path: str, add_hs: bool = False) -> str:
 
     # Cleanup temp files
     for temp_file in fallback_files:
-        if os.path.exists(temp_file):
+        if os.path.exists(temp_file) and temp_file != current_path:
             os.remove(temp_file)
 
     return output_path
@@ -402,3 +403,91 @@ def fix_mol2_atom_types(input_file: str, output_file: str) -> None:
 
     with open(output_file, "w", encoding="utf-8") as f:
         f.writelines(fixed_lines)
+
+
+def eval_pose(
+    docked_pose: str,
+    reference_pose: str | None,
+    protein: str,
+    outfmt: str = "csv",
+    multiple: bool = True,
+    output_file: str | None = str,
+    top_n: int = None,
+    max_workers: int = None,
+) -> str | pd.DataFrame:
+    """
+    Run posebuster (bust) command line tool to evaluate predicted pose
+        whether the poses are physically valid
+    Args:
+        docked_pose : Path to the docked pose file.
+        reference_pose : Path to the reference pose file.
+        protein : Path to the protein file.
+        outfmt : Output format for bust. Default is "short". Ir can be "short", "long", or "csv".
+        multiple : Whether to run bust on multiple poses. Default is True.
+            If True, docked_pose should be a csv file and reference_pose should be None
+        output_file : Path to save the output file. If None, will return
+        top_n : Number of top results to return. Default is None (return all).
+        max_workers : Maximum number of workers to use for parallel processing. Default is None (use all available).
+    Returns:
+        Path to the output file or a pandas DataFrame with the results.
+    """
+    if multiple:
+        # check that docked_pose is a csv file and reference_pose is None if true cool if not error
+        if not isinstance(docked_pose, str) or not docked_pose.endswith(".csv"):
+            raise ValueError("When multiple is True, docked_pose must be a csv file.")
+        if reference_pose is not None:
+            logger.warning("When multiple is True, reference_pose would be ignored. ")
+        if protein is not None:
+            logger.warning("When multiple is True, protein would be ignored. ")
+        command = [
+            "bust",
+            "-t",
+            docked_pose,
+        ]
+    else:
+        # check if any of the three inputs don't exist or are empty error out
+        if (
+            reference_pose is None
+            or not os.path.exists(reference_pose)
+            or not os.path.exists(docked_pose)
+            or not os.path.exists(protein)
+        ):
+            raise ValueError(
+                "When multiple is False, all three inputs must be valid file paths."
+            )
+        command = [
+            "bust",
+            docked_pose,
+            "-l",
+            reference_pose,
+            "-p",
+            protein,
+        ]
+    command.extend(["-outfmt", outfmt])
+    if output_file is not None:
+        if not output_file.endswith(".csv"):
+            output_file += ".csv"
+        command.extend(["-o", output_file])
+    if top_n is not None:
+        command.extend(["--top-n", str(top_n)])
+    if max_workers is not None:
+        command.extend(["--max-workers", str(max_workers)])
+    logger.info(f"Running command: {' '.join(command)}")
+    try:
+        with subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+        ) as process:
+            stdout, stderr = process.communicate()
+        if process.returncode == 0:
+            logger.info("Pose evaluation completed")
+            logger.info(f"Output:\n{stdout}")
+        else:
+            logger.error("Pose evaluation failed ")
+            logger.error(f"Error Output:\n{stderr}")
+            raise subprocess.CalledProcessError(process.returncode, " ".join(command))
+    except Exception as e:
+        logger.error(f"An error occurred during pose evaluation: {str(e)}")
+        raise e

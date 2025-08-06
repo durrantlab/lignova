@@ -1,5 +1,7 @@
 """Implements the Docking class."""
 
+from typing import override
+
 import glob
 import os
 import shutil
@@ -24,6 +26,7 @@ class Glide(Docking):
         # self.context= GlideContext.get_current()
         pass
 
+    @override
     def run(
         self, target: PreparedProtein, ligand: PreparedLigand, context: GlideContext
     ) -> None:
@@ -36,10 +39,22 @@ class Glide(Docking):
         Returns:
             None
         """
+        assert isinstance(
+            target, PreparedProtein
+        ), "Target must be a PreparedProtein instance."
+        assert isinstance(
+            ligand, PreparedLigand
+        ), "Ligand must be a PreparedLigand instance."
+        if not os.path.exists(target.file_path):
+            raise FileNotFoundError(f"Target file {target.file_path} does not exist.")
+        if not os.path.exists(ligand.file_path):
+            raise FileNotFoundError(f"Ligand file {ligand.file_path} does not exist.")
+        if not context.command or not context.write_dir:
+            raise ValueError(
+                "Context must have 'command' and 'write_dir' attributes defined."
+            )
         # ensure that prepped_ligand and grid_file are defined and if not raise an error and exit
-        logger.info(ligand.file_path, ligand.file_id)
         jobname = str(ligand.file_id.split("_prepared")[0]) + "_docking"
-        logger.info(jobname)
         command = [
             context.command + "/run",
             "glide_sif.py",
