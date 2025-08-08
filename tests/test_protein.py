@@ -194,6 +194,7 @@ def test_validate_pdb():
     r"""Test validate PDB"""
     assert not validate_pdb(context_protein_6Oav["id"])
     assert not validate_pdb("3c5e")
+    assert validate_pdb("7dbk")
     assert validate_pdb("4uxl")
 
 
@@ -201,6 +202,7 @@ def test_validate_ligands():
     r"""Test validate ligands"""
     assert validate_ligands(context_protein_6Oav["id"])
     assert validate_ligands("4uxl")
+    assert not validate_ligands("7dbk")
     assert not validate_ligands("4zbg")
 
 

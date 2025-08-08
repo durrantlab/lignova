@@ -1,6 +1,6 @@
 r"""Class for parsing HDF5 files."""
 
-from typing import List, Tuple
+from typing import List
 
 import os
 
@@ -30,11 +30,9 @@ class HDF5Parser(FormatManager):
         r"""Read a dataset or a group from the HDF5 file.
 
         Args:
-            path: str
-                Path to the dataset or group to read.
-
+            path: Path to the dataset or group to read.
         Returns:
-            np.ndarray | List[np.ndarray]: Data from the dataset or group.
+            A numpy array or a list of numpy arrays with the dataset.
         """
 
         # check if the file exists
@@ -55,10 +53,12 @@ class HDF5Parser(FormatManager):
         r"""Write data to the HDF5 file.
 
         Args:
-            data : np.ndarray | List[np.ndarray]
-                Data to write. If the dataset already exists, the data will be appended to the dataset.
-            data_scheme : str
-                Name of the dataset to write. If the dataset does not exist, it will be created.
+            data : Data to write.
+                If the dataset already exists, the data will be appended to the dataset.
+            data_scheme : Name of the dataset to write.
+                If the dataset does not exist, it will be created.
+        Returns:
+            None
         """
         try:
             with h5py.File(self.file_path, "r+") as hdf5_file:
@@ -76,15 +76,14 @@ class HDF5Parser(FormatManager):
         except Exception as e:
             raise e
 
-    def read_attributes(self, dataset: str) -> Tuple[dict, dict]:
+    def read_attributes(self, dataset: str) -> dict:
         r"""Read attributes from the dataset.
 
         Args:
-            dataset : str
-                Name of the dataset to read attributes from.
+            dataset : Name of the dataset to read attributes from.
 
         Returns:
-            Tuple[dict, dict]: Tuple containing attributes and their values.
+            Dictionary containing attributes and their values.
         """
         # check if the file exists
         if not os.path.exists(self.file_path):
@@ -102,11 +101,11 @@ class HDF5Parser(FormatManager):
         r"""Write attributes to the dataset.
 
         Args:
-            dataset : str
-                Name of the dataset to write attributes to i.e. the group.
+            dataset : Name of the dataset to write attributes to i.e. the group.
                 If the dataset does not exist, it will be created.
-            attributes : dict
-                Attributes to write.
+            attributes : Attributes to write.
+        Returns:
+            None
         """
         # check if the file exists
         if not os.path.exists(self.file_path):
@@ -122,7 +121,7 @@ class HDF5Parser(FormatManager):
         except Exception as e:
             raise e
 
-    def find_file_stats(self):
+    def find_file_stats(self) -> None:
         r"""save the file stats to a file in the same directory as the hdf5 file"""
         # check if the file exists
         if not os.path.exists(self.file_path):
@@ -144,13 +143,12 @@ class HDF5Parser(FormatManager):
         except Exception as e:
             raise e
 
-    def is_path_valid(self, path):
+    def is_path_valid(self, path: str) -> bool:
         r"""Check if the path exists in the HDF5 file.
         Note that this is a recursive function. Thus takes a long time to run on large files.
 
         Args:
-            path: str
-                Path to check in the HDF5 file.
+            path: Path to check in the HDF5 file.
 
         Returns:
             True if the path exists in the HDF5 file, False otherwise.

@@ -139,7 +139,7 @@ def test_parquet_write():
             },
         },
     ]
-    parser.write(data, parser.schema)
+    parser.write(data)
     assert os.path.exists(parquet_file_path)
     result = parser.read()
     assert result.schema.names == ["id", "name", "attributes"]
@@ -245,6 +245,6 @@ def test_filter_data():
             },
         },
     ]
-    parser.write(data, parser.schema)
+    parser.write(data)
     result = parser.filter_data(lambda x: (x == "John Doe"), "name")
     assert result.equals(pd.DataFrame([data[1]]))

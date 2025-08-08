@@ -8,7 +8,7 @@ class Ligand(Structure):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._ligand_text = None  # Initialize _ligand_text in __init__
+        self._ligand_text = None
 
     # Define a property to access _ligand_text
     @property
@@ -29,8 +29,11 @@ class Ligand(Structure):
 
         Args:
             file_path : Path to ligand file.
-            write_path : Path to write the ligand file to disk.
+            write : if true write the ligand to disk. Default is False.
+            write_path : Path to write ligand to disk.
             pdb_id : PDB ID of ligand to download.
+        Returns:
+            None
         """
         if file_path is not None:
             # read in file
@@ -39,7 +42,8 @@ class Ligand(Structure):
         if write_path:
             # write to file
             with open(write_path, "w", encoding="utf-8") as file:
-                file.write(self._ligand_text)
+                if self._ligand_text is not None:
+                    _ = file.write(self._ligand_text)
 
 
 class PreparedLigand(Ligand, Prepared):

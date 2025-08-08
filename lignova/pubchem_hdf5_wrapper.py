@@ -88,10 +88,8 @@ def complete_hdf5(hdf5_file_path: str) -> None:
                     if "smiles" not in hdf5_file[f"/aids/{aid}/cids/{cids}"]:
                         logger.info(f"Processing CID {cids} for AID {aid}.")
                         pubchem = PubChemAPI()
-                        data = pubchem.get_cids_info(
-                            int(cids), ["IsomericSMILES", "ExactMass"]
-                        )
-                        smiles = data["IsomericSMILES"]
+                        data = pubchem.get_cids_info(int(cids), ["SMILES", "ExactMass"])
+                        smiles = data["SMILES"]
                         logger.info(f"Smiles: {smiles}")
                         mass = data["ExactMass"]
                         logger.info(f"Exact mass: {mass}")

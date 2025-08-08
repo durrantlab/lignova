@@ -264,7 +264,7 @@ def make_protein_cluster_file(new_file: ParquetParser, cluster_csv: str) -> None
         for rep in representatives:
             for member in members_list:
                 data.append((cluster_number + 1, str(rep), str(member), []))
-    new_file.write(data, new_file.schema)
+    new_file.write(data)
     logger.info(f"Data written to Parquet file at {new_file.file_path}")
 
 
@@ -342,7 +342,7 @@ def add_compounds(
     else:
         new_file = "new_" + original_file.file_path
         new_parser = ParquetParser(new_file, original_file.schema)
-        new_parser.write(old_data, original_file.schema)
+        new_parser.write(old_data)
         logger.info(f"New file created at {new_file}")
 
 
@@ -475,7 +475,7 @@ def make_ligand_cluster_file(
             if time.time() - start_time > 60 * 20:
                 # make a parquet file with the initial_data named backup
                 backup = ParquetParser("backup.parquet", new_file_name.schema)
-                backup.write(initial_data, new_file_name.schema)
+                backup.write(initial_data)
                 logger.info(
                     f"Data written to backup Parquet file at {backup.file_path}"
                 )
@@ -483,7 +483,7 @@ def make_ligand_cluster_file(
                 # read the backup file as a pandas dataframe
                 done_data = backup.convert_to_pandas()
 
-    new_file_name.write(initial_data, new_file_name.schema)
+    new_file_name.write(initial_data)
 
 
 def add_smiles_cluster(
@@ -563,7 +563,7 @@ def add_smiles_cluster(
         all_results.append(rest)
     # Concatenate all results and save the data to the new parquet file
     final_result = pd.concat(all_results)
-    new_parquet.write(final_result, new_parquet.schema)
+    new_parquet.write(final_result)
 
 
 # TODO: Turn into a run function for CLI
@@ -578,6 +578,52 @@ if __name__ == "__main__":
     AID_2_TARGET_FILE = "../aid_2_target.csv"
     FINAL_FULL_PARQUET = "final_ligand_cluster.parquet"
 
+    # READ THE protein_cluster_4_10.parquet file as a ParquetParser object
+    schema = pa.schema(
+        [
+            ("Cluster number", pa.int64()),
+            ("Represenatives", pa.string()),
+            ("members", pa.string()),
+            ("member_compound", pa.list_(pa.string())),
+        ]
+    )
+    prot_parq = ParquetParser("../protein_clustered_data.parquet", schema)
+    # head the protein_cluster_4_10.parquet file as a pandas dataframe
+    prot_data = prot_parq.convert_to_pandas()
+    logger.info(
+        f"Number of rows in the protein_cluster_4_10.parquet file: {len(prot_data)}"
+    )
+    print(prot_data.head())
+    # read the filtered_version_2_9_1_2025.csv file as a pandas dataframe and extract the from column
+    filtered_data = pd.read_csv("./filtered_version_6_9_1_2025.csv")
+    represenatives_id = filtered_data["From"]
+    # find the represenatives_id that are not in the protein_cluster_4_10.parquet file
+    missing_represenatives = [
+        rep_id
+        for rep_id in represenatives_id
+        if rep_id not in prot_data["Represenatives"].to_list()
+    ]
+    logger.info(f"Number of missing represenatives: {len(missing_represenatives)}")
+    # ingnore the missing represenatives and find the length of the member_compound column for each represenatives
+    sum = 0
+    data_no = []
+    for rep_id in represenatives_id:
+        if rep_id in missing_represenatives:
+            continue
+        member_compound = prot_data[prot_data["Represenatives"] == rep_id][
+            "member_compound"
+        ].to_list()[0]
+        logger.info(
+            f"Length of member_compound for represenatives {rep_id}: {len(member_compound)}"
+        )
+        data_no.append(tuple(member_compound))
+        sum += len(member_compound)
+    # print length of the data_no without duplication
+    print(len(data_no))
+    # remove the duplication in the data_no
+    data_no = list(set(data_no))
+    print(len(data_no))
+    print(sum)
     # 1. Read the PubChem HDF5 file and extract the fasta sequences
     create_fasta_file(HDF5_FILE, FASTA_FILE)
     # 2. Cluster the fasta sequences using MMseqs2
@@ -694,7 +740,7 @@ if __name__ == "__main__":
     # save the unique data to a new parquet file named unique_final_ligand_cluster.parquet
     unique_data = final_data.drop_duplicates(subset=["Compound ID"])
     unique_parq = ParquetParser("unique_final_ligand_cluster.parquet", schema)
-    unique_parq.write(unique_data, schema)
+    unique_parq.write(unique_data)
     logger.info(
         f"Number of unique rows in the unique_final_parq file: {len(unique_data)}"
     )

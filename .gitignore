@@ -649,3 +649,5 @@ raw/
 *.pkl
 *.csv
 lignova/noon_semi.py
+bridg_water/
+plots/

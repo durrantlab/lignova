@@ -16,7 +16,7 @@ class Docking(ABC):
         self,
         target: PreparedProtein,
         ligand: Iterable[PreparedLigand] | PreparedLigand,
-        context: GlideContext | None,
+        context: GlideContext,
     ) -> Iterable[DockedLigand] | DockedLigand:
         r"""Dock one or multiple ligands to a single target.
 

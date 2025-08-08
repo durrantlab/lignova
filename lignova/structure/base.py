@@ -40,7 +40,7 @@ class Structure(ABC):
 class Prepared:
     r"""Base class for prepared structures."""
 
-    def get_info(self, context):
+    def get_info(self, context) -> dict[str, str | int | float | bool]:
         r"""This function gives information about the prepared structure.
 
         Args:
@@ -77,4 +77,7 @@ class Prepared:
         if "protein" in str(type(self)):
             return prot_info
         if "ligand" not in str(type(self)) and "protein" not in str(type(self)):
-            return None
+            return {}
+
+        # Ensure a dictionary is returned on all code paths
+        return {}

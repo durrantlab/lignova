@@ -220,6 +220,7 @@ CRYSTAL_ADDITIVES = [
     "XO4",
     "M3L",
     "ALY",
+    "PG5",
 ]
 
 COFACTORS = [

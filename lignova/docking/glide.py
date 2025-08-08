@@ -1,5 +1,7 @@
 """Implements the Docking class."""
 
+from typing import override
+
 import glob
 import os
 import shutil
@@ -8,7 +10,8 @@ import subprocess
 from loguru import logger
 
 from ..structure.ligand import Ligand, PreparedLigand
-from ..structure.protein import PreparedProtein
+from ..structure.protein import PreparedProtein, Protein
+from .contexts import GlideContext
 from .docking import Docking
 
 
@@ -16,30 +19,42 @@ class Glide(Docking):
     r"""Perform docking with `glide_sif.py`.
 
     Command documentation can be found
-    [here](https://www.schrodinger.com/
-    sites/default/files/s3/release/2023-3/
-    Documentation/html/utilities/program_utility_usage/glide_sif.html).
+    [here](https://www.schrodinger.com/sites/default/files/s3/release/2023-3/Documentation/html/utilities/program_utility_usage/glide_sif.html).
     """
 
     def __init__(self) -> None:
         # self.context= GlideContext.get_current()
         pass
 
-    def run(self, target, ligand, context):
+    @override
+    def run(
+        self, target: PreparedProtein, ligand: PreparedLigand, context: GlideContext
+    ) -> None:
         r"""Dock ligand into protein grid.
 
         Args:
-            target : PreparedProtein
-                The protein structure to dock the ligand into
-            ligand : PreparedLigand
-                The ligand structure to dock into the protein
-            context : GlideContext
-                The context for the glide docking
+            target : The protein structure to dock the ligand into
+            ligand : The ligand structure to dock into the protein
+            context : The context for the glide docking
+        Returns:
+            None
         """
+        assert isinstance(
+            target, PreparedProtein
+        ), "Target must be a PreparedProtein instance."
+        assert isinstance(
+            ligand, PreparedLigand
+        ), "Ligand must be a PreparedLigand instance."
+        if not os.path.exists(target.file_path):
+            raise FileNotFoundError(f"Target file {target.file_path} does not exist.")
+        if not os.path.exists(ligand.file_path):
+            raise FileNotFoundError(f"Ligand file {ligand.file_path} does not exist.")
+        if not context.command or not context.write_dir:
+            raise ValueError(
+                "Context must have 'command' and 'write_dir' attributes defined."
+            )
         # ensure that prepped_ligand and grid_file are defined and if not raise an error and exit
-        logger.info(ligand.file_path, ligand.file_id)
         jobname = str(ligand.file_id.split("_prepared")[0]) + "_docking"
-        logger.info(jobname)
         command = [
             context.command + "/run",
             "glide_sif.py",
@@ -73,6 +88,7 @@ class Glide(Docking):
                 logger.info(
                     f"Docking jobname file created for {target.file_id} and {ligand.file_id}"
                 )
+
             else:
                 logger.error(
                     f"Docking jobname file failed for {target.file_id} and {ligand.file_id}"
@@ -121,14 +137,14 @@ class Glide(Docking):
             raise e
 
     @staticmethod
-    def convert_to_mae(input_object, context):
+    def convert_to_mae(input_object: Ligand | Protein, context: GlideContext) -> None:
         r"""Convert from the pdb format to mae format needed for Schrodinger
 
         Args:
-            input_object : Ligand or Protein object
-                The object to be converted to mae format
-            context : GlideContext
-                The context for the glide docking
+            input_object : The object to be converted to mae format
+            context : The context for the glide docking
+        Returns:
+            None
         """
         command = [
             context.command + "/utilities/structconvert",
@@ -151,15 +167,15 @@ class Glide(Docking):
             raise e
 
     @staticmethod
-    def PrepLigand(ligand, context):
+    def PrepLigand(ligand: Ligand, context: GlideContext) -> PreparedLigand:
         r"""Check the extension of the ligand file using the split function and
         Prepare ligands for docking using Schrödinger's LigPrep
 
         Args:
-            ligand : Ligand object
-                The ligand structure to be prepared for docking as a Ligand object
-            context : GlideContext
-                The context for the glide docking
+            ligand : The ligand structure to be prepared for docking as a Ligand object
+            context : The context for the glide docking
+        Returns:
+            The prepared ligand structure needed for docking as a PreparedLigand
         """
         if ligand.file_ext == "pdb":
             Glide().convert_to_mae(ligand, context)
@@ -230,17 +246,18 @@ class Glide(Docking):
         return prep
 
     @staticmethod
-    def PrepProtein(protein, context, ligand_asl: str | None = None):
+    def PrepProtein(
+        protein: Protein, context: GlideContext, ligand_asl: str | None = None
+    ) -> PreparedProtein:
         r"""Prepare protein structures using Schrödinger's Protein Wizard
 
         Args:
-            protein : Protein object
-                The protein structure to be prepared for docking as a Protein object
-            context : GlideContext
-                The context for the glide docking
-            ligand_asl : str
-                The name of the ligand in the protein structure to generate the grid around it
+            protein The protein structure to be prepared for docking as a Protein object
+            context : The context for the glide docking
+            ligand_asl : The name of the ligand in the protein structure to generate the grid around it
                 (i.e ligand residue name). Set to None if the ligand is not known
+        Returns:
+            The prepared protein structure needed for docking as a PreparedProtein
         """
         command = [
             context.command + "/utilities/prepwizard",
@@ -341,22 +358,33 @@ class Glide(Docking):
         return prep
 
     @staticmethod
-    def sort_docking_results(docking_results, context):
+    def sort_docking_results(
+        docking_results: str, context: GlideContext, best: int | None = None
+    ) -> None:
         r"""Sort the docking maegz output based on the glide score
 
         Args:
-            docking_results : str
-                The path to the docking results file
-            context : GlideContext
-                The context for the glide docking
+            docking_results : The path to the docking results file
+            context : The context for the glide docking
+            best : The number of best poses to keep for each ligand.
+                If None, all poses are kept.Default is None.
+        Returns:
+            None
         """
         command = [
             context.command + "/utilities/glide_sort",
             "-use_dscore",
-            "-o",
-            docking_results.replace(".maegz", "_sorted.maegz"),
-            docking_results,
+            "-best_by_title",
         ]
+        if best:
+            command.extend(["-nbest", str(best)])
+        command.extend(
+            [
+                "-o",
+                docking_results.replace(".maegz", "_sorted.maegz"),
+                docking_results,
+            ]
+        )
         try:
             with subprocess.Popen(
                 command,
@@ -375,4 +403,185 @@ class Glide(Docking):
                 )
         except Exception as e:
             logger.error(f"An error occurred during sorting: {str(e)}")
+            raise e
+
+    @staticmethod
+    def parse_mae_files(
+        input_maefile: str, context: GlideContext, ligand: str
+    ) -> Protein:
+        """Parse the mae file and subset the structure based on the ligand in the csv file
+        Args:
+            input_maefile : The path to the input mae file
+            context : The context for the glide docking
+            csv_file : The path to the csv file containing the ligand information
+            ligand : The ligand name in the csv file
+        Returns:
+            Protein object containing the parsed file
+        """
+        output_file = f"{os.path.basename(input_maefile).replace('.maegz','')}_{ligand.lower()}.maegz"
+        clean_ligand = ligand.strip().strip('"').strip("'")
+        expression = f's_lp_Variant == "{clean_ligand}"'
+        command = [
+            context.command + "/utilities/ligfilter",
+            "-WAIT",
+            "-e",
+            expression,
+            "-o",
+            output_file,
+            input_maefile,
+        ]
+        try:
+            with subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+            ) as process:
+                _, stderr = process.communicate()
+            if process.returncode == 0:
+                logger.info(f"Parsing completed for {input_maefile}")
+                # MOVE THE OUTPUT FILE TO THE WRITE DIR
+                shutil.move(
+                    output_file,
+                    os.path.join(context.write_dir, f"{output_file}"),
+                )
+                logger.info(f"Output file moved to {context.write_dir}")
+                return Protein(
+                    file_path=os.path.join(context.write_dir, f"{output_file}")
+                )
+            else:
+                logger.error(f"Parsing failed for {input_maefile}")
+                logger.error(f"Error Output:\n{stderr}")
+                raise subprocess.CalledProcessError(
+                    process.returncode, " ".join(command)
+                )
+        except Exception as e:
+            logger.error(f"An error occurred during parsing: {str(e)}")
+            raise e
+
+    @staticmethod
+    def mae_to_mol(
+        inputfile: str, context: GlideContext, n_structure: int | None = None
+    ) -> Protein:
+        """Convert the input file to mol2 format using Schrodinger's utilities
+
+        Args:
+            inputfile : The path to the input file
+            context : The context for the glide docking
+            n_structure : The number of structures to convert.
+                If None, converts all structures. Default is None.
+        Returns:
+            Protein object containing the converted file
+        """
+        filename_wo_ext = os.path.splitext(os.path.basename(inputfile))[0]
+        output_path = os.path.join(context.write_dir, f"{filename_wo_ext}.mol2")
+        command = [
+            context.command + "/utilities/mol2convert",
+            "-noarom",
+        ]
+        if n_structure is not None:
+            command.extend(["-n", str(n_structure)])
+        else:
+            command.extend(["-all"])
+        command.extend(
+            [
+                "-imae",
+                inputfile,
+                "-omol2",
+                output_path,
+            ]
+        )
+        logger.info(f"Converting {inputfile} to mol2 format")
+        try:
+            with subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+            ) as process:
+                _, stderr = process.communicate()
+            if process.returncode == 0:
+                logger.info("Conversion completed successfully.")
+                return Protein(output_path)
+            else:
+                logger.error("Conversion failed")
+                logger.error(f"Error Output:\n{stderr}")
+                raise subprocess.CalledProcessError(
+                    process.returncode, " ".join(command)
+                )
+        except Exception as e:
+            logger.error(f"An error occurred during conversion: {str(e)}")
+            raise e
+
+    @staticmethod
+    def split_prepared_prot(
+        filename: str, context: GlideContext, lig_name=str
+    ) -> list[Ligand]:
+        r"""Split the prepared structure into multiple files based on the ligand name
+
+        Args:
+            filename : The path to the prepared structure file
+            context : The context for the glide docking
+            lig_name : The ligand name to split the file by
+        Returns:
+            a list of ligand objects
+        """
+        output_file = (
+            f"{os.path.basename(filename).replace('.mae','')}_{lig_name.lower()}.mae"
+        )
+        command = [
+            os.path.join(context.command, "run"),
+            "split_structure.py",
+            "-m",
+            "ligand",
+            "-ligand_asl",
+            f"res {lig_name}",
+            "-many_files",
+            filename,
+            os.path.join(context.write_dir, output_file),
+        ]
+        logger.info(f"Splitting {filename} into multiple files")
+        try:
+            with subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+            ) as process:
+                _, stderr = process.communicate()
+            if process.returncode == 0:
+                logger.info("Splitting completed successfully.")
+                if os.path.exists(
+                    os.path.join(
+                        context.write_dir, output_file.replace(".mae", "_receptor1.mae")
+                    )
+                ):
+                    # remove the receptor file
+                    os.remove(
+                        os.path.join(
+                            context.write_dir,
+                            output_file.replace(".mae", "_receptor1.mae"),
+                        )
+                    )
+                files = glob.glob(
+                    os.path.join(
+                        context.write_dir,
+                        f"{output_file.replace('.mae','_ligand')}*.mae",
+                    )
+                )
+                if len(files) > 1:
+                    ligands = []
+                    for file in files:
+                        ligands.append(Ligand(file_path=file))
+                    return ligands
+                else:
+                    return [Ligand(file_path=files[0])]
+            else:
+                logger.error("Splitting failed")
+                logger.error(f"Error Output:\n{stderr}")
+                raise subprocess.CalledProcessError(
+                    process.returncode, " ".join(command)
+                )
+        except Exception as e:
+            logger.error(f"An error occurred during splitting: {str(e)}")
             raise e

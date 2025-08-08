@@ -3,7 +3,8 @@
 import requests
 from loguru import logger
 
-from ..io import write_text
+from lignova.io import write_text
+
 from .base import Prepared, Structure
 
 

@@ -1,0 +1,80 @@
+# Name: M3A
+# Created by ModelServer 0.9.12
+
+# model_server_result.job_id: IG8kNyk5QEueNs5hZHt66A
+# model_server_result.datetime_utc: 2025-07-03 14:06:39
+# model_server_result.server_version: 0.9.12
+# model_server_result.query_name: ligand
+# model_server_result.source_id: pdb-bcif
+# model_server_result.entry_id: 6oav
+
+# model_server_params.name: atom_site
+# model_server_params.value: {"label_asym_id":"B","auth_seq_id":901}
+
+# model_server_stats.io_time_ms: 9
+# model_server_stats.parse_time_ms: 14
+# model_server_stats.create_model_time_ms: 14
+# model_server_stats.query_time_ms: 325
+# model_server_stats.encode_time_ms: 1
+# model_server_stats.element_count: 24
+
+@<TRIPOS>MOLECULE
+M3A
+24 26 1
+****
+****
+
+@<TRIPOS>ATOM
+1 C4 11.993 -5.993 -20.210 C.ar 1 M3A 0.000
+2 C5 9.721 -5.384 -19.237 C.cat 1 M3A 0.000
+3 C6 7.769 -4.947 -18.607 C.cat 1 M3A 0.000
+4 N1 11.060 -5.268 -19.420 N.pl3 1 M3A 0.000
+5 C7 6.679 -7.060 -19.560 C.2 1 M3A 0.000
+6 C8 6.067 -9.226 -20.651 C.ar 1 M3A 0.000
+7 N2 9.004 -4.443 -18.573 N.ar 1 M3A 0.000
+8 C9 5.353 -10.026 -19.751 C.ar 1 M3A 0.000
+9 C10 4.479 -11.003 -20.226 C.ar 1 M3A 0.000
+10 C11 4.299 -11.191 -21.583 C.ar 1 M3A 0.000
+11 C12 5.003 -10.405 -22.476 C.ar 1 M3A 0.000
+12 N3 6.677 -4.384 -18.088 N.pl3 1 M3A 0.000
+13 C13 5.877 -9.429 -22.017 C.ar 1 M3A 0.000
+14 C14 13.335 -5.658 -20.030 C.ar 1 M3A 0.000
+15 C15 14.320 -6.302 -20.754 C.ar 1 M3A 0.000
+16 N4 7.766 -6.159 -19.278 N.ar 1 M3A 0.000
+17 N 15.821 -8.491 -23.045 N.1 1 M3A 0.000
+18 C 15.016 -7.950 -22.436 C.1 1 M3A 0.000
+19 O 5.538 -6.789 -19.177 O.2 1 M3A 0.000
+20 C1 13.985 -7.287 -21.676 C.ar 1 M3A 0.000
+21 C2 12.647 -7.626 -21.862 C.ar 1 M3A 0.000
+22 C3 11.659 -6.983 -21.132 C.ar 1 M3A 0.000
+23 N5 6.983 -8.200 -20.261 N.am 1 M3A 0.000
+24 N6 9.053 -6.433 -19.686 N.ar 1 M3A 0.000
+@<TRIPOS>BOND
+1 1 22 ar
+2 1 14 ar
+3 1 4 1
+4 2 24 ar
+5 2 4 1
+6 2 7 ar
+7 3 16 ar
+8 3 7 ar
+9 3 12 1
+10 5 23 1
+11 5 16 1
+12 5 19 2
+13 6 13 ar
+14 6 23 1
+15 6 8 ar
+16 8 9 ar
+17 9 10 ar
+18 10 11 ar
+19 11 13 ar
+20 14 15 ar
+21 15 20 ar
+22 16 24 ar
+23 17 18 3
+24 18 20 1
+25 20 21 ar
+26 21 22 ar
+@<TRIPOS>SUBSTRUCTURE
+1 M3A 1

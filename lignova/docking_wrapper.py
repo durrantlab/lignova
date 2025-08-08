@@ -2,7 +2,6 @@ r"Implementation for the wrapper for the docking program Schrodinger GLIDE."
 from typing import Optional
 
 import os
-import time
 
 import MDAnalysis as mda
 import pandas as pd
@@ -10,23 +9,20 @@ import pyarrow as pa
 from loguru import logger
 
 from lignova.analysis.rmsd import RMSD
+from lignova.analysis.utils import clean_and_standardize_file
 from lignova.docking.combind import Combind
 from lignova.docking.contexts import GlideContext
 from lignova.docking.contexts.combind import CombindContext
 from lignova.docking.glide import Glide
-from lignova.docking.utils import convert_to_pdb, manipulate_complexes
+from lignova.docking.utils import manipulate_complexes
 from lignova.hdf5.parquet import ParquetParser
 from lignova.io import write_text
-from lignova.structure.editing import (
-    convert_cif2pdb,
-    remove_residues,
-    select_residues,
-    write_mda_universe,
-)
+from lignova.structure.editing import convert_cif2pdb, write_mda_universe
 from lignova.structure.ligand import DockedLigand, Ligand, PreparedLigand
 from lignova.structure.protein import PreparedProtein, Protein
 from lignova.structure.utils import (
     chery_pick_ligand,
+    get_ligand_names,
     separate_protein_ligand,
     validate_ligands,
     validate_pdb,
@@ -43,7 +39,9 @@ from lignova.structure.utils import (
 # and the RMSD values <= 2.5 Angstroms
 
 
-def get_pdb_ids_from_parquet(file_path: str, schema: pa.schema | None = None) -> list:
+def get_pdb_ids_from_parquet(
+    file_path: str, schema: Optional[pa.schema] = None
+) -> list:
     r"""
     Get the pdb ids from the parquet file
 
@@ -85,8 +83,8 @@ def extract_parquet_clusters(
     Args:
         file_path : The path to the parquet file
         pdb_id : The pdb id of the protein of interest
-        same_ligand_cluster : If true, only return the members in the same ligand cluster as the protein of interest
-            not only the same protein cluster
+        same_ligand_cluster : If true, only return the members in the same ligand cluster
+            as the protein of interest not only the same protein cluster
 
     Returns:
 
@@ -97,7 +95,7 @@ def extract_parquet_clusters(
         raise FileNotFoundError(f"The file {file_path} does not exist")
     data = pd.read_parquet(file_path)
     prot_data = data[data["PDB/Gene ID"] == pdb_id]
-    logger.info(f"The protein data is {prot_data}")
+    # logger.info(f"The protein data is {prot_data}")
     # check if the protein is in the dataframe
     if prot_data.empty:
         logger.error(f"The protein {pdb_id} is not in the dataframe")
@@ -120,86 +118,94 @@ def parse_ligand_members(
     find_pdb_ligand: bool = False,
     input_dir: str | None = None,
     water: bool = True,
-    combine: bool = False,
     datatype: str = "pdb",
+    type_water: str | None = None,
 ) -> pd.DataFrame | mda.Universe:
-    r"""Parse the cluster members information to write the ligand file
+    r"""Parse the cluster members to separate real PDB ligands and PubChem ligands.
 
     Args:
-        cluster_members : The dataframe containing the information about the ligand members in the cluster
-            extracted from the parquet file
-        pdb_id : The pdb id of the protein of interest
-        output_path : str
-            The path to the output ligand file to be written
-        find_pdb_ligand : If true, we extract the crystallographic ligand from the pdb file
-            if false, we extract the pubchem ligand from the smiles string
-            and write it to the output file
-        input_dir : The path to the directory containing the pdb files
-        water : If true, we remove the water molecules from the ligand file extracted from the pdb file
-        combine : If true, we combine PDB and PubChem ligands into one csv file
-        datatype : The type of data to be written to the output file when find_pdb_ligand is True
-            if can be "pdb" or "panadas"
+        cluster_members : DataFrame containing ligand cluster information.
+        pdb_id : PDB ID of the protein.
+        find_pdb_ligand : Whether to find PDB ligands only or all ligands.
+        input_dir : Directory containing PDB files.
+        water : Whether to remove water molecules when extracting ligands.
+        datatype : Output format when extracting ligands ("pdb" or "pandas").
+        type_water : Water type to retain if water=False.
 
     Returns:
-        TODO:
+        Ligands as a pandas DataFrame or MDAnalysis Universe object.
     """
-    # split the cluster members into pdb and pubchem ligands
+    if input_dir is None:
+        logger.error("Input directory must be provided.")
+        raise ValueError("input_dir must be provided to locate the PDB file.")
+
+    pdb_file = os.path.join(input_dir, f"{pdb_id.lower()}.pdb")
+    if not os.path.exists(pdb_file):
+        logger.error(f"PDB file {pdb_file} does not exist.")
+        raise FileNotFoundError(f"PDB file {pdb_file} not found.")
+
+    # Load the PDB file and detect ligand residue names
+    ligand_resnames = get_ligand_names(pdb_file)
+
+    logger.info(f"Detected ligand residue names in PDB: {ligand_resnames}")
+
+    if not ligand_resnames:
+        logger.error("No ligands detected in the PDB file.")
+        raise ValueError("No ligands detected in the PDB file.")
+
+    # Split the cluster_members into pdb ligands and pubchem ligands
     all_pdb_ligands = cluster_members[
-        cluster_members["PDB/Gene ID"].apply(
-            lambda x: any(char.isalpha() for char in x)
-        )
-        & (cluster_members["PDB/Gene ID"] == pdb_id)
+        cluster_members["Compound ID"].isin(ligand_resnames)
     ].drop_duplicates()
-    logger.info(f"The pdb ligands are {all_pdb_ligands}")
+
     pubchem_ligands = cluster_members[
-        cluster_members["PDB/Gene ID"].apply(
-            lambda x: all(char.isdigit() for char in x)
-        )
+        ~cluster_members["Compound ID"].isin(ligand_resnames)
     ].drop_duplicates()
-    logger.info(f"The pubchem ligands are {pubchem_ligands}")
+
+    if all_pdb_ligands.empty:
+        logger.error("No matching cluster members found for PDB ligands.")
+        raise ValueError("No matching cluster members found for PDB ligands.")
+
+    # Handle datatype
     if find_pdb_ligand:
-        if input_dir is None:
-            logger.error("The input directory is not provided")
-            raise ValueError("The input directory is not provided")
         if datatype == "pdb":
-            # loop through the pdb ligands and extract the ligand from the pdb file
+            ligand_universe_list = []
             for lig_id in all_pdb_ligands["Compound ID"]:
-                if os.path.exists(os.path.join(input_dir, f"{pdb_id.lower()}.pdb")):
-                    _protein, ligand = chery_pick_ligand(
-                        os.path.join(input_dir, f"{pdb_id.lower()}.pdb"),
-                        lig_id,
-                        remove_water=water,
-                    )
-                else:
-                    logger.error(f"The file {pdb_id.lower()}.pdb does not exist")
-                    raise FileNotFoundError(
-                        f"The file {pdb_id.lower()}.pdb does not exist"
-                    )
-        elif datatype == "pandas":
-            ligand = all_pdb_ligands[["Smiles", "Compound ID"]].rename(
-                columns={"Smiles": "SMILES", "Compound ID": "s_m_title"}
+                _, ligand = chery_pick_ligand(
+                    pdb_file,
+                    lig_id,
+                    remove_water=water,
+                    water_selection=type_water,
+                )
+                ligand_universe_list.append(ligand)
+
+            ligand = (
+                ligand_universe_list[0]
+                if len(ligand_universe_list) == 1
+                else ligand_universe_list
             )
+
+        elif datatype == "pandas":
+            ligand = (
+                all_pdb_ligands[["Smiles", "Compound ID"]]
+                .rename(columns={"Smiles": "SMILES", "Compound ID": "s_m_title"})
+                .reset_index(drop=True)
+            )
+
         else:
-            logger.error(f"Invalid datatype {datatype}")
-            raise ValueError(f"Invalid datatype {datatype}")
+            logger.error(f"Invalid datatype: {datatype}")
+            raise ValueError(f"Invalid datatype: {datatype}")
+
     else:
-        ligand = (
-            pubchem_ligands[["Smiles", "Compound ID"]]
-            .drop_duplicates()
+        # combine all ligands
+        all_ligands = pd.concat([all_pdb_ligands, pubchem_ligands], ignore_index=True)
+        all_ligands = all_ligands.drop_duplicates()
+        all_ligands = (
+            all_ligands[["Smiles", "Compound ID"]]
+            .rename(columns={"Smiles": "SMILES", "Compound ID": "s_m_title"})
             .reset_index(drop=True)
         )
-        ligand = ligand.rename(columns={"Smiles": "SMILES", "Compound ID": "s_m_title"})
-    if combine:
-        all_pdb_ligands_renamed = all_pdb_ligands[["Smiles", "Compound ID"]].rename(
-            columns={"Smiles": "SMILES", "Compound ID": "s_m_title"}
-        )
-        ligand = pd.concat(
-            [all_pdb_ligands_renamed, ligand],
-            axis=0,
-            ignore_index=True,
-        )
-        # make sure the ligand is unique
-        ligand = ligand.drop_duplicates(subset=["s_m_title"])
+        ligand = all_ligands
 
     return ligand
 
@@ -259,7 +265,7 @@ def prep_ligands(
         file_name : The name of the file to be written
 
     Returns:
-        TODO:
+        a PreparedLigand object with the prepared ligand
     """
     glide = Glide()
     if not os.path.exists(context.write_dir):
@@ -296,7 +302,10 @@ def prep_ligands(
 
 
 def prep_proteins(
-    pdb_file: str, context: GlideContext, lig_asl: str | None
+    pdb_file: str,
+    context: GlideContext,
+    lig_asl: str | None,
+    type_water: str | None = None,
 ) -> PreparedProtein:
     """
     Prepare the protein for docking
@@ -304,10 +313,11 @@ def prep_proteins(
     Args:
         pdb_file : The path to the pdb file
         context : The context object with information about the preparation
-        lig_asl : The ligand asl file to be used in the preparation i.e the ligand residue name
-
+        lig_asl : The ligand asl file to be used in the preparation i.e the ligand residue nam
+        type_water : The type of water to be kept when samplewater is True.
+            it can be "surface"| "interfacial"| "all" or None. Default is None
     Returns:
-        TODO:
+        a PreparedProtein object with the prepared protein
     """
     temp_prot = Protein(file_path=pdb_file)
     if not os.path.exists(context.write_dir):
@@ -315,7 +325,10 @@ def prep_proteins(
         os.makedirs(context.write_dir)
     if not os.path.exists(os.path.join(context.write_dir, temp_prot.file_id + ".pdb")):
         protein, _ligand = separate_protein_ligand(
-            pdb_file, remove_water=not (context.samplewater), keep_het_chain="A"
+            pdb_file,
+            remove_water=not (context.samplewater),
+            keep_het_chain="A",
+            water_selection=type_water,
         )
         write_mda_universe(
             protein, os.path.join(context.write_dir, f"{temp_prot.file_id}.pdb")
@@ -343,20 +356,16 @@ def dock_ligands(
     prepped_protein: PreparedProtein,
     prepped_ligand: PreparedLigand,
     context: GlideContext,
-) -> None:
+) -> DockedLigand:
     r"""
     Dock the ligands to the protein
 
     Args:
-        prepped_protein : PreparedProtein
-            The prepared protein to dock the ligand to
-        prepped_ligand : PreparedLigand
-            The prepared ligand to be docked
-        context : GlideContext
-            The context object with information about the docking
-
+        prepped_protein : The prepared protein object to dock the ligand to
+        prepped_ligand :  The prepared ligand object to be docked
+        context : The glidecontext object with information about the docking
     Returns:
-        TODO:
+        a DockedLigand object with the docked ligand
     """
     glide = Glide()
     if not os.path.exists(context.write_dir):
@@ -390,15 +399,13 @@ def run_combind(
     Run the combind program to get the top poses
 
     Args:
-        docked_ligand : DockedLigand | list[DockedLigand]
-            The docked ligand to be scored
-        context : GlideContext
-            The context object with information about the scoring
-        screen : bool (default=false)
-            If true, we use combindVS to screen the ligands and generate features
+        docked_ligand : The DockedLigand object containing the docking results
+        context : CombindContext with information about the combind docking
+        screen : If true, we use combindVS to screen the ligands and generate features
+            Default is False
 
     Returns:
-        TODO:
+        The path to the combind docking results CSV file
     """
     combind = Combind(
         command=context.command,
@@ -474,15 +481,11 @@ def get_top_combind_pose(
     r"""Parse the combind docking results to get the top pose
 
     Args:
-        combind_csv : str
-            The path to the combind docking results CSV file
-        glide_docking_file : DockedLigand
-            The DockedLigand object containing the glide docking results
-        context : CombindContext
-            The context object with information about the combind docking
-
+        combind_csv : The path to the combind docking results CSV file
+        glide_docking_file : DockedLigand object with the glide docking results
+        context : CombindContext with information about the combind docking
     Returns:
-        TODO:
+        The DockedLigand object containing the top pose
     """
     if not os.path.exists(context.work_dir):
         logger.warning(f"The directory {context.work_dir} does not exist.Creating it")
@@ -520,21 +523,18 @@ def get_top_combind_pose(
 
 
 def extract_pdb_top_poses(
-    combind_result: DockedLigand, context: CombindContext, pdb_lig: str | None = None
-):
+    combind_result: DockedLigand, context: CombindContext, pdb_lig: str
+) -> DockedLigand:
     r"""Parse the combind docking results top poses to get each complex in a separate file
 
     Args:
-        combind_result : DockedLigand
-            The DockedLigand object containing the combind docking results
-        context : CombindContext
-            The context object with information about the combind docking
-        pdb_lig : str | None (default=None)
-            The id of the pdb ligand to be extracted from the complex
-
+        combind_result : The DockedLigand object containing the combind docking results
+        context : CombindContext with information about the combind docking
+        pdb_lig : The id of the pdb ligand to be extracted from the complex.
     Returns:
-        TODO:
+        The DockedLigand object containing the top pose
     """
+    pdb_file = None
     combind = Combind(
         command=context.command,
         work_dir=context.work_dir,
@@ -552,7 +552,7 @@ def extract_pdb_top_poses(
         raise FileNotFoundError(f"The file {combind_result.file_path} does not exist")
     try:
         if not os.path.exists(
-            os.path.join(context.work_dir, combind_result.file_id + "_merge.maegz")
+            os.path.join(context.work_dir, combind_result.file_id + "_split_lig.maegz")
         ):
             manipulate_complexes(
                 input_file=combind_result.file_path,
@@ -560,59 +560,15 @@ def extract_pdb_top_poses(
                 outfile_name=combind_result.file_id + "_merge.maegz",
                 mode="merge",
             )
-        if pdb_lig is not None:
-            if not os.path.exists(
-                os.path.join(context.work_dir, combind_result.file_id + "_merge.csv")
-            ):
-                combind.extract_data_csv(
-                    os.path.join(
-                        context.work_dir, combind_result.file_id + "_merge.maegz"
-                    ),
-                    combind_result.file_id + "_merge",
-                    filter_data=False,
-                )
-            # read the csv file and find the index of the pdb ligand from the s_m_title column
-            # after splitting the string by ":" and selecting the second element
-            combind_data = pd.read_csv(
-                os.path.join(context.work_dir, combind_result.file_id + "_merge.csv")
+            logger.debug(f"Complexes file for {combind_result.file_id} is created")
+            manipulate_complexes(
+                input_file=os.path.join(
+                    context.work_dir, combind_result.file_id + "_merge.maegz"
+                ),
+                context=glide_context,
+                outfile_name=combind_result.file_id + "_split_lig.maegz",
+                mode="split_ligand",
             )
-            pdb_lig_index = (
-                combind_data[
-                    combind_data["s_m_title"].apply(lambda x: x.split(":")[1])
-                    == pdb_lig.upper()
-                ].index[0]
-                + 1
-            )
-            logger.debug(f"The index of the pdb ligand is {pdb_lig_index}")
-            if not os.path.exists(
-                os.path.join(
-                    context.work_dir, f"{combind_result.file_id }_{str(pdb_lig)}.pdb"
-                )
-            ):
-                convert_to_pdb(
-                    os.path.join(
-                        context.work_dir, combind_result.file_id + "_merge.maegz"
-                    ),
-                    glide_context,
-                    [pdb_lig_index],
-                )
-                os.rename(
-                    os.path.join(
-                        context.work_dir, combind_result.file_id + "_merge.pdb"
-                    ),
-                    os.path.join(
-                        context.work_dir,
-                        f"{combind_result.file_id }_{str(pdb_lig)}.pdb",
-                    ),
-                )
-            if os.path.exists(
-                os.path.join(context.work_dir, combind_result.file_id + "_merge.csv")
-            ):
-                os.remove(
-                    os.path.join(
-                        context.work_dir, combind_result.file_id + "_merge.csv"
-                    )
-                )
             if os.path.exists(
                 os.path.join(context.work_dir, combind_result.file_id + "_merge.maegz")
             ):
@@ -621,40 +577,54 @@ def extract_pdb_top_poses(
                         context.work_dir, combind_result.file_id + "_merge.maegz"
                     )
                 )
-        final_docked_lig = DockedLigand(
-            os.path.join(
-                context.work_dir,
-                f"{combind_result.file_id }_{str(pdb_lig)}.pdb",
-            )
-        )
         logger.debug(f"Top poses pdb complex for {combind_result.file_id} is extracted")
     except Exception as exc:
         logger.error(f"Error in selecting top poses for {combind_result.file_id}")
         raise exc
-    return final_docked_lig
+    property_csv = combind.extract_data_csv(
+        os.path.join(context.work_dir, combind_result.file_id + "_split_lig.maegz"),
+        combind_result.file_id + "_split_lig",
+        filter_data=False,
+    )
+    logger.debug(f"The property csv file is {property_csv}")
+    # read the property_csv and find the value of s_lp_Variant that contains the pdb_lig
+    combind_data = pd.read_csv(property_csv)
+    logger.debug(f"The combind data is {combind_data}")
+    matches = combind_data[
+        combind_data["s_m_title"].str.contains(pdb_lig, case=False, na=False)
+    ]
+    logger.debug(f"The matches are {matches} for {pdb_lig}")
+    # find the index of the pdb ligand from the s_m_title column and extract the s_lp_Variant
+    slpvariant = matches["s_lp_Variant"].values[0]
+    parsed_file = Glide().parse_mae_files(
+        os.path.join(context.work_dir, combind_result.file_id + "_split_lig.maegz"),
+        glide_context,
+        slpvariant,
+    )
+    # run mae to mol2 function then clean and standardize the file
+    mol2_file = Glide().mae_to_mol(parsed_file.file_path, glide_context)
+    pdb_file = clean_and_standardize_file(mol2_file.file_path)
+    if os.path.exists(mol2_file.file_path):
+        os.remove(mol2_file.file_path)
+    if os.path.exists(parsed_file.file_path):
+        os.remove(parsed_file.file_path)
+    return DockedLigand(pdb_file)
 
 
 def calc_rmsd_spyrmsd(
     reference_file: DockedLigand,
     target_file: DockedLigand,
     context: GlideContext,
-    ligand_name: str = None,
-):
+) -> float:
     """
     Calculate the symmetry corrected RMSD between the reference and target ligands
 
     Args:
-        reference_file : DockedLigand
-            The object containing the reference complex i.e protein and ligand
-        target_file : DockedLigand
-            The object containing the target complex i.e protein and ligand
-        context : GlideContext
-            The context object with information about the pre calculation prossessing
-        ligand_name : str (default=None)
-            The name of the ligand to be extracted from the complex
-
+        reference_file : DockedLigand object containing the reference complex
+        target_file : DockedLigand object containing the target complex
+        context : GlideContext containing the information about the docking
     Returns:
-        TODO:
+        A float value of the symmetry corrected RMSD between the reference and target ligands
     """
     if not os.path.exists(reference_file.file_path):
         logger.error(f"The file {reference_file.file_path} does not exist")
@@ -665,217 +635,300 @@ def calc_rmsd_spyrmsd(
     if not os.path.exists(context.write_dir):
         logger.warning(f"The directory {context.write_dir} does not exist.Creating it")
         os.makedirs(context.write_dir)
-    # if file extension is not pdb, convert to pdb
-    if not reference_file.file_ext == "pdb":
-        logger.debug(f"Converting {reference_file.file_path} to pdb format")
-        convert_to_pdb(reference_file.file_path, context)
-        reference_file = DockedLigand(
-            os.path.join(context.write_dir, reference_file.file_id + ".pdb")
-        )
-    if not target_file.file_ext == "pdb":
-        logger.debug(f"Converting {target_file.file_path} to pdb format")
-        convert_to_pdb(target_file.file_path, context)
-        target_file = DockedLigand(
-            os.path.join(context.write_dir, target_file.file_id + ".pdb")
-        )
-    # sepate the protein and ligand from the reference and target files
-    _ref_prot, ref_lig = separate_protein_ligand(
-        reference_file.file_path, remove_water=True
-    )
-    # get the residue names in ref_lig and exclude the ligand_name
-    all_residues = set(list(ref_lig.resnames))
-    ligand_residues = [residue for residue in all_residues if residue != ligand_name]
-    logger.debug(f"The ligand residues are {ligand_residues}")
-    write_mda_universe(
-        select_residues(ref_lig, ligand_name),
-        os.path.join(context.write_dir, reference_file.file_id + "_ref_lig.pdb"),
-    )
-    ref_lig_filepath = os.path.join(
-        context.write_dir, reference_file.file_id + "_ref_lig.pdb"
-    )
-    logger.debug(f"Reference ligand is written to {ref_lig_filepath}")
-    _tar_prot, tar_lig = separate_protein_ligand(
-        target_file.file_path, remove_water=True
-    )
-    if len(ligand_residues) != 0:
-        write_mda_universe(
-            remove_residues(tar_lig, ligand_residues),
-            os.path.join(context.write_dir, target_file.file_id + "_tar_lig.pdb"),
-        )
-    else:
-        write_mda_universe(
-            tar_lig,
-            os.path.join(context.write_dir, target_file.file_id + "_tar_lig.pdb"),
-        )
-    tar_lig_filepath = os.path.join(
-        context.write_dir, target_file.file_id + "_tar_lig.pdb"
-    )
-    logger.debug(f"Target ligand is written to {tar_lig_filepath}")
-    new_ref_lig = DockedLigand(
-        os.path.join(context.write_dir, reference_file.file_id + "_ref_lig.pdb")
-    )
-    new_tar_lig = DockedLigand(
-        os.path.join(context.write_dir, target_file.file_id + "_tar_lig.pdb")
-    )
-    rmsd = RMSD(new_tar_lig, new_ref_lig, context)
+    if reference_file.file_ext == "maegz" or reference_file.file_ext == "mae":
+        logger.error(f"The file {reference_file.file_path} is not a pdb file")
+        raise ValueError(f"The file {reference_file.file_path} is not a pdb file")
+    ref_pdb = clean_and_standardize_file(reference_file.file_path)
+    if target_file.file_ext == "maegz" or target_file.file_ext == "mae":
+        logger.error(f"The file {target_file.file_path} is not a pdb file")
+        raise ValueError(f"The file {target_file.file_path} is not a pdb file")
+    target_pdb = clean_and_standardize_file(target_file.file_path)
+    ref_lig_object = DockedLigand(ref_pdb)
+    target_lig_object = DockedLigand(target_pdb)
+
+    rmsd = RMSD(target_lig_object, ref_lig_object, context)
     res = rmsd.symmetry_rmsd()
     logger.info(f"The RMSD between the reference and target ligands is {res}")
-    if os.path.exists(
-        os.path.join(context.write_dir, reference_file.file_id + "_ref_lig.pdb")
-    ):
-        os.remove(
-            os.path.join(context.write_dir, reference_file.file_id + "_ref_lig.pdb")
-        )
-    if os.path.exists(
-        os.path.join(context.write_dir, target_file.file_id + "_tar_lig.pdb")
-    ):
-        os.remove(os.path.join(context.write_dir, target_file.file_id + "_tar_lig.pdb"))
-    if os.path.exists(reference_file.file_path):
-        os.remove(reference_file.file_path)
+    if os.path.exists(target_lig_object.file_path):
+        os.remove(target_lig_object.file_path)
+    if os.path.exists(ref_lig_object.file_path):
+        os.remove(ref_lig_object.file_path)
     return res
 
 
-# TODO: Remove this into a run function for CLI
-if __name__ == "__main__":
-    start_time = time.time()
-    PARQUET_FILENAME = "final_ligand_cluster_0.7_Tc.parquet"
-    RMSD_FILE_WATER = "rmsd_values_water.csv"
-    RMSD_FILE_NO_WATER = "rmsd_values_no_water.csv"
-    # pdbids = get_pdb_ids_from_parquet(PARQUET_FILENAME)
-    pdbids = pd.read_csv("rmsd_values_no_water_old.csv")["PDB_ID"].values
-    # add 2dux and 3aox to the pdbids
-    pdbids = list(pdbids)
-    failed = []
-    COUNT = 0
-    TOTAL_LIGANDS_DOCKED = 0
-    SCREEN = False
-    logger.info(f"The number of pdb ids to dock into is {len(pdbids)}")
-    logger.info(f"The pdb ids are {pdbids}")
-    # Check if the rmsd file exists
-    if os.path.exists(RMSD_FILE_NO_WATER):
-        rmsd_df = pd.read_csv(RMSD_FILE_NO_WATER)
-        rmsd_dict = dict(zip(rmsd_df["PDB_ID"].values, rmsd_df["RMSD"].values))
-        logger.info(f"The rmsd dictionary is {rmsd_dict}")
-    else:
-        rmsd_dict = {}
-    for pdbid in pdbids:
-        # check if the pdb id is in the rmsd dictionary
-        if pdbid in rmsd_dict:
-            logger.info(f"The pdb id {pdbid} is already in the rmsd dictionary")
-            continue
-        logger.info(f"Getting the pdb coordinates for {pdbid}")
-        get_pdb_coordinates(pdbid, "raw")
-        ligand_members = extract_parquet_clusters(PARQUET_FILENAME, pdbid.upper())
-        ligand_info = parse_ligand_members(
-            ligand_members,
-            pdbid.upper(),
-            input_dir="raw",
-            find_pdb_ligand=False,
-            combine=True,
-        )
-        pubchem_lig = ligand_info[
-            ligand_info["s_m_title"].apply(lambda x: all(char.isdigit() for char in x))
-        ]
-        pdb_ligands = parse_ligand_members(
-            ligand_members,
-            pdbid.upper(),
-            input_dir="raw",
-            find_pdb_ligand=True,
-            datatype="pandas",
-        )
-        lig_name = pdb_ligands["s_m_title"].values[0]
-        if not (len(pubchem_lig) != 0 and len(pdb_ligands) >= 1):
-            logger.error(f"The ligand information for {pdbid} is not complete")
-            continue
-        logger.info(f"The ligand information is\n {ligand_info}")
-        prep_context = GlideContext.get_current()
-        prep_context.write_dir = "./nt_water"
-        prep_context.samplewater = False
-        prep_context.set_current(prep_context)
-        try:
-            result = prep_ligands(ligand_info, prep_context, pdbid)
-            ref_lig_obj = PreparedLigand(
-                file_path=f"nt_water/{pdbid.lower()}_protein_prepared.mae"
-            )
-            logger.info(f"The prepared ligand is {result.file_path}")
+def main(
+    csv_file: str,
+    output_files_dir: dict,
+    save_file: str,
+    parquet_file: str,
+    pdbfile_dir: str,
+    glide_only: bool = False,
+):
+    r"""
+    Main function to run the docking wrapper.
 
-            prep_prot = prep_proteins(
-                f"raw/{pdbid.lower()}.pdb", prep_context, lig_name
+    Args:
+        csv_file : Path to the CSV file containing the PDB IDs to dock.
+        output_files_dir : Dictionary where key is the input directory,
+            value is the RMSD column name.
+        save_file : Path to the CSV file where output will be saved.
+        parquet_file : Path to the parquet file containing ligand data.
+        pdbfile_dir : The directory where the pdb files are located.
+        glide_only : If true, we don't run combind and only run glide docking
+    """
+    # Load or initialize the output DataFrame
+    if os.path.exists(save_file):
+        save_file_df = pd.read_csv(save_file)
+        if save_file_df.empty:
+            logger.warning(f"{save_file} is empty. Initializing new DataFrame.")
+            save_file_df = pd.DataFrame(
+                columns=["PDB_ID"] + list(output_files_dir.values())
             )
-            logger.info(f"The prepared protein is {prep_prot.file_path}")
-            final_lig = dock_ligands(prep_prot, result, prep_context)
-            logger.info(f"The docked ligand is {final_lig.file_path}")
-            # check if the length of ligand_info is greater than 5 skip the combind screening
-            if len(ligand_info) > 5:
+    else:
+        logger.info(f"{save_file} does not exist. Creating new output file.")
+        save_file_df = pd.DataFrame(
+            columns=["PDB_ID"] + list(output_files_dir.values())
+        )
+
+    # Read PDB IDs to process
+    pdb_df = pd.read_csv(csv_file)
+    # limit the pdb_df to the one with 5ix0 pdb id
+    if pdb_df.empty or "PDB_ID" not in pdb_df.columns:
+        logger.error("CSV file contains no data or missing 'PDB_ID' column.")
+        return
+
+    # sort the rows based on the Number of PubChem Ligands column from smallest to largest
+    pdb_df = pdb_df.sort_values(by=["Number of PubChem Ligands"])
+    # exclude rows with 0 in the Total Water column
+    pdb_df = pdb_df[pdb_df["Total Water"] != 0]
+    pdbs = pdb_df["PDB_ID"].dropna().unique()
+    logger.info(f"Number of PDB IDs to process: {len(pdbs)}")
+    for pdbid in pdbs:
+        logger.info(f"--- Processing {pdbid} ---")
+        # chck if the pdb file exists in the pdbfile_dir
+        if not os.path.exists(os.path.join(pdbfile_dir, f"{pdbid.lower()}.pdb")):
+            logger.info(f"Downloading PDB file for {pdbid}")
+            get_pdb_coordinates(pdbid, pdbfile_dir)
+        pdbfile = os.path.join(pdbfile_dir, f"{pdbid.lower()}.pdb")
+        ref_lig_n_list = (
+            []
+        )  # Initialize with a default value to avoid unassigned variable usage
+        for directory, column_name in output_files_dir.items():
+            # check the directory to determine water
+            if "./water" in directory:
+                water = "all"
+            elif "./nt_water" in directory:
+                water = None
+            else:
+                water = "interfacial"
+            # check if the pdb_df["Bridge Water"] of the current row is 0 and if so skip
+            if (
+                pdb_df[pdb_df["PDB_ID"] == pdbid]["Bridge Water"].values[0] == 0
+                and water == "interfacial"
+            ):
+                logger.info(f"Skipping {pdbid} due to no bridge water.")
                 continue
+            if (
+                pdbid in save_file_df["PDB_ID"].values
+                and not save_file_df.loc[save_file_df["PDB_ID"] == pdbid, column_name]
+                .isnull()
+                .all()
+            ):
+                logger.info(f"{pdbid} already has value in {column_name}. Skipping.")
+                continue
+            logger.info(f"Directory: {directory} -> Column: {column_name}")
             combind_context = CombindContext.get_current()
-            combind_context.work_dir = "./nt_water"
+            combind_context.work_dir = directory
             combind_context.set_current(combind_context)
-            raw_combind_result = run_combind(final_lig, combind_context, screen=SCREEN)
-            if SCREEN:
-                combind_data = pd.read_csv(raw_combind_result)
-                # remove the row with prepared in the s_m_title column
-                combind_data = combind_data[
-                    ~combind_data["s_m_title"].str.contains("prepared")
+            glide = Glide()
+            context = GlideContext.get_current()
+            context.write_dir = directory
+            context.samplewater = False if water is None else True
+            context.set_current(context)
+            ligand_members = extract_parquet_clusters(parquet_file, pdbid.upper())
+            ligand_info = parse_ligand_members(
+                ligand_members,
+                pdbid.upper(),
+                input_dir=pdbfile_dir,
+                find_pdb_ligand=False,
+                water=True,
+                datatype="pandas",
+            )
+            pdb_ligands = parse_ligand_members(
+                ligand_members,
+                pdbid.upper(),
+                input_dir=pdbfile_dir,
+                find_pdb_ligand=True,
+                water=True,
+                datatype="pandas",
+            )
+            print(f"The ligand info is {ligand_info}")
+            if pdb_ligands.empty:
+                logger.warning(f"No valid ligand found for {pdbid}. Skipping.")
+                continue
+            pdb_lig = pdb_ligands["s_m_title"].values[0]
+            logger.info(f"PDB ligand: {pdb_lig}")
+            # check if the prepared protein file exists
+            if not os.path.exists(
+                os.path.join(directory, f"{pdbid.lower()}_protein_prepared.mae")
+            ):
+                # prepare the protein
+                grid_file = prep_proteins(pdbfile, context, pdb_lig, type_water=water)
+            else:
+                logger.info(
+                    f"Protein prepared file already exists: {pdbid.lower()}_protein_prepared.mae"
+                )
+                grid_file = PreparedProtein(
+                    os.path.join(directory, f"{pdbid.lower()}_grid.zip")
+                )
+            prepared_path = PreparedLigand(
+                os.path.join(directory, f"{pdbid.lower()}_protein_prepared.mae")
+            )
+            if os.path.exists(prepared_path.file_path) and not os.path.exists(
+                prepared_path.file_path.replace(".mae", "_merged.mae")
+            ):
+                new_reflig_obj = glide.split_prepared_prot(
+                    prepared_path.file_path, context, pdb_lig
+                )
+
+                ref_lig_n_list = [
+                    glide.mae_to_mol(obj.file_path, context, n_structure=1)
+                    for obj in new_reflig_obj
                 ]
-                combind_data = combind_data.rename(columns={"s_m_title": "ID"})
-                # save the csv file with the new column names as docked_ligand.file_id + "temp.csv"
-                combind_data.to_csv(
-                    final_lig.file_path.replace(".maegz", "_screen.csv"), index=False
+            # check if the prepared ligand file exists
+            if not os.path.exists(
+                os.path.join(directory, f"{pdbid.lower()}_lig_pubchem_prepared.mae")
+            ):
+                prepared_lig = prep_ligands(ligand_info, context, pdbid)
+            else:
+                logger.info(
+                    f"Ligand prepared file already exists: {pdbid.lower()}_lig_pubchem_prepared.mae"
                 )
-                new_combind_result = final_lig.file_path.replace(
-                    ".maegz", "_screen.csv"
+                prepared_lig = PreparedLigand(
+                    os.path.join(directory, f"{pdbid.lower()}_lig_pubchem_prepared.mae")
                 )
-                final_combind_res = get_top_combind_pose(
-                    new_combind_result, final_lig, combind_context
+            # check if the docking file exists
+            if not os.path.exists(
+                os.path.join(
+                    directory,
+                    f"{pdbid.lower()}_lig_pubchem_docking_pv.maegz",
+                )
+            ):
+                try:
+                    # dock the ligand
+                    docked_ligands = dock_ligands(
+                        grid_file,
+                        prepared_lig,
+                        context,
+                    )
+                except Exception as e:
+                    logger.error(f"Docking failed for {pdbid} in {directory}: {e}")
+                    continue
+            else:
+                logger.info(f"Docking result file already exists for {pdbid.lower()}")
+                docked_ligands = DockedLigand(
+                    os.path.join(
+                        directory,
+                        f"{pdbid.lower()}_lig_pubchem_docking_pv.maegz",
+                    )
+                )
+            # check if the combind file exists
+            if not glide_only:
+                if not os.path.exists(
+                    os.path.join(
+                        directory,
+                        f"{pdbid.upper()}_lig_pubchem_docking_pv_top_poses_pv.maegz",
+                    )
+                ):
+                    if water is "interfacial":
+                        continue
+                    combind_context = CombindContext.get_current()
+                    combind_context.work_dir = directory
+                    combind_context.set_current(combind_context)
+                    raw_combind_csv = run_combind(
+                        docked_ligands, combind_context, screen=False
+                    )
+                    docking_result_path = get_top_combind_pose(
+                        raw_combind_csv,
+                        docked_ligands,
+                        combind_context,
+                    )
+
+                else:
+                    logger.info(
+                        f"Combind result file already exists for {pdbid.upper()}"
+                    )
+                    docking_result_path = DockedLigand(
+                        os.path.join(
+                            directory,
+                            f"{pdbid.upper()}_lig_pubchem_docking_pv_top_poses_pv.maegz",
+                        )
+                    )
+                srodinger = extract_pdb_top_poses(
+                    docking_result_path, combind_context, pdb_lig
                 )
             else:
-                final_combind_res = get_top_combind_pose(
-                    raw_combind_result, final_lig, combind_context
+                docking_result_path = docked_ligands
+                glide.sort_docking_results(
+                    docking_result_path.file_path, context, best=1
                 )
-            logger.info(f"The top poses are {final_combind_res.file_path}")
-            rmsd_target_file = extract_pdb_top_poses(
-                final_combind_res,
-                combind_context,
-                pdb_ligands["s_m_title"].values[0],
-            )
-            logger.info(f"The rmsd target file is {rmsd_target_file}")
-            RMSD_VAL = calc_rmsd_spyrmsd(
-                ref_lig_obj,
-                rmsd_target_file,
-                prep_context,
-                pdb_ligands["s_m_title"].values[0],
-            )
-            rmsd_dict[pdbid] = RMSD_VAL
-            logger.info(f"The RMSD value is {RMSD_VAL}")
-            COUNT += 1
-            TOTAL_LIGANDS_DOCKED += len(ligand_info)
-            if COUNT % 10 == 0:
-                logger.info("Writing the rmsd values to the csv file")
-                rmsd_df = pd.DataFrame(rmsd_dict.items(), columns=["PDB_ID", "RMSD"])
-                rmsd_df.to_csv(RMSD_FILE_NO_WATER, index=False)
-        except Exception as error:
-            logger.error(f"Error in docking {pdbid}")
-            failed.append(pdbid)
-        pdb_ligand_name = pdb_ligands["s_m_title"].values[0]
-        logger.debug(
-            f"The pdb id is {pdbid}: {pdb_ligand_name} pdb & {len(pubchem_lig)} ligands"
-        )
-    # save the failed pdb ids to a text file
-    if len(failed) != 0 and not os.path.exists("nt_water/failed_pdb_ids.txt"):
-        with open("nt_water/failed_pdb_ids.txt", "w", encoding="utf-8") as f:
-            for item in failed:
-                f.write(f"{item}\n")
-    elif os.path.exists("nt_water/failed_pdb_ids.txt"):
-        with open("nt_water/failed_pdb_ids.txt", "a", encoding="utf-8") as f:
-            for item in failed:
-                f.write(f"{item}\n")
-    # save the final rmsd values to a csv file
-    rmsd_df = pd.DataFrame(rmsd_dict.items(), columns=["PDB_ID", "RMSD"])
-    rmsd_df.to_csv(RMSD_FILE_NO_WATER, index=False)
 
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    logger.info(f"Total time taken: {elapsed_time:.2f} seconds")
-    logger.info(f"Total number of ligands docked: {TOTAL_LIGANDS_DOCKED}")
-    logger.info(f"Total number of proteins docked: {COUNT}")
+                sorted_path = os.path.join(
+                    directory,
+                    f"{pdbid.upper()}_lig_pubchem_docking_pv_sorted.maegz",
+                )
+                file_sorted = DockedLigand(sorted_path)
+
+                srodinger = extract_pdb_top_poses(file_sorted, combind_context, pdb_lig)
+            rmsd_list = []
+            for ref_lig_n in ref_lig_n_list:
+                try:
+                    ref_object = clean_and_standardize_file(ref_lig_n.file_path)
+                    rmsd = calc_rmsd_spyrmsd(
+                        DockedLigand(file_path=ref_object),
+                        srodinger,
+                        context,
+                    )
+                    rmsd_list.append(rmsd)
+                    logger.info(f"RMSD for {pdbid} in {directory} is {rmsd}")
+                except Exception as e:
+                    logger.error(
+                        f"Failed to calculate RMSD for {pdbid} in {directory}: {e}"
+                    )
+                    continue
+
+            if len(rmsd_list) == 1:
+                rmsd_value = rmsd_list[0]
+            else:
+                rmsd_value = ",".join(map(str, rmsd_list))
+
+            if pdbid not in save_file_df["PDB_ID"].values:
+                new_row = {"PDB_ID": pdbid, column_name: rmsd_value}
+                save_file_df = pd.concat(
+                    [save_file_df, pd.DataFrame([new_row])], ignore_index=True
+                )
+            else:
+                row_index = save_file_df.index[save_file_df["PDB_ID"] == pdbid][0]
+                save_file_df.at[row_index, column_name] = rmsd_value
+
+            save_file_df.to_csv(save_file, index=False)
+
+
+if __name__ == "__main__":
+    PARQUET_FILENAME = "final_ligand_cluster_0.7_Tc.parquet"
+    CSV_FILE = "data_summary_v2.csv"
+    SAVE_FILE = "merged_df_v2c.csv"
+    FILE_PDB = "./raw"
+    OUTPUT_FILES_DIR = {
+        "./nt_water": "Combind RMSD Water Deletion",
+        "./bridg_water": "Combind RMSD Selective Retention",
+        "./water": "Combind RMSD Water Retention",
+    }
+    main(
+        CSV_FILE,
+        OUTPUT_FILES_DIR,
+        SAVE_FILE,
+        PARQUET_FILENAME,
+        FILE_PDB,
+        glide_only=False,
+    )

@@ -27,7 +27,6 @@ context_protein_6Oav = {
     "docked_ligand_filepath": "/home/mma121/PubChem_small/try_schrodinger/6oav_validation/6oav_m3a_top_pose_pv.maegz",
     "complexes_filepath": "/home/mma121/PubChem_small/try_schrodinger/6oav_validation/6oav_m3a_top_pose_merge.maegz",
 }
-# "/home/mma121/PubChem_small/try_schrodinger/6oav_validation/6oav_m3a_combind_sorted.maegz",
 
 
 def prep_dirs():
@@ -157,3 +156,28 @@ def test_manipulate_complexes_lig_sep():
             context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_split_lig.maegz"
         )
     )
+
+
+"""
+def test_spyrmsd_calculation():
+    r""Test the RMSD calculation using spyrmsd.""
+    ligand = DockedLigand(
+        os.path.join(
+            context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv_complexes.pdb"
+        )
+    )
+
+    reference = DockedLigand(
+        os.path.join(
+            context_protein_6Oav["write_dir"], "6oav_m3a_top_pose_pv_complexes.pdb"
+        )
+    )
+    # Create an instance of the RMSD class
+    rmsd = RMSD(ligand, reference, context)
+    # Call the rmsd_obabel function
+    output_filename = os.path.join(
+        context_protein_6Oav["write_dir"], "6oav_m3a_rmsd_spyrmsd"
+    )
+    _ = rmsd.symmetry_rmsd(output_filename=output_filename, save=True)
+    assert os.path.exists(output_filename + ".txt")
+"""
