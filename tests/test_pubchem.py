@@ -46,17 +46,22 @@ def test_get_cids_info():
 def test_get_binding_affinity():
     r"""Retrieve binding affinity from PubChem"""
     pubchem = PubChemAPI()
-    binding_affinity_test = pubchem.get_binding_affinity(
+    binding_affinity_test, assay_name = pubchem.get_binding_affinity(
         1057958,
         [
-            135566761,
-            135566762,
+            "135566761",
+            "135566762",
         ],
     )
-    assert binding_affinity_test[135566761]["Activity Value [uM]"] == "2.12"
-    assert binding_affinity_test[135566762]["Activity Value [uM]"] == "0.88"
-    assert (
-        binding_affinity_test[135566761]["Activity Name"]
-        == "IC50"
-        == binding_affinity_test[135566762]["Activity Name"]
-    )
+    assert binding_affinity_test[135566761] == 2.12
+    assert binding_affinity_test[135566762] == 0.88
+    assert assay_name == "IC50"
+
+
+def test_get_pubmed_id():
+    r"""Retrieve PubMed ID from PubChem"""
+    pubchem = PubChemAPI()
+    empty = pubchem.get_pubmed_id(2244)
+    pubmed_id = pubchem.get_pubmed_id(1057924)
+    assert pubmed_id == 24183742
+    assert not empty

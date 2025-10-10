@@ -54,7 +54,6 @@ class PubChemAPI:
         response = requests.get(url, timeout=30)
         if response.status_code == 200:
             data = response.json()
-            logger.debug(f"Response data: {data}")
             cids = []
             if "InformationList" in data and "Information" in data["InformationList"]:
                 for entry in data["InformationList"]["Information"]:
@@ -71,7 +70,7 @@ class PubChemAPI:
             time.sleep(5)
             return self.get_cids(aid, active)
         else:
-            print(f"Failed to fetch CIDs. Status code: {response.status_code}")
+            logger.error(f"Failed to fetch CIDs. Status code: {response.status_code}")
 
     def get_cids_info(self, cid: int, properties: list[str]) -> dict[str, str]:
         r"""Get compound information from PubChem API.
@@ -92,21 +91,17 @@ class PubChemAPI:
         response = requests.get(url, timeout=30)
         if response.status_code == 200:
             response = response.json()
-            logger.debug(f"Retrieved compound information for CID {cid}.")
-            logger.debug(f"Properties: {response['PropertyTable']['Properties']}")
             compound_info = {}
             if "Properties" in response["PropertyTable"]:
                 properties_data = response["PropertyTable"]["Properties"][0]
                 for prop in properties:
                     if str(prop) in properties_data:
-                        logger.debug(f"{prop}: {properties_data[str(prop)]}")
                         compound_info[str(prop)] = properties_data[str(prop)]
                     else:
                         logger.warning(
                             f"Failed to find {prop} information for CID {cid}."
                         )
                         compound_info[str(prop)] = ""
-                print(f"Compound information for CID {cid}: {compound_info}")
                 return compound_info
         elif response.status_code == 204:
             logger.warning(
@@ -122,8 +117,8 @@ class PubChemAPI:
         return {}
 
     def get_binding_affinity(
-        self, aid: int, cid: list[int]
-    ) -> dict[int, dict[str, str]]:
+        self, aid: int, cid: list[str]
+    ) -> tuple[dict[int, None | float], str]:
         r"""Get binding affinity information from PubChem API.
 
         Args:
@@ -132,6 +127,7 @@ class PubChemAPI:
 
         Returns:
             A dictionary with the Binding affinity information.
+            str: The type of binding affinity (e.g., IC50, Ki).
         """
         url = f"{self.api_key}/assay/aid/{str(aid)}/concise/{self.retrieve_format}"
         response = requests.get(url, timeout=30)
@@ -139,31 +135,29 @@ class PubChemAPI:
         if response.status_code == 200:
             if "Table" in data and "Row" in data["Table"]:
                 columns = data["Table"]["Columns"]["Column"]
-                rows = data["Table"]["Row"]
+                # from columns get the index of "CID" and "Activity Value [uM]"
+                if (
+                    "CID" not in columns
+                    or "Activity Value [uM]" not in columns
+                    or "Activity Name" not in columns
+                ):
+                    logger.warning(f"No CID or Activity column found for AID {aid}.")
+                    return {}, None
+                cid_index = columns.index("CID")
+                activity_index = columns.index("Activity Value [uM]")
+                activity_name_index = columns.index("Activity Name")
                 # Extract columns and rows with "Activity" in the column name
                 activity_data = {}
-                for row in rows:
-                    cid_value = None
-                    cid_data = {}
-                    for column, cell in zip(columns, row["Cell"]):
-                        if column == "CID":
-                            logger.debug(f"Extracting CID value: {cell}")
-                            cid_value = int(cell)
-                        if "Activity" in column:
-                            cid_data[column] = cell
-                            logger.debug(cid_data)
+                for row in data["Table"]["Row"]:
+                    cid_value = row["Cell"][cid_index]
+                    activity = row["Cell"][activity_index]
+                    activity_name = row["Cell"][activity_name_index]
                     if cid_value in cid:
-                        activity_data[cid_value] = cid_data
-                return activity_data
-            logger.warning(
-                f"Failed to retrieve binding affinity information for CID {cid}."
-            )
-            return {}
-        elif response.status_code == 204:
-            logger.warning(
-                f"No binding affinity information found for CID {cid}. Status code: {response.status_code}"
-            )
-            return {}
+                        try:
+                            activity_data[int(cid_value)] = float(activity)
+                        except ValueError:
+                            activity_data[int(cid_value)] = None
+                return activity_data, activity_name
         elif response.status_code == 503:
             # wait for 5 seconds and retry again
             logger.warning(f"Service unavailable for CID {cid}. Retrying in 5 seconds.")
@@ -174,3 +168,42 @@ class PubChemAPI:
                 f"Failed to retrieve binding affinity information for CID {cid}."
             )
             return {}
+
+    def get_pubmed_id(self, aid: int) -> int | None:
+        r"""Get binding affinity information from PubChem API.
+
+        Args:
+            aid : PubChem Assay ID.
+
+        Returns:
+            A list with the PubMed IDs.
+        """
+        url = f"{self.api_key}/assay/aid/{str(aid)}/concise/{self.retrieve_format}"
+        response = requests.get(url, timeout=30)
+        data = response.json()
+        if response.status_code == 200:
+            if "Table" in data and "Row" in data["Table"]:
+                columns = data["Table"]["Columns"]["Column"]
+                if "PubMed ID" not in columns:
+                    logger.warning(f"No PubMed ID column found for AID {aid}.")
+                    return None
+                else:
+                    pubmed_ids = data["Table"]["Columns"]["Column"].index("PubMed ID")
+                    rows = data["Table"]["Row"]
+                    pubmed_ids = rows[0]["Cell"][pubmed_ids]
+                    if pubmed_ids == "":
+                        return None
+                    return int(pubmed_ids)
+        elif response.status_code == 204:
+            logger.warning(
+                f"No PubMed ID information found for AID {aid}. Status code: {response.status_code}"
+            )
+            return None
+        elif response.status_code == 503:
+            # wait for 5 seconds and retry again
+            logger.warning(f"Service unavailable for AID {aid}. Retrying in 5 seconds.")
+            time.sleep(5)
+            return self.get_pubmed_id(aid)
+        else:
+            logger.warning(f"Failed to retrieve PubMed ID information for AID {aid}.")
+            return None

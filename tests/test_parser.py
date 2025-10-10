@@ -146,6 +146,51 @@ def test_parquet_write():
     assert parser.convert_to_pandas().equals(pd.DataFrame(data))
 
 
+def test_parquet_read_schema():
+    r"""Test reading data from Parquet files."""
+    schema = pa.schema(
+        [
+            ("id", pa.int64()),
+            ("name", pa.string()),
+            (
+                "attributes",
+                pa.struct(
+                    [
+                        ("age", pa.int64()),
+                        (
+                            "address",
+                            pa.struct(
+                                [
+                                    ("street", pa.string()),
+                                    ("city", pa.string()),
+                                    ("zip", pa.int64()),
+                                ]
+                            ),
+                        ),
+                    ]
+                ),
+            ),
+        ]
+    )
+    parser = ParquetParser(parquet_file_path, schema)
+    data = [
+        {
+            "id": 2,
+            "name": "Jane Smith",
+            "attributes": {
+                "age": 25,
+                "address": {
+                    "street": "456 Maple Ave",
+                    "city": "Othertown",
+                    "zip": 67890,
+                },
+            },
+        },
+    ]
+    result = parser.find_schema()
+    assert result == schema
+
+
 def test_parquet_read():
     r"""Test reading data from Parquet files."""
     schema = pa.schema(

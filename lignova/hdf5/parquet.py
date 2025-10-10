@@ -1,5 +1,5 @@
 r"""Implementation of the parquet class ."""
-
+import os
 import pandas as pd
 import pyarrow as pa
 import pyarrow.dataset as ds
@@ -19,7 +19,19 @@ class ParquetParser(FormatManager):
     def __init__(self, *args, **kwargs):
         r"""Initialize the ParquetParser class."""
         super().__init__(*args, **kwargs)
+        
+    def find_schema(self) -> pa.Schema | None:
+        r"""Find the schema of a Parquet file using PyArrow.
 
+        Returns:
+            schema: pyarrow.Schema
+        """
+        #check if file exists
+        if not os.path.exists(self.file_path):
+            logger.warning(f"File {self.file_path} does not exist.")
+            return None
+        return pq.read_schema(self.file_path)
+    
     def create(self) -> None:
         r"""Create a Parquet file using PyArrow."""
         # Create an empty table
@@ -111,6 +123,6 @@ class ParquetParser(FormatManager):
         data = self.read()
         field = ds.field(column)
         filter_expr = condition(field)
-        logger.debug(filter_expr)
+        # logger.debug(filter_expr)
         data = data.scanner(filter=filter_expr).to_table()
         return data.to_pandas()
