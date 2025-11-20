@@ -4,6 +4,14 @@ import csv
 import os
 
 import numpy as np
+import pytest
+
+# Skip this entire module as it had Schrödinger-dependent code
+if os.getenv("SCHRODINGER") is None:
+    pytest.skip(
+        "Schrödinger is not installed or the $SCHRODINGER environment variable is not set. Skipping Glide tests.",
+        allow_module_level=True,
+    )
 
 from lignova.docking.combind import Combind
 from lignova.docking.contexts.combind import CombindContext

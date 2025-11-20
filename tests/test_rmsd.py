@@ -3,7 +3,15 @@ r"""Test for the RMSD calculation class."""
 import os
 
 import numpy as np
+import pytest
 from loguru import logger
+
+# Skip this entire module as it had Schrödinger-dependent code
+if os.getenv("SCHRODINGER") is None:
+    pytest.skip(
+        "Schrödinger is not installed or the $SCHRODINGER environment variable is not set. Skipping Glide tests.",
+        allow_module_level=True,
+    )
 
 from lignova.analysis.rmsdclass.mda import mdaRMSD
 from lignova.analysis.rmsdclass.obabel import obabelRMSD

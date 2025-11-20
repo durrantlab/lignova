@@ -6,14 +6,23 @@ import csv
 import os
 
 import numpy as np
+import pytest
 from loguru import logger
+
+from lignova.structure.ligand import Ligand, PreparedLigand
+from lignova.structure.protein import PreparedProtein, Protein
+from lignova.structure.utils import separate_protein_ligand
+
+# Skip this entire module as it had Schrödinger-dependent code
+if os.getenv("SCHRODINGER") is None:
+    pytest.skip(
+        "Schrödinger is not installed or the $SCHRODINGER environment variable is not set. Skipping Glide tests.",
+        allow_module_level=True,
+    )
 
 from lignova.docking import Glide
 from lignova.docking.contexts import GlideContext
 from lignova.structure.editing import write_mda_universe
-from lignova.structure.ligand import Ligand, PreparedLigand
-from lignova.structure.protein import PreparedProtein, Protein
-from lignova.structure.utils import separate_protein_ligand
 
 # Ensures we execute from file directory (for relative paths).
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -38,6 +47,7 @@ def prep_dirs():
 
 if not os.path.exists(context_protein_6Oav["write_dir"]):
     prep_dirs()
+
 
 # to generate the protein and ligand files for 6oav
 prot_raw = Protein(context_protein_6Oav["file_path"])

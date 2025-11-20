@@ -2,7 +2,15 @@ r"""Test the docking analysis module for calculating RMSD."""
 
 import os
 
+import pytest
 from loguru import logger
+
+# Skip this entire module as it had Schrödinger-dependent code
+if os.getenv("SCHRODINGER") is None:
+    pytest.skip(
+        "Schrödinger is not installed or the $SCHRODINGER environment variable is not set. Skipping Glide tests.",
+        allow_module_level=True,
+    )
 
 from lignova.analysis.rmsd import RMSD
 from lignova.analysis.utils import (
@@ -48,7 +56,9 @@ context.set_current(context)
 
 
 # get the complex for the docking file
-# manipulate_complexes(context_protein_6Oav["docked_ligand_filepath"])
+@pytest.mark.skipif(
+    condition=os.getenv("SCHRODINGER") is None, reason="Schrödinger not installed"
+)
 def test_manipulate_complexes():
     r"""Test the manipulation of complexes as it is used in the rmsd calculation functions."""
     manipulate_complexes(
@@ -62,6 +72,9 @@ def test_manipulate_complexes():
     )
 
 
+@pytest.mark.skipif(
+    condition=os.getenv("SCHRODINGER") is None, reason="Schrödinger not installed"
+)
 def test_interconvert_mae_sdf():
     r"""Test the interconversion of MAE to SDF."""
     # Call the interconvert_mae_sdf function
@@ -143,6 +156,9 @@ def test_obabel_parser():
     assert list(values.values()) == [[0.0]]
 
 
+@pytest.mark.skipif(
+    condition=os.getenv("SCHRODINGER") is None, reason="Schrödinger not installed"
+)
 def test_manipulate_complexes_lig_sep():
     r"""Test the manipulation of complexes to split ligand."""
     manipulate_complexes(

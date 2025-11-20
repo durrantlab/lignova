@@ -1,4 +1,4 @@
-[project]
+[workspace]
 name = "lignova"
 version = "0.0.0"
 description = "Lignova is a flexible, physics‑driven package for rapid generation of high‑quality protein–ligand complexes."

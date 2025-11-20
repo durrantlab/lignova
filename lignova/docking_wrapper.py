@@ -1,6 +1,4 @@
 r"Implementation for the wrapper for the docking program Schrodinger GLIDE."
-from typing import Optional
-
 import os
 
 import MDAnalysis as mda
@@ -40,7 +38,7 @@ from lignova.structure.utils import (
 
 
 def get_pdb_ids_from_parquet(
-    file_path: str, schema: Optional[pa.schema] = None
+    file_path: str, schema: pa.schema| None = None
 ) -> list:
     r"""
     Get the pdb ids from the parquet file
