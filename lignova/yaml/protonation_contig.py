@@ -68,7 +68,7 @@ class ProtonationContigConfig(YamlConfig):
                     "noopt": False,
                     "keep-chain": True,
                     "assign-only": False,
-                    "ffout": "PARSE",
+                    "ffout": None,
                     "usernames": None,
                     "apbs-input": None,
                     "pdb-output": None,
