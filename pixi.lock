@@ -238,6 +238,10 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-ng-2.2.5-hde8ca8f_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstandard-0.25.0-py312h5253ce2_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb8e6e7a_2.conda
+      - pypi: https://files.pythonhosted.org/packages/d5/f9/d721ee039c5d070efbf67696b01aaa84b431b82c7a7e57504f2c1f46ced2/dimorphite_dl-2.0.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/90/38/93b99e99706829558b0ac1ad2c75a50521c712b8a2b27c12811521dc7ee1/gypsum_dl-1.3.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/08/dc/d948e83b97f2c420cb6c7e2143ae349560d3b5b061945f1b2a4eefb0231c/MolVS-0.1.1.tar.gz
+      - pypi: https://files.pythonhosted.org/packages/ee/15/b908d1d23a4bd2bd7b2e98de5df23b26e43145119fe294728bf89211b935/mpi4py-4.1.1-cp312-cp312-manylinux1_x86_64.manylinux_2_5_x86_64.whl
       - pypi: ./
       osx-64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
@@ -455,6 +459,10 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zlib-ng-2.2.5-h55e386d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstandard-0.25.0-py312h01f6755_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h8210216_2.conda
+      - pypi: https://files.pythonhosted.org/packages/d5/f9/d721ee039c5d070efbf67696b01aaa84b431b82c7a7e57504f2c1f46ced2/dimorphite_dl-2.0.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/90/38/93b99e99706829558b0ac1ad2c75a50521c712b8a2b27c12811521dc7ee1/gypsum_dl-1.3.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/08/dc/d948e83b97f2c420cb6c7e2143ae349560d3b5b061945f1b2a4eefb0231c/MolVS-0.1.1.tar.gz
+      - pypi: https://files.pythonhosted.org/packages/ff/2c/e201cd4828555f10306a5439875cbd0ecfba766ace01ff5c6df43f795650/mpi4py-4.1.1-cp312-cp312-macosx_10_13_x86_64.whl
       - pypi: ./
   dev:
     channels:
@@ -755,6 +763,10 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-ng-2.2.5-hde8ca8f_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstandard-0.25.0-py312h5253ce2_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb8e6e7a_2.conda
+      - pypi: https://files.pythonhosted.org/packages/d5/f9/d721ee039c5d070efbf67696b01aaa84b431b82c7a7e57504f2c1f46ced2/dimorphite_dl-2.0.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/90/38/93b99e99706829558b0ac1ad2c75a50521c712b8a2b27c12811521dc7ee1/gypsum_dl-1.3.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/08/dc/d948e83b97f2c420cb6c7e2143ae349560d3b5b061945f1b2a4eefb0231c/MolVS-0.1.1.tar.gz
+      - pypi: https://files.pythonhosted.org/packages/ee/15/b908d1d23a4bd2bd7b2e98de5df23b26e43145119fe294728bf89211b935/mpi4py-4.1.1-cp312-cp312-manylinux1_x86_64.manylinux_2_5_x86_64.whl
       - pypi: ./
       osx-64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
@@ -1029,6 +1041,10 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zlib-ng-2.2.5-h55e386d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstandard-0.25.0-py312h01f6755_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h8210216_2.conda
+      - pypi: https://files.pythonhosted.org/packages/d5/f9/d721ee039c5d070efbf67696b01aaa84b431b82c7a7e57504f2c1f46ced2/dimorphite_dl-2.0.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/90/38/93b99e99706829558b0ac1ad2c75a50521c712b8a2b27c12811521dc7ee1/gypsum_dl-1.3.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/08/dc/d948e83b97f2c420cb6c7e2143ae349560d3b5b061945f1b2a4eefb0231c/MolVS-0.1.1.tar.gz
+      - pypi: https://files.pythonhosted.org/packages/ff/2c/e201cd4828555f10306a5439875cbd0ecfba766ace01ff5c6df43f795650/mpi4py-4.1.1-cp312-cp312-macosx_10_13_x86_64.whl
       - pypi: ./
   docs:
     channels:
@@ -1362,9 +1378,13 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb8e6e7a_2.conda
       - pypi: https://files.pythonhosted.org/packages/78/b6/6307fbef88d9b5ee7421e68d78a9f162e0da4900bc5f5793f6d3d0e34fb8/annotated_types-0.7.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/9d/2a/9186535ce58db529927f6cf5990a849aa9e052eea3e2cfefe20b9e1802da/bracex-2.6-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/d5/f9/d721ee039c5d070efbf67696b01aaa84b431b82c7a7e57504f2c1f46ced2/dimorphite_dl-2.0.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/90/38/93b99e99706829558b0ac1ad2c75a50521c712b8a2b27c12811521dc7ee1/gypsum_dl-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/48/9d/797d595dc57bbcb6284584ca7e228ac54b421aa1e864cec15d0f78e02f4b/material_plausible_plugin-0.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/f4/2a/dab5925d2d66a1620400e9b64127e576859a0d5dc0cb5ebda1c4f64601ef/mkdocs_awesome_nav-3.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/3f/3e/7513f2f37c563da65d1b91781e047f4a1c0ceac8206d4f6042428428e4ad/mkdocs_print_site_plugin-2.8-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/08/dc/d948e83b97f2c420cb6c7e2143ae349560d3b5b061945f1b2a4eefb0231c/MolVS-0.1.1.tar.gz
+      - pypi: https://files.pythonhosted.org/packages/ee/15/b908d1d23a4bd2bd7b2e98de5df23b26e43145119fe294728bf89211b935/mpi4py-4.1.1-cp312-cp312-manylinux1_x86_64.manylinux_2_5_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/ef/82/7a9d0550484a62c6da82858ee9419f3dd1ccc9aa1c26a1e43da3ecd20b0d/natsort-8.4.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/82/2f/e68750da9b04856e2a7ec56fc6f034a5a79775e9b9a81882252789873798/pydantic-2.12.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0d/76/941cc9f73529988688a665a5c0ecff1112b3d95ab48f81db5f7606f522d3/pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
@@ -1682,9 +1702,13 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h8210216_2.conda
       - pypi: https://files.pythonhosted.org/packages/78/b6/6307fbef88d9b5ee7421e68d78a9f162e0da4900bc5f5793f6d3d0e34fb8/annotated_types-0.7.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/9d/2a/9186535ce58db529927f6cf5990a849aa9e052eea3e2cfefe20b9e1802da/bracex-2.6-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/d5/f9/d721ee039c5d070efbf67696b01aaa84b431b82c7a7e57504f2c1f46ced2/dimorphite_dl-2.0.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/90/38/93b99e99706829558b0ac1ad2c75a50521c712b8a2b27c12811521dc7ee1/gypsum_dl-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/48/9d/797d595dc57bbcb6284584ca7e228ac54b421aa1e864cec15d0f78e02f4b/material_plausible_plugin-0.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/f4/2a/dab5925d2d66a1620400e9b64127e576859a0d5dc0cb5ebda1c4f64601ef/mkdocs_awesome_nav-3.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/3f/3e/7513f2f37c563da65d1b91781e047f4a1c0ceac8206d4f6042428428e4ad/mkdocs_print_site_plugin-2.8-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/08/dc/d948e83b97f2c420cb6c7e2143ae349560d3b5b061945f1b2a4eefb0231c/MolVS-0.1.1.tar.gz
+      - pypi: https://files.pythonhosted.org/packages/ff/2c/e201cd4828555f10306a5439875cbd0ecfba766ace01ff5c6df43f795650/mpi4py-4.1.1-cp312-cp312-macosx_10_13_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/ef/82/7a9d0550484a62c6da82858ee9419f3dd1ccc9aa1c26a1e43da3ecd20b0d/natsort-8.4.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/82/2f/e68750da9b04856e2a7ec56fc6f034a5a79775e9b9a81882252789873798/pydantic-2.12.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/5f/5d/5f6c63eebb5afee93bcaae4ce9a898f3373ca23df3ccaef086d0233a35a7/pydantic_core-2.41.5-cp312-cp312-macosx_10_12_x86_64.whl
@@ -3081,6 +3105,14 @@ packages:
   - pkg:pypi/defusedxml?source=hash-mapping
   size: 24062
   timestamp: 1615232388757
+- pypi: https://files.pythonhosted.org/packages/d5/f9/d721ee039c5d070efbf67696b01aaa84b431b82c7a7e57504f2c1f46ced2/dimorphite_dl-2.0.2-py3-none-any.whl
+  name: dimorphite-dl
+  version: 2.0.2
+  sha256: 44125dfe2a5e1a37239f61914428d7f51d8fa61ec701a1337e71c293514133a8
+  requires_dist:
+  - loguru>=0.7.2,<0.8
+  - rdkit>=2020.3.3,<2026
+  requires_python: '>=3.10'
 - conda: https://conda.anaconda.org/conda-forge/noarch/docutils-0.22.3-pyhd8ed1ab_0.conda
   sha256: ab77ee201665dc654248e3a250bd6fe05db0a1892716a6feb8da4a3162518624
   md5: abbe8c85619c87c4f4f61b44173434af
@@ -3538,6 +3570,19 @@ packages:
   - pkg:pypi/gsd?source=hash-mapping
   size: 226798
   timestamp: 1759914877117
+- pypi: https://files.pythonhosted.org/packages/90/38/93b99e99706829558b0ac1ad2c75a50521c712b8a2b27c12811521dc7ee1/gypsum_dl-1.3.0-py3-none-any.whl
+  name: gypsum-dl
+  version: 1.3.0
+  sha256: 09d8869c704566c83be830797b4f9fcab79eaec3827d3274b649d4ddac1534e1
+  requires_dist:
+  - loguru>=0.7.2,<1
+  - numpy>=2.0.0,<3
+  - scipy>=1.15.1,<2
+  - rdkit>=2024.9.4,<2027
+  - mpi4py>=4.0.1,<5
+  - molvs>=0.1.1,<1
+  - dimorphite-dl>=2.0.1,<3
+  requires_python: '>=3.10'
 - conda: https://conda.anaconda.org/conda-forge/noarch/h2-4.3.0-pyhcf101f3_0.conda
   sha256: 84c64443368f84b600bfecc529a1194a3b14c3656ee2e832d15a20e0329b6da3
   md5: 164fc43f0b53b6e3a7bc7dce5e4f1dc9
@@ -6577,6 +6622,12 @@ packages:
   - pkg:pypi/mmtf-python?source=hash-mapping
   size: 26040
   timestamp: 1657095365436
+- pypi: https://files.pythonhosted.org/packages/08/dc/d948e83b97f2c420cb6c7e2143ae349560d3b5b061945f1b2a4eefb0231c/MolVS-0.1.1.tar.gz
+  name: molvs
+  version: 0.1.1
+  sha256: 3679713d95774f69625e42b7e83b161be48df8d994768ba2786440f085497474
+  requires_dist:
+  - six
 - conda: https://conda.anaconda.org/conda-forge/noarch/more-itertools-10.8.0-pyhd8ed1ab_0.conda
   sha256: fabe81c8f8f3e1d0ef227fc1306526c76189b3f1175f12302c707e0972dd707c
   md5: d7620a15dc400b448e1c88a981b23ddd
@@ -6611,6 +6662,16 @@ packages:
   purls: []
   size: 373396
   timestamp: 1725746891597
+- pypi: https://files.pythonhosted.org/packages/ee/15/b908d1d23a4bd2bd7b2e98de5df23b26e43145119fe294728bf89211b935/mpi4py-4.1.1-cp312-cp312-manylinux1_x86_64.manylinux_2_5_x86_64.whl
+  name: mpi4py
+  version: 4.1.1
+  sha256: ed3d9b619bf197a290f7fd67eb61b1c2a5c204afd9621651a50dc0b1c1280d45
+  requires_python: '>=3.8'
+- pypi: https://files.pythonhosted.org/packages/ff/2c/e201cd4828555f10306a5439875cbd0ecfba766ace01ff5c6df43f795650/mpi4py-4.1.1-cp312-cp312-macosx_10_13_x86_64.whl
+  name: mpi4py
+  version: 4.1.1
+  sha256: d4403a7cec985be9963efc626193e6df3f63f5ada0c26373c28e640e623e56c3
+  requires_python: '>=3.8'
 - conda: https://conda.anaconda.org/conda-forge/noarch/mrcfile-1.5.4-pyhd8ed1ab_0.conda
   sha256: 465a9c6634811dcd2680d09820e66b589bef6015c34316f1b59684e2e0cd3df3
   md5: f7c1396aa66942e77cf544ba6945111d
