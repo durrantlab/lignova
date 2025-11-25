@@ -20,10 +20,9 @@ lignova = { path = ".", editable = true }
 [tasks]
 
 [dependencies]
-python = ">=3.9,<3.13"
+python = ">=3.11,<3.13"
 h5py = ">=3.12.1,<4"
-numpy = ">=1.23.2,<2"
-pubchempy = ">=1.0.4,<2"
+numpy = ">=2.3.5,<3"
 rdkit = ">=2024.9.2,<2025"
 loguru = ">=0.7.2,<0.8"
 mdanalysis = ">=2.9.0,<3"
