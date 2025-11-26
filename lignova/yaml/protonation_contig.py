@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any, override
 
 import os
-from turtle import pd
 
 from loguru import logger
 
@@ -13,7 +12,7 @@ from .config import YamlConfig
 
 
 class ProtonationContigConfig(YamlConfig):
-    """Class to handle YAML configuration files for protonation contigs."""
+    r"""Class to handle YAML configuration files for protonation contigs."""
 
     # ---- Schema/constraints ----
     _FF_ALLOWED = {"AMBER", "CHARMM", "PARSE", "TYL06", "PEOEPB", "SWANSON"}
@@ -43,10 +42,10 @@ class ProtonationContigConfig(YamlConfig):
 
     @override
     def __init__(self, file_path: str, data_dict: dict[str, Any] | None = None) -> None:
-        """Initialize with the path to the YAML file.
+        r"""Initialize with the path to the YAML file.
         Args:
             file_path (str): Path to the YAML configuration file.
-            data_dict (dict, optional): Dictionary to create the YAML file if it doesn't exist.
+            data_dict (dict| None) : Dictionary to create the YAML file if it doesn't exist.
         """
         if data_dict is None and not os.path.exists(file_path):
             logger.warning(
@@ -57,7 +56,7 @@ class ProtonationContigConfig(YamlConfig):
         self.validate()
 
     def declare_defaults(self) -> dict[str, dict[str, Any]]:
-        """Declare default settings for protonation config (grouped under pdb2pqr)."""
+        r"""Declare default settings for protonation config (grouped under pdb2pqr)."""
         default_config: dict[str, dict[str, Any]] = {
             "pdb2pqr": {
                 "general": {
@@ -91,7 +90,7 @@ class ProtonationContigConfig(YamlConfig):
                     "thermophile": None,
                     "alignment": None,
                     "mutation": None,  # e.g., "N25R/N181D"
-                    # Optional: include parameters path if you want it in defaults
+                    # NOTE: Optional include parameters path if you want it in defaults
                     # "parameters": "/path/to/propka.cfg",
                     "log-level": "INFO",  # DEBUG|INFO|WARNING|ERROR|CRITICAL
                     "pH": 7.0,
@@ -110,7 +109,7 @@ class ProtonationContigConfig(YamlConfig):
         return default_config
 
     def validate(self) -> None:
-        """Validate the current configuration against allowed values."""
+        r"""Validate the current configuration against allowed values."""
         # compare values in data_dict to default allowed values if any keys are missing log a warning and use default
         default = self.declare_defaults()
         pdb2pqr_cfg = self.data_dict.setdefault("pdb2pqr", {})

@@ -1,9 +1,9 @@
 r"""Implementation for yaml class to write configuration files."""
 
-from typing import Any, Iterator
+from typing import Any
 
 import os
-from venv import logger
+from collections.abc import Iterator
 
 import yaml
 
@@ -12,10 +12,10 @@ class YamlConfig:
     """Class to handle YAML configuration files."""
 
     def __init__(self, file_path: str, data_dict: dict[str, Any] | None = None) -> None:
-        """Initialize with the path to the YAML file.
+        r"""Initialize with the path to the YAML file.
         Args:
-            file_path (str): Path to the YAML configuration file.
-            data_dict (dict, optional): Dictionary to create the YAML file if it doesn't exist.
+            file_path str: Path to the YAML configuration file.
+            data_dict (dict | None) : Dictionary to create the YAML file if it doesn't exist.
         """
         self.file_path = file_path
         if not os.path.exists(file_path) and data_dict is None:
@@ -28,13 +28,16 @@ class YamlConfig:
             self.data_dict = self.read_config()
 
     def read_config(self) -> dict[str, Any]:
-        """Read the YAML configuration file and return its contents as a dictionary."""
+        r"""Read the YAML configuration file and return its contents as a dictionary."""
         with open(self.file_path, "r") as file:
             config = yaml.safe_load(file) or {}
         return config
 
     def write_config(self, config: dict[str, Any]) -> None:
-        """Write the given dictionary to the YAML configuration file."""
+        r"""Write the given dictionary to the YAML configuration file.
+        Args:
+            config (dict): Dictionary to write to the YAML file.
+            """
         with open(self.file_path, "w") as file:
             yaml.dump(config, file)
         self.data_dict = config
@@ -45,7 +48,7 @@ class YamlConfig:
         nested: bool = False,
         parent_key: str | None = None,
     ) -> None:
-        """Update the YAML configuration file with the given dictionary
+        r"""Update the YAML configuration file with the given dictionary
             Allow both surface and deep updates.
         Args:
             updates (dict): Dictionary containing updates to apply.
@@ -63,14 +66,20 @@ class YamlConfig:
         self.write_config(config)
 
     def delete_key(self, key: str) -> None:
-        """Delete a key from the YAML configuration file."""
+        r"""Delete a key from the YAML configuration file.
+        Args:
+            key (str): The key to delete from the configuration.
+        """
         config = self.read_config()
         if key in config:
             del config[key]
             self.write_config(config)
 
     def _leaf_items(self, data: dict[str, Any]) -> Iterator[tuple[str, Any]]:
-        """Yield (key, value) for all non-dict values in a nested dict."""
+        r"""Yield (key, value) for all non-dict values in a nested dict.
+        Args:
+            data (Dict): The dictionary to traverse.
+            """
         for key, value in data.items():
             if isinstance(value, dict):
                 # Go deeper: depth-first search
@@ -80,9 +89,9 @@ class YamlConfig:
                 yield key, value
 
     def to_cli(self, data: dict[str, Any] | None = None) -> list[str]:
-        """Convert the YAML configuration to a command-line argument string.
+        r"""Convert the YAML configuration to a command-line argument string.
         Args:
-            data (dict, optional): Dictionary to convert. If None, uses self.data_dict.
+            data (Dict | None) : Dictionary to convert. If None, uses self.data_dict.
         """
         if data is None:
             data = self.data_dict

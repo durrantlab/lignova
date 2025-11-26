@@ -37,9 +37,7 @@ from lignova.structure.utils import (
 # and the RMSD values <= 2.5 Angstroms
 
 
-def get_pdb_ids_from_parquet(
-    file_path: str, schema: pa.schema| None = None
-) -> list:
+def get_pdb_ids_from_parquet(file_path: str, schema: pa.Schema | None = None) -> list:
     r"""
     Get the pdb ids from the parquet file
 

@@ -1,8 +1,6 @@
 r""" Implementation of the ProteinContext class containing the configuration for PDB/protein validation."""
 
-from typing import Optional
-
-_default_glide_context: "Optional[ProteinContext]" = None
+_default_glide_context: "[ProteinContext]" = None
 
 CRYSTAL_ADDITIVES = [
     "2PE",
@@ -291,9 +289,9 @@ class ProteinContext:
     # pylint: disable-next=too-many-arguments,too-many-locals
     def __init__(
         self,
-        impurities: Optional[list] = None,
-        cofactors: Optional[list] = None,
-        crystal_additives: Optional[list] = None,
+        impurities: list | None = None,
+        cofactors: list | None = None,
+        crystal_additives: list | None = None,
     ):
         r"""Initialize the ProteinContext class with the given impurities, cofactors and crystal_additives."""
         self.cofactors = cofactors if cofactors is not None else COFACTORS.copy()

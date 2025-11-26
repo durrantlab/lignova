@@ -4,8 +4,6 @@ import os
 
 from loguru import logger
 
-_default_glide_context: "Optional[GlideContext]" = None
-
 DEFAULT_COMMAND = os.environ.get("SCHRODINGER", None)
 DEFAULT_POSES_PER_LIG = "100"
 DEFAULT_FORCEFIELD = "OPLS_2005"
@@ -144,3 +142,6 @@ class GlideContext:
         """Set the current context."""
         global _default_glide_context
         _default_glide_context = context
+
+
+_default_glide_context: GlideContext | None = None

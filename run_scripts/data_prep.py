@@ -20,7 +20,6 @@ from lignova.structure.utils import (
     validate_pdb,
 )
 
-
 def get_pdb_ids_from_parquet(
     file_path: str, schema: pa.Schema | None = None
 ) -> list:
@@ -57,7 +56,7 @@ def get_pdb_ids_from_parquet(
 
 
 def get_pdb_coordinates(pdb_id: str, work_dir: str) -> None:
-    """
+    r"""
     Download/prepare PDB coordinates if they pass validation.
 
     Args:
@@ -98,7 +97,7 @@ def prep_proteins(
     pdb_file: str,
     output_dir: str,
 ) -> str:
-    """
+    r"""
     Prepare the protein for PDB2PQR
     Args:
         pdb_file : The path to the pdb file
@@ -132,7 +131,7 @@ def run_cli(
     output_dir: str,
     num_proteins: list[int] | None = None,
 ) -> list[str]:
-    """
+    r"""
     CLI to prepare proteins pre-PDB2PQR from a parquet file.
     Args:
         input_dir : The input directory containing raw pdb files
@@ -207,6 +206,7 @@ def run_cli(
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
+    r""" Build the argument parser for the CLI."""
     parser = argparse.ArgumentParser(
         description="Prepare proteins for running PBQ2PQR from a parquet file."
     )

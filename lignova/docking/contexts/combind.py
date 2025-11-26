@@ -1,13 +1,10 @@
 r""" Implementation of the CombindContext class containing the configuration for Glide docking."""
 
-from typing import Optional
-
 import os
 import subprocess
 
 from loguru import logger
 
-_default_combind_context: "Optional[CombindContext]" = None
 
 DEFAULT_COMMAND = "/home/mma121/PubChem_small/combind"
 DEFAULT_WORK_DIR = "./tmp/6oav"
@@ -122,3 +119,6 @@ class CombindContext:
         """Set the current context."""
         global _default_combind_context
         _default_combind_context = context
+
+
+_default_combind_context: CombindContext | None = None
