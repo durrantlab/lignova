@@ -1,12 +1,16 @@
 #!/bin/bash
 #SBATCH --job-name=prep_prot
-#SBATCH --array=2-30               
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=4G
-#SBATCH --time=01:00:00
+#SBATCH --array=201-300  
+#SBATCH --nodes=1
+#SBATCH --mem=8G
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --time=08:00:00
 #SBATCH --partition=preempt
 #SBATCH --output=../logs/%x_%A_%a.out
 #SBATCH --error=../logs/%x_%A_%a.err
+#SBATCH --mail-user=mma121@pitt.edu
+#SBATCH --mail-type=END,FAIL
 
 # --- environment setup ---
 set -euo pipefail 
@@ -18,7 +22,7 @@ PARQUET="../../lignova_parquets/final_ligand_cluster_0.7_Tc.parquet"
 INPUT_DIR="../raw"              # raw_protein-ligand_structures
 OUTDIR="../prepared_prot"        # prepared_proteins, protonated_proteins
 CONFIG_YAML="../prepared_prot/pdb2pqr.yaml"    # have to give a path even if it doesn't exist yet
-BATCH_SIZE=30
+BATCH_SIZE=50
 
 # --- compute range for this array task ---
 TASK_ID=${SLURM_ARRAY_TASK_ID}
@@ -26,9 +30,14 @@ START_IDX=$(( TASK_ID * BATCH_SIZE ))
 END_IDX=$(( START_IDX + BATCH_SIZE ))
 
 echo "Array task ${TASK_ID}: processing indices [${START_IDX}, ${END_IDX})"
+echo "Job ID:       ${SLURM_JOB_ID:-N/A}"
+echo "Array Task:   ${SLURM_ARRAY_TASK_ID:-N/A}"
+echo "Node:         $(hostname)"
+echo "Started at:   $(date)"
+echo "Working dir:  $(pwd)"
 
 # --- run data prep for this batch ---
-pixi run -e dev python3 data_prep.py \
+pixi run -e dev python3 -m run_scripts.data_prep \
         -i ${INPUT_DIR} \
         -p ${PARQUET} \
         -o ${OUTDIR} \
@@ -45,11 +54,14 @@ fi
 mapfile -t CLEANED_FILES < "${TXT_LIST}"
 echo "Got ${#CLEANED_FILES[@]} cleaned PDBs from data_prep.py"
 
+if (( ${#CLEANED_FILES[@]} == 0 )); then
+    echo "No cleaned PDBs listed; nothing to protonate. Exiting."
+    exit 0
+fi
 
 # Base dirs (must match what data_prep.py uses)
 PREPPED_BASE="${OUTDIR}"
 PROTONATED_BASE="${OUTDIR}"
-
 # --- protonate each cleaned pdb ---
 for CLEANED in "${CLEANED_FILES[@]}"; do
     echo "Protonating: ${CLEANED}"
@@ -71,8 +83,15 @@ for CLEANED in "${CLEANED_FILES[@]}"; do
 
     OUT_PATH="${OUT_DIR}/${OUT_NAME}"
 
-    pixi run -e dev python3 protonate.py \
+    # Attempt protonation and skip to the next file if it fails
+    if ! pixi run -e dev python3 -m run_scripts.protonate \
         -p "${CLEANED}" \
         -c "${CONFIG_YAML}" \
-        -o "${OUT_PATH}"
+        -o "${OUT_PATH}"; then
+        echo "WARNING: Protonation failed for ${CLEANED}. Skipping to the next file." >&2
+        continue
+    fi
 done
+
+echo "All protonation done for array task ${TASK_ID}."
+echo "Finished at: $(date)"
