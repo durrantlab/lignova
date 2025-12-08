@@ -6,7 +6,6 @@ Prepare proteins for PDB2PQR from a parquet file containing protein-ligand data.
 import argparse
 import os
 
-import pandas as pd
 import pyarrow as pa
 from loguru import logger
 

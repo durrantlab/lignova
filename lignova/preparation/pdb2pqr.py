@@ -18,6 +18,7 @@ class PDB2PQR:
 
         Args:
             pdb_file (str): Path to the input PDB file.
+            outfile (str): Path to the output PDB file.
             config_obj (ProtonationContigConfig): Configuration object for PDB2PQR.
         """
         self.pdb_file = pdb_file
@@ -45,13 +46,14 @@ class PDB2PQR:
             process = subprocess.run(
                 cmd_str, capture_output=True, text=True, shell=True
             )
-            if process.returncode != 0:
-                logger.error(f"PDB2PQR failed with error: {process.stderr}")
-                raise RuntimeError(f"PDB2PQR failed with error: {process.stderr}")
-            else:
+            if process.returncode == 0:
                 logger.info(
                     f"PDB2PQR completed successfully. Output written to {self.outfile}"
                 )
+            else:
+                logger.error(f"PDB2PQR failed with error: {process.stderr}")
+                raise RuntimeError(f"PDB2PQR failed with error: {process.stderr}")
+
         except Exception as e:
             logger.error(f"An error occurred while running PDB2PQR: {str(e)}")
             raise e

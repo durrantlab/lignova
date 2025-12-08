@@ -5,7 +5,6 @@ import subprocess
 
 from loguru import logger
 
-
 DEFAULT_COMMAND = "/home/mma121/PubChem_small/combind"
 DEFAULT_WORK_DIR = "./tmp/6oav"
 DEFAULT_SCHRODINGER = os.environ.get("SCHRODINGER", None)
