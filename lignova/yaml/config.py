@@ -37,7 +37,7 @@ class YamlConfig:
         r"""Write the given dictionary to the YAML configuration file.
         Args:
             config (dict): Dictionary to write to the YAML file.
-            """
+        """
         with open(self.file_path, "w") as file:
             yaml.dump(config, file)
         self.data_dict = config
@@ -79,7 +79,7 @@ class YamlConfig:
         r"""Yield (key, value) for all non-dict values in a nested dict.
         Args:
             data (Dict): The dictionary to traverse.
-            """
+        """
         for key, value in data.items():
             if isinstance(value, dict):
                 # Go deeper: depth-first search
@@ -88,10 +88,13 @@ class YamlConfig:
                 # Leaf: not a dict
                 yield key, value
 
-    def to_cli(self, data: dict[str, Any] | None = None) -> list[str]:
+    def to_cli(
+        self, data: dict[str, Any] | None = None, prefix: str = "--"
+    ) -> list[str]:
         r"""Convert the YAML configuration to a command-line argument string.
         Args:
             data (Dict | None) : Dictionary to convert. If None, uses self.data_dict.
+            prefix (str): Prefix for command-line arguments. Default is "--".
         """
         if data is None:
             data = self.data_dict
@@ -99,14 +102,14 @@ class YamlConfig:
         for key, value in self._leaf_items(data):
             if isinstance(value, bool):
                 if value:
-                    arg.append(f"--{key}")
+                    arg.append(f"{prefix}{key}")
             elif isinstance(value, list):
                 # write the list as a list of comma separated values
-                arg.append(f"--{key}")
+                arg.append(f"{prefix}{key}")
                 arg.extend(str(v) for v in value)
             elif value is None:
                 continue
 
             else:
-                arg.append(f"--{key} {value}")
+                arg.append(f"{prefix}{key} {value}")
         return arg
