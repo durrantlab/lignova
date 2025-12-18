@@ -1,7 +1,5 @@
 r"""Class for parsing HDF5 files."""
 
-from typing import List
-
 import os
 
 import h5py
@@ -26,7 +24,7 @@ class HDF5Parser(FormatManager):
         r"""Create an HDF5 file."""
         h5py.File(self.file_path, "w")
 
-    def read(self, path: str) -> np.ndarray | List[np.ndarray]:
+    def read(self, path: str) -> np.ndarray | list[np.ndarray]:
         r"""Read a dataset or a group from the HDF5 file.
 
         Args:
@@ -49,7 +47,7 @@ class HDF5Parser(FormatManager):
         except Exception as e:
             raise e
 
-    def write(self, data: np.ndarray | List[np.ndarray], data_scheme: str) -> None:
+    def write(self, data: np.ndarray | list[np.ndarray], data_scheme: str) -> None:
         r"""Write data to the HDF5 file.
 
         Args:
@@ -76,7 +74,7 @@ class HDF5Parser(FormatManager):
         except Exception as e:
             raise e
 
-    def read_attributes(self, dataset: str) -> dict:
+    def read_attributes(self, dataset: str) -> dict[str, str | int | float]:
         r"""Read attributes from the dataset.
 
         Args:
@@ -97,7 +95,9 @@ class HDF5Parser(FormatManager):
             raise e
         return attributes
 
-    def write_attributes(self, dataset: str, attributes: dict) -> None:
+    def write_attributes(
+        self, dataset: str, attributes: dict[str, str | int | float]
+    ) -> None:
         r"""Write attributes to the dataset.
 
         Args:
