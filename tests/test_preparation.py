@@ -14,6 +14,7 @@ from lignova.yaml.protonation_contig import ProtonationContigConfig
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 pdbfile = "./files/6oav/6oav.pdb"
+tmp_path = "./tmp"
 
 
 def read_yaml(file_path: str) -> str:

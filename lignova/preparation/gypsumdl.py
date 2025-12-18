@@ -1,6 +1,5 @@
 r"""Implementation for ligand preparation using Gypsum-dl pre-docking."""
 
-import glob
 import os
 import subprocess
 

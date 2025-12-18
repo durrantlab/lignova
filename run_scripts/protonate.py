@@ -4,6 +4,7 @@ run PDB2PQR to protonate proteins
 """
 
 import argparse
+import sys
 import os
 from lignova.preparation.pdb2pqr import PDB2PQR
 from lignova.yaml.protonation_contig import ProtonationContigConfig
@@ -20,10 +21,7 @@ def protonate(
     Args:
         pdb_file : The path to the pdb file
         output_filepath : The path to the output file
-        config_path : The path to the protonation configuration file if not provided default config will be used
-
-    Returns:
-        The path to the protonated protein file
+        config_path : The path to the protonation configuration file if not provided default config will be used    
     """
     #check if the output directory exists if not create it
     output_dir = os.path.dirname(output_filepath)
@@ -58,10 +56,9 @@ def run_cli():
         help="Path to the protonation configuration file.",
     )
     
-    #if no arguments are provided print help
-    if len(os.sys.argv)==1:
+    if len(sys.argv) == 1:
         parser.print_help()
-        os.sys.exit(1)
+        sys.exit(1)
 
     args = parser.parse_args()
     protonate(
