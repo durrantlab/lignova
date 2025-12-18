@@ -1,16 +1,14 @@
 #!/bin/bash
 #SBATCH --job-name=prep_prot
-#SBATCH --array=201-300  
+#SBATCH --array=0-1 
 #SBATCH --nodes=1
 #SBATCH --mem=8G
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH --time=08:00:00
+#SBATCH --cpus-per-task=2
+#SBATCH --time=01:00:00
 #SBATCH --partition=preempt
 #SBATCH --output=../logs/%x_%A_%a.out
 #SBATCH --error=../logs/%x_%A_%a.err
-#SBATCH --mail-user=mma121@pitt.edu
-#SBATCH --mail-type=END,FAIL
 
 # --- environment setup ---
 set -euo pipefail 
@@ -22,7 +20,7 @@ PARQUET="../../lignova_parquets/final_ligand_cluster_0.7_Tc.parquet"
 INPUT_DIR="../raw"              # raw_protein-ligand_structures
 OUTDIR="../prepared_prot"        # prepared_proteins, protonated_proteins
 CONFIG_YAML="../prepared_prot/pdb2pqr.yaml"    # have to give a path even if it doesn't exist yet
-BATCH_SIZE=50
+BATCH_SIZE=10
 
 # --- compute range for this array task ---
 TASK_ID=${SLURM_ARRAY_TASK_ID}
@@ -38,6 +36,7 @@ echo "Working dir:  $(pwd)"
 
 # --- run data prep for this batch ---
 pixi run -e dev python3 -m run_scripts.data_prep \
+        -m protein \
         -i ${INPUT_DIR} \
         -p ${PARQUET} \
         -o ${OUTDIR} \

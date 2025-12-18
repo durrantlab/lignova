@@ -1,7 +1,4 @@
 r" Implementation of the tanimoto clustering algorithm."
-
-from typing import List
-
 from collections.abc import Iterable
 
 from loguru import logger
@@ -56,8 +53,8 @@ class TanimotoClustering:
         return DataStructs.cDataStructs.TanimotoSimilarity(mol1, mol2)
 
     def cal_distance(
-        self, tanimoto_score: Iterable[List[float]] | Iterable[float]
-    ) -> List[float]:
+        self, tanimoto_score: Iterable[list[float]] | Iterable[float]
+    ) -> list[float]:
         r"""Calculate the distance between two fingerprints.
 
         Args:
@@ -81,7 +78,7 @@ class TanimotoClustering:
         tanimoto_score: Iterable[float],
         smiles: Iterable[str],
         similarity_threshold: float,
-    ) -> Iterable[List[str]]:
+    ) -> Iterable[list[str]]:
         r"""Cluster the SMILES based on Tanimoto similarity using butina algorithm.
 
         Args:
