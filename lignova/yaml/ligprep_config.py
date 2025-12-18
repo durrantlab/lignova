@@ -201,13 +201,19 @@ class GypsumDLConfig(YamlConfig):
         # ensure that tasks_per_processor is an int when job_manager is mpi
         job_manager = job_specs.get("job_manager")
         tasks_per_processor = job_specs.get("tasks_per_processor")
+        num_processors = job_specs.get("num_processors")
         if job_manager == "mpi":
             # check that it is not none
             if tasks_per_processor is None:
                 raise ValueError("tasks_per_processor must be specified for mpi job.")
             elif not isinstance(tasks_per_processor, int):
                 raise TypeError("tasks_per_processor must be an integer for mpi job.")
-            if tasks_per_processor <= 1 and not tasks_per_processor == -1:
+            if tasks_per_processor < 1:
                 raise ValueError(
-                    "tasks_per_processor must be a positive integer more than 1 for mpi job OR -1 to use all available processor."
+                    "tasks_per_processor must be a positive integer for mpi job"
                 )
+            if num_processors != -1:
+                if num_processors <= 1:
+                    raise ValueError(
+                        "num_processors must be a positive integer more than 1 for mpi job OR -1 to use all available processor."
+                    )
