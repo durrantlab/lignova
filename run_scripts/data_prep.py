@@ -6,6 +6,7 @@ Prepare ligand using gypsum-dl.
 
 import argparse
 import os
+import numpy as np
 
 import pyarrow as pa
 from loguru import logger
@@ -40,17 +41,18 @@ def get_pdb_ids_from_parquet(
         logger.error(f"The file {file_path} does not exist")
         raise FileNotFoundError(f"The file {file_path} does not exist")
     if schema is None:
-        schema = pa.schema(
-            [
-                ("Protein Cluster number", pa.int64()),
-                ("PDB/Gene ID", pa.string()),
-                ("Compound ID", pa.string()),
-                ("Smiles", pa.string()),
-                ("Ligand Cluster number", pa.int64()),
-            ]
-        )
-    new_parquet = ParquetParser(file_path, schema)
-    raw_prot_ids = new_parquet.convert_to_pandas()["PDB/Gene ID"].unique()
+        new_parquet = ParquetParser(file_path)
+    else:
+        new_parquet = ParquetParser(file_path,schema)
+    #check if schema has PDB/Gene ID column
+    if "PDB/Gene ID" in new_parquet.schema.names:
+        raw_prot_ids = new_parquet.convert_to_pandas()["PDB/Gene ID"].unique()
+    elif "Represenatives" in new_parquet.schema.names:
+        raw_prot_ids = new_parquet.convert_to_pandas()["Represenatives"].unique()
+        #read the schema from the parquet file
+    else:
+        logger.error("The parquet file does not contain 'PDB/Gene ID' or 'Represenatives' column.")
+        raise ValueError("The parquet file does not contain 'PDB/Gene ID' or 'Represenatives' column.")
     pdb_ids = [
         raw_prot_ids[i]
         for i in range(len(raw_prot_ids))
@@ -109,16 +111,8 @@ def extract_ligand_id(parquet_file: str, pdb_id:str) -> list[int]:
     if not os.path.exists(parquet_file):
         logger.error(f"The file {parquet_file} does not exist")
         raise FileNotFoundError(f"The file {parquet_file} does not exist")
-    schema = pa.schema(
-        [
-            ("Cluster number", pa.int64()),
-            ("Representatives", pa.string()),
-            ("memberd", pa.string()),
-            ("member_compound", list(pa.string())),
-        ]
-    )
-    new_parquet = ParquetParser(parquet_file, schema)
-    member_compound_data= new_parquet.filter_data(condition=lambda x:x == pdb_id, column="Representatives")["member_compound"][0]
+    new_parquet = ParquetParser(parquet_file)
+    member_compound_data= new_parquet.filter_data(condition=lambda x:x == pdb_id, column="Represenatives")["member_compound"][0]
     if len(member_compound_data) == 0:
         logger.warning(f"No ligands found for PDB ID {pdb_id} in the parquet file.")
         return []
@@ -154,7 +148,7 @@ def make_smi_file_from_parquet(parquet:str,ligand_source:list[int], output_smi: 
     with open(output_smi, "w",encoding="utf-8") as smi_file:
         for ligand_id in ligand_source:
             smiles_data = new_parquet.filter_data(condition=lambda x:x == ligand_id, column="actives")
-            if smiles_data["smiles"][0] is None or smiles_data["smiles"][0] == "" or smiles_data["pubmed"][0] is None:
+            if smiles_data["smiles"][0] is None or smiles_data["smiles"][0] == "" or smiles_data["pubmed"][0] is None or smiles_data["pubmed"][0] == np.nan:
                 logger.warning(f"Missing smiles or pubmed data for ligand ID {ligand_id}. Skipping.")
                 continue
             smi_file.write(f"{smiles_data['smiles'][0]} {smiles_data['actives'][0]}_{smiles_data['pubmed'][0]}\n")
@@ -171,19 +165,10 @@ def add_pdb_ligand_to_smi(parquet_file: str, pdb_id: str, output_smi: str) -> No
     if not os.path.exists(parquet_file):
         logger.error(f"The file {parquet_file} does not exist")
         raise FileNotFoundError(f"The file {parquet_file} does not exist")
-    schema= pa.schema(
-        [
-            ("Protein Cluster number", pa.int64()),
-            ("PDB/Gene ID", pa.string()),
-            ("Compound ID", pa.string()),
-            ("Smiles", pa.string()),
-            ("Ligand Cluster number", pa.int64()),
-        ]
-    )
-    new_parquet = ParquetParser(parquet_file, schema)
+    new_parquet = ParquetParser(parquet_file)
     #get the protein_cluster number for the given pdb_id
     filtered_data = new_parquet.filter_data(condition=lambda x: x == pdb_id, column="PDB/Gene ID")
-    if filtered_data.num_rows == 0:
+    if len(filtered_data) == 0:
         logger.warning(f"No entries found for PDB ID {pdb_id} in the parquet file.")
         raise ValueError(f"No entries found for PDB ID {pdb_id} in the parquet file.")
     protein_cluster_number = filtered_data["Protein Cluster number"][0]
@@ -193,7 +178,7 @@ def add_pdb_ligand_to_smi(parquet_file: str, pdb_id: str, output_smi: str) -> No
         column="Protein Cluster number"
     )
     with open(output_smi, "a",encoding="utf-8") as smi_file:
-        for i in range(ligands_data.num_rows):
+        for i in range(len(ligands_data)):
             compound_id = ligands_data["Compound ID"][i]
             smiles = ligands_data["Smiles"][i]
             pdb_entry = ligands_data["PDB/Gene ID"][i]
@@ -397,9 +382,9 @@ def run_cli_ligand(
         pdb_ids = [pdb_id]
     os.makedirs(output_dir, exist_ok=True)
     for pdb_id in pdb_ids:
-        output_dir=os.path.join(output_dir, pdb_id)
-        os.makedirs(output_dir, exist_ok=True)
-        pathfile=os.path.join(output_dir, f"{pdb_id}_{output_smi}.smi")
+        pdb_output_dir=os.path.join(output_dir, pdb_id)
+        os.makedirs(pdb_output_dir, exist_ok=True)
+        pathfile=os.path.join(pdb_output_dir, f"{pdb_id}_{output_smi}.smi")
         if os.path.exists(pathfile):
             logger.info(f"Smiles file for {pdb_id} already exists at {pathfile}. Skipping generation.")
             outputpaths.append(pathfile)

@@ -17,6 +17,7 @@ from lignova.yaml.ligprep_config import GypsumDLConfig
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 tmp_path = "./tmp"
 
+
 def read_yaml(file_path: str) -> dict[str, Any]:
     """Helper to read a YAML file into a dictionary."""
     with open(file_path, "r", encoding="utf-8") as f:
@@ -37,7 +38,7 @@ def make_cfg_dict() -> dict[str, Any]:
 
 def test_valid_init(tmp_path: str):
     """Defaults are created when no file or data_dict is given."""
-    cfg_path: LiteralString = os.path.join(tmp_path, "gypsum_dl.yaml")    
+    cfg_path: LiteralString = os.path.join(tmp_path, "gypsum_dl.yaml")
     # No file and no data_dict -> class should create defaults and validate
     cfg = GypsumDLConfig(cfg_path)
     assert os.path.exists(cfg_path)
@@ -261,7 +262,7 @@ def test_to_cli(tmp_path: str):
 def test_gypsum(tmp_path: str):
     """Test the Gypsum class initialization and run method."""
     # Create a dummy .smi file
-    smiles_file =os.path.join( tmp_path, "test.smi")
+    smiles_file = os.path.join(tmp_path, "test.smi")
     with open(smiles_file, "w", encoding="utf-8") as f:
         # Use a space or tab between SMILES and ID, *not* "\s"
         f.write(
@@ -273,7 +274,9 @@ def test_gypsum(tmp_path: str):
     d = make_cfg_dict()
     d["gypsum_dl"]["job_specs"]["job_manager"] = "serial"
     d["gypsum_dl"]["job_specs"]["num_processors"] = 1
-    config = GypsumDLConfig(file_path=os.path.join(tmp_path, "gypsum_config.yaml"),data_dict=d)
+    config = GypsumDLConfig(
+        file_path=os.path.join(tmp_path, "gypsum_config.yaml"), data_dict=d
+    )
     gypsum = Gypsum(
         smiles_file=str(smiles_file),
         outfolder=str(outfolder),
@@ -307,7 +310,9 @@ def test_gypsum_multi(tmp_path: str):
     d = make_cfg_dict()
     d["gypsum_dl"]["job_specs"]["job_manager"] = "multiprocessing"
     d["gypsum_dl"]["job_specs"]["num_processors"] = 2
-    config = GypsumDLConfig(os.path.join(tmp_path,"gypsum_config_multi.yaml"), data_dict=d)
+    config = GypsumDLConfig(
+        os.path.join(tmp_path, "gypsum_config_multi.yaml"), data_dict=d
+    )
     gypsum = Gypsum(
         smiles_file=str(smiles_file),
         outfolder=str(outfolder),

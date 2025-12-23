@@ -21,6 +21,8 @@ class ParquetParser(FormatManager):
     def __init__(self, *args, **kwargs):
         r"""Initialize the ParquetParser class."""
         super().__init__(*args, **kwargs)
+        if self.schema is None:
+            self.schema = self.find_schema()
 
     def find_schema(self) -> pa.Schema | None:
         r"""Find the schema of a Parquet file using PyArrow.
