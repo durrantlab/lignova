@@ -170,19 +170,23 @@ def add_pdb_ligand_to_smi(parquet_file: str, pdb_id: str, output_smi: str) -> No
     filtered_data = new_parquet.filter_data(condition=lambda x: x == pdb_id, column="PDB/Gene ID")
     if len(filtered_data) == 0:
         logger.warning(f"No entries found for PDB ID {pdb_id} in the parquet file.")
-        raise ValueError(f"No entries found for PDB ID {pdb_id} in the parquet file.")
+        return
     protein_cluster_number = filtered_data["Protein Cluster number"][0]
     #get all ligands for the protein_cluster_number that only have a length of 3
     ligands_data = new_parquet.filter_data(
         condition=lambda x: x == protein_cluster_number,
         column="Protein Cluster number"
     )
-    with open(output_smi, "a",encoding="utf-8") as smi_file:
-        for i in range(len(ligands_data)):
-            compound_id = ligands_data["Compound ID"][i]
-            smiles = ligands_data["Smiles"][i]
-            pdb_entry = ligands_data["PDB/Gene ID"][i]
-            if len(compound_id) == 3:
+    if len(ligands_data) == 0:
+        logger.warning(f"No ligands found for PDB ID {pdb_id} in the parquet file.")
+        return
+    logger.info(f"Adding {len(ligands_data)} ligands for PDB ID {pdb_id} to smiles file.")
+    with open(output_smi, "a", encoding="utf-8") as smi_file:
+        for _index,ligand in ligands_data.iterrows():
+            compound_id = ligand.get("Compound ID", "")
+            smiles = ligand.get("Smiles", "")
+            pdb_entry = ligand.get("PDB/Gene ID", "")
+            if isinstance(compound_id, str) and len(compound_id) == 3:
                 smi_file.write(f"{smiles} {compound_id}_{pdb_entry}\n")
     
 def prep_proteins(
@@ -396,7 +400,10 @@ def run_cli_ligand(
                 outputpaths.append(pathfile)
             else:
                 logger.warning(f"No ligands found for PDB ID {pdb_id} in the ligand source parquet file.")
-            add_pdb_ligand_to_smi(pdb_ligand_parquet_source, pdb_id, pathfile)
+            try:
+                add_pdb_ligand_to_smi(pdb_ligand_parquet_source, pdb_id, pathfile)
+            except ValueError as ve:
+                logger.warning(f"No pdb ligands added for PDB ID {pdb_id}: {ve}")
         else:
             make_smi_file_from_parquet(ligand_source, extract_ligand_id(ligand_source, pdb_id),pathfile)
             if os.path.exists(pathfile):
