@@ -7,8 +7,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=32G
-#SBATCH --time=24:00:00
-#SBATCH --array=251-300
+#SBATCH --time=2-12:00:00
+#SBATCH --array=111
 #SBATCH --output=../logs/lig_prep/%x_%A_%a.out
 #SBATCH --error=../logs/lig_prep/%x_%A_%a.err
 

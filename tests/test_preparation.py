@@ -8,7 +8,7 @@ import pytest
 import yaml
 
 from lignova.preparation.pdb2pqr import PDB2PQR
-from lignova.yaml.protonation_contig import ProtonationContigConfig
+from lignova.yaml.protonation_contig import ProtonationConfig
 
 # Ensures we execute from file directory (for relative paths).
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -25,7 +25,7 @@ def read_yaml(file_path: str) -> str:
 
 def make_cfg_dict():
     """Start from defaults to keep tests focused; tweak per-test."""
-    tmp = ProtonationContigConfig(
+    tmp = ProtonationConfig(
         "does_not_exist.yaml", data_dict=None
     )  # will write defaults in CWD
     d = tmp.declare_defaults()
@@ -40,7 +40,7 @@ def test_valid_init(tmp_path):
     """Test that defaults are created when no file or data_dict is given."""
     cfg_path = tmp_path / "protonation.yaml"
     # No file and no data_dict -> class should create defaults and validate
-    pc = ProtonationContigConfig(str(cfg_path))
+    pc = ProtonationConfig(str(cfg_path))
     assert cfg_path.exists(), "Expected defaults to be written to disk"
     on_disk = read_yaml(cfg_path)
     assert on_disk["pdb2pqr"]["general"]["ff"] == "PARSE"
@@ -53,7 +53,7 @@ def test__valid_data_population(tmp_path):
     base["pdb2pqr"].pop("propka")
     base["pdb2pqr"]["general"].pop("include-header")
 
-    pc = ProtonationContigConfig(str(cfg_path), data_dict=base)
+    pc = ProtonationConfig(str(cfg_path), data_dict=base)
     merged = read_yaml(cfg_path)
     assert "propka" in merged["pdb2pqr"]
     assert "include-header" in merged["pdb2pqr"]["general"]
@@ -66,7 +66,7 @@ def test_valid_ff(tmp_path):
     d = make_cfg_dict()
     d["pdb2pqr"]["general"]["ff"] = "BADFF"
     with pytest.raises(ValueError, match="Invalid force field"):
-        ProtonationContigConfig(str(cfg_path), data_dict=d)
+        ProtonationConfig(str(cfg_path), data_dict=d)
 
 
 def test_valid_titration_method(tmp_path):
@@ -75,7 +75,7 @@ def test_valid_titration_method(tmp_path):
     d = make_cfg_dict()
     d["pdb2pqr"]["pka"]["titration-state-method"] = "something-else"
     with pytest.raises(ValueError, match="Invalid titration method"):
-        ProtonationContigConfig(str(cfg_path), data_dict=d)
+        ProtonationConfig(str(cfg_path), data_dict=d)
 
 
 def test_valid_log_level(tmp_path):
@@ -84,7 +84,7 @@ def test_valid_log_level(tmp_path):
     d = make_cfg_dict()
     d["pdb2pqr"]["propka"]["log-level"] = "TRACE"
     with pytest.raises(ValueError, match="Invalid log level"):
-        ProtonationContigConfig(str(cfg_path), data_dict=d)
+        ProtonationConfig(str(cfg_path), data_dict=d)
 
 
 def test_valid_mutator(tmp_path):
@@ -93,7 +93,7 @@ def test_valid_mutator(tmp_path):
     d = make_cfg_dict()
     d["pdb2pqr"]["propka"]["mutator"] = "weird"
     with pytest.raises(ValueError, match="Invalid mutator"):
-        ProtonationContigConfig(str(cfg_path), data_dict=d)
+        ProtonationConfig(str(cfg_path), data_dict=d)
 
 
 def test_valid_reference(tmp_path):
@@ -102,7 +102,7 @@ def test_valid_reference(tmp_path):
     d = make_cfg_dict()
     d["pdb2pqr"]["propka"]["reference"] = "basic"
     with pytest.raises(ValueError, match="Invalid PropKa reference"):
-        ProtonationContigConfig(str(cfg_path), data_dict=d)
+        ProtonationConfig(str(cfg_path), data_dict=d)
 
 
 def test__valid_boolean(tmp_path):
@@ -112,7 +112,7 @@ def test__valid_boolean(tmp_path):
     # choose a boolean param and make it a string
     d["pdb2pqr"]["general"]["whitespace"] = "false"
     with pytest.raises(ValueError, match="must be a boolean"):
-        ProtonationContigConfig(str(cfg_path), data_dict=d)
+        ProtonationConfig(str(cfg_path), data_dict=d)
 
 
 def test_valid_ph_checks(tmp_path):
@@ -123,12 +123,12 @@ def test_valid_ph_checks(tmp_path):
     d_bad1 = deepcopy(d)
     d_bad1["pdb2pqr"]["pka"]["with-ph"] = 20
     with pytest.raises(ValueError, match="between 0 and 14"):
-        ProtonationContigConfig(str(cfg_path), data_dict=d_bad1)
+        ProtonationConfig(str(cfg_path), data_dict=d_bad1)
 
     d_bad2 = deepcopy(d)
     d_bad2["pdb2pqr"]["propka"]["pH"] = -1
     with pytest.raises(ValueError, match="PropKa pH must be between 0 and 14"):
-        ProtonationContigConfig(str(cfg_path), data_dict=d_bad2)
+        ProtonationConfig(str(cfg_path), data_dict=d_bad2)
 
 
 def test_valid_parse_only_neutral_flags(tmp_path):
@@ -141,7 +141,7 @@ def test_valid_parse_only_neutral_flags(tmp_path):
     with pytest.raises(
         ValueError, match="neutraln and neutralc can only be True if ff is 'PARSE'"
     ):
-        ProtonationContigConfig(str(cfg_path), data_dict=d)
+        ProtonationConfig(str(cfg_path), data_dict=d)
 
 
 def test_to_cli(tmp_path):
@@ -151,7 +151,7 @@ def test_to_cli(tmp_path):
     expect_pattern = r"--\w+ [^\s]+"
     d["pdb2pqr"]["general"]["clean"] = True
     d["pdb2pqr"]["propka"]["chain"] = "A"
-    pc = ProtonationContigConfig(str(cfg_path), data_dict=d)
+    pc = ProtonationConfig(str(cfg_path), data_dict=d)
     cli_args = pc.to_cli()
     cli_str = " ".join(cli_args)
     matches = re.findall(expect_pattern, cli_str)
@@ -165,7 +165,7 @@ def test_to_cli(tmp_path):
 def test_pdb2pqr_run(tmp_path):
     cfg_path = tmp_path / "protonation.yaml"
     d = make_cfg_dict()
-    pc = ProtonationContigConfig(str(cfg_path), data_dict=d)
+    pc = ProtonationConfig(str(cfg_path), data_dict=d)
     output_pqr = "./tmp/6oav/trial.pqr"
     prep = PDB2PQR(pdb_file=pdbfile, outfile=str(output_pqr), config_obj=pc)
     prep.run()

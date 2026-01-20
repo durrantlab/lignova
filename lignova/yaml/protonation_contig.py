@@ -1,7 +1,5 @@
 r"""Implementation for the yaml class to write configuration for PDB2QR."""
 
-from __future__ import annotations
-
 from typing import Any, override
 
 import os
@@ -11,7 +9,7 @@ from loguru import logger
 from .config import YamlConfig
 
 
-class ProtonationContigConfig(YamlConfig):
+class ProtonationConfig(YamlConfig):
     r"""Class to handle YAML configuration files for protonation contigs."""
 
     # ---- Schema/constraints ----

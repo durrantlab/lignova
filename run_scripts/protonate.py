@@ -7,7 +7,7 @@ import argparse
 import sys
 import os
 from lignova.preparation.pdb2pqr import PDB2PQR
-from lignova.yaml.protonation_contig import ProtonationContigConfig
+from lignova.yaml.protonation_contig import ProtonationConfig
 from loguru import logger
 
 def protonate(
@@ -28,7 +28,7 @@ def protonate(
     if not os.path.exists(output_dir):
         logger.warning(f"The directory {output_dir} does not exist.Creating it")
         os.makedirs(output_dir)
-    protonation_config = ProtonationContigConfig(config_path,data_dict=None)
+    protonation_config = ProtonationConfig(config_path,data_dict=None)
     pdb2pqr = PDB2PQR(pdb_file=pdb_file, outfile=output_filepath, config_obj=protonation_config)
     pdb2pqr.run()
     

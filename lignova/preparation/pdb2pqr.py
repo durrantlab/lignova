@@ -5,21 +5,21 @@ import subprocess
 
 from loguru import logger
 
-from lignova.yaml.protonation_contig import ProtonationContigConfig
+from lignova.yaml.protonation_contig import ProtonationConfig
 
 
 class PDB2PQR:
     """Class to handle protein preparation using PDB2PQR."""
 
     def __init__(
-        self, pdb_file: str, outfile: str, config_obj: ProtonationContigConfig
+        self, pdb_file: str, outfile: str, config_obj: ProtonationConfig
     ) -> None:
         """Initialize PDB2PQR with a given configuration file.
 
         Args:
             pdb_file (str): Path to the input PDB file.
             outfile (str): Path to the output PDB file.
-            config_obj (ProtonationContigConfig): Configuration object for PDB2PQR.
+            config_obj (ProtonationConfig): Configuration object for PDB2PQR.
         """
         self.pdb_file = pdb_file
         # check the input file exists
