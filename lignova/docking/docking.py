@@ -5,7 +5,8 @@ from collections.abc import Iterable
 
 from ..structure.ligand import DockedLigand, PreparedLigand
 from ..structure.protein import PreparedProtein
-from .contexts import GlideContext
+
+# from .contexts import GlideContext #NOTE:removed the type hint for the context
 
 
 class Docking(ABC):
@@ -16,7 +17,7 @@ class Docking(ABC):
         self,
         target: PreparedProtein,
         ligand: Iterable[PreparedLigand] | PreparedLigand,
-        context: GlideContext,
+        context,
     ) -> Iterable[DockedLigand] | DockedLigand:
         r"""Dock one or multiple ligands to a single target.
 
