@@ -219,7 +219,7 @@ def prep_proteins(
         )
     else:
         logger.info(f"Cleaned protein file for {temp_prot.file_id}_cleaned.pdb already exists.")
-    return os.path.join(output_dir, f"{temp_prot.file_id}_cleaned.pdb")
+    return pdb_file 
 
 def run_cli_prot(
     input_dir:str,
@@ -270,7 +270,7 @@ def run_cli_prot(
             pdb_file=os.path.join(input_dir, pdb_parq_source),
             output_dir=pdb_output_dir)
         logger.info(
-            f"Cleaned protein for {os.path.basename(pdb_parq_source)} saved to {prepped}"
+            f"Cleaned protein for {os.path.basename(pdb_parq_source)} is saved"
         )
         return [prepped]
     os.makedirs(output_dir, exist_ok=True)

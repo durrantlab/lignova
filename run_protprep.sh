@@ -1,26 +1,28 @@
 #!/bin/bash
 #SBATCH --job-name=prep_prot
-#SBATCH --array=0-1 
+#SBATCH --array=38
 #SBATCH --nodes=1
 #SBATCH --mem=8G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
-#SBATCH --time=01:00:00
+#SBATCH --time=05:00:00
+#SBATCH --cluster=htc
 #SBATCH --partition=preempt
-#SBATCH --output=../logs/%x_%A_%a.out
-#SBATCH --error=../logs/%x_%A_%a.err
+#SBATCH --output=../logs/prot_prep/%x_%A_%a.out
+#SBATCH --error=../logs/prot_prep/%x_%A_%a.err
 
 # --- environment setup ---
 set -euo pipefail 
 pwd
 module purge
+mkdir -p ../logs/prot_prep
 
 # --- user-configurable paths ---
 PARQUET="../../lignova_parquets/final_ligand_cluster_0.7_Tc.parquet"
 INPUT_DIR="../raw"              # raw_protein-ligand_structures
 OUTDIR="../prepared_prot"        # prepared_proteins, protonated_proteins
 CONFIG_YAML="../prepared_prot/pdb2pqr.yaml"    # have to give a path even if it doesn't exist yet
-BATCH_SIZE=10
+BATCH_SIZE=50
 
 # --- compute range for this array task ---
 TASK_ID=${SLURM_ARRAY_TASK_ID}
@@ -65,22 +67,14 @@ PROTONATED_BASE="${OUTDIR}"
 for CLEANED in "${CLEANED_FILES[@]}"; do
     echo "Protonating: ${CLEANED}"
 
-    # Get path relative to prepared_proteins base
-    REL="${CLEANED#${PREPPED_BASE}/}"
-    REL_DIR=$(dirname "${REL}")
-    BASE_NAME=$(basename "${REL}")
+    # Extract PDB ID from filename (e.g. ../raw/2e2b.pdb -> 2E2B)
+    BASE_NAME=$(basename "${CLEANED}" .pdb)
+    PDB_ID=$(echo "${BASE_NAME}" | tr '[:lower:]' '[:upper:]')
 
-    # Prepare output directory & filename
-    OUT_DIR="${PROTONATED_BASE}/${REL_DIR}"
+    # Output goes to prepared_prot/PDB_ID/
+    OUT_DIR="${PROTONATED_BASE}/${PDB_ID}"
     mkdir -p "${OUT_DIR}"
-
-    if [[ "${BASE_NAME}" == *_cleaned.pdb ]]; then
-        OUT_NAME="${BASE_NAME/_cleaned.pdb/_protonated.pqr}"
-    else
-        OUT_NAME="${BASE_NAME/.pdb/_protonated.pqr}"
-    fi
-
-    OUT_PATH="${OUT_DIR}/${OUT_NAME}"
+    OUT_PATH="${OUT_DIR}/${BASE_NAME}_protonated.pqr"
 
     # Attempt protonation and skip to the next file if it fails
     if ! pixi run -e dev python3 -m run_scripts.protonate \

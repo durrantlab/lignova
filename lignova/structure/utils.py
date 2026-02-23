@@ -132,6 +132,7 @@ def separate_protein_ligand(
     remove_water: bool | None = True,
     keep_het_chain: str | list | None = None,
     water_selection: Literal["surface", "interfacial", "all"] | None = None,
+    hetatm: Literal["valid_ligand","no_hetam","cofactors"] = "valid_ligand",
 ) -> tuple[mda.Universe, mda.Universe]:
     r"""Separate protein and ligand from a PDB file.
 
@@ -144,14 +145,18 @@ def separate_protein_ligand(
             Chain(s) to keep their HETATM in the protein structure.
             Default is None. If None, all HETATM will be kept.
         water_selection : str
-            The selection of water molecules to keep if remove_water is False. Default is "none".
-
+            The selection of water molecules to keep if remove_water is False. Default is "none"
+        hetatm : str
+            The selection of hetatoms to keep in the protein structure. Default is "valid_ligand".
     Returns:
         Universe object containing the protein.
 
         Universe object containing the ligand.
     """
     save_prot = None
+    if hetatm not in ["valid_ligand","no_hetam","cofactors"]:
+        logger.warning(f"Invalid option for hetatm: {hetatm}. Defaulting to 'valid_ligand'.")
+        hetatm = "valid_ligand"
     if water_selection is None and remove_water is False:
         logger.warning("No water selection specified. Retaining all water molecules.")
         raise ValueError("Please specify a water selection.")
@@ -204,7 +209,7 @@ def separate_protein_ligand(
             ]
             # Remove self-assignment
             # keep_het_chain = keep_het_chain
-        hetatm = filter_hetatoms(pdb_obj, keep_het_chain)
+        hetatm_selection = filter_hetatoms(pdb_obj, keep_het_chain)
     else:
         logger.debug(
             f"No chain specified. Selecting all chains.i.e {list(set(pdb_obj.segments.segids))}"
@@ -215,25 +220,33 @@ def separate_protein_ligand(
         keep_het_chain = [i for i in keep_het_chain if i]
         logger.debug(f"Chains in the pdb file: {keep_het_chain}")
         selection = select_chains(pdb_obj, chains=keep_het_chain)
-        hetatm = filter_hetatoms(pdb_obj)
+        hetatm_selection = filter_hetatoms(pdb_obj)
     # delete any hetatoms in hetatm that exist in the crystal additive list
-    hetatm = remove_residues(hetatm, residues=impurities)
+    hetatm_selection = remove_residues(hetatm_selection, residues=impurities)
     actual_ligand = remove_residues(
-        hetatm,
+        hetatm_selection,
         residues=["HOH"]
-        + [res.resname for res in hetatm.residues if len(res.resname) < 3],
+        + [res.resname for res in hetatm_selection.residues if len(res.resname) < 3],
     )
     ligand_name = actual_ligand.resnames.all()
     if remove_water:
-        save_prot = merge_universes(
+        if hetatm == "valid_ligand":
+            save_prot = merge_universes(
             [remove_hetatoms(pdb_obj), actual_ligand, cofactor_obj, metal_obj]
+            )
+        elif hetatm == "cofactors":
+            save_prot = merge_universes(
+            [remove_hetatoms(pdb_obj), cofactor_obj, metal_obj]
         )
+        else:
+            save_prot = remove_hetatoms(pdb_obj)
     else:
         logger.warning(
             "Crystallographic Water molecules are not removed from the structure."
         )
         if water_selection == "all":
-            save_prot = merge_universes(
+            if hetatm == "valid_ligand":
+                save_prot = merge_universes(
                 [
                     remove_hetatoms(pdb_obj),
                     actual_ligand,
@@ -241,13 +254,22 @@ def separate_protein_ligand(
                     cofactor_obj,
                     metal_obj,
                 ]
-            )
+                )
+            elif hetatm == "cofactors":
+                save_prot = merge_universes(
+                    [remove_hetatoms(pdb_obj), water_object, cofactor_obj, metal_obj]
+                )
+            else:
+                save_prot = merge_universes(
+                    [remove_hetatoms(pdb_obj), water_object]
+                )
         elif water_selection == "surface":
             surface_water = select_water(
                 pdb=pdb_obj, ligand=ligand_name, water_selection=water_selection
             )
             print(surface_water)
-            save_prot = merge_universes(
+            if hetatm == "valid_ligand":
+                 save_prot = merge_universes(
                 [
                     remove_hetatoms(pdb_obj),
                     actual_ligand,
@@ -256,11 +278,19 @@ def separate_protein_ligand(
                     metal_obj,
                 ]
             )
+            elif hetatm == "cofactors":
+                save_prot = merge_universes(
+                    [remove_hetatoms(pdb_obj), surface_water, cofactor_obj, metal_obj])
+            else:
+                save_prot = merge_universes(
+                    [remove_hetatoms(pdb_obj), surface_water]
+                )
         elif water_selection == "interfacial":
             interfacial_water = select_water(
                 pdb=pdb_obj, ligand=ligand_name, water_selection=water_selection
             )
-            save_prot = merge_universes(
+            if hetatm == "valid_ligand":
+                save_prot = merge_universes(
                 [
                     remove_hetatoms(pdb_obj),
                     actual_ligand,
@@ -269,6 +299,14 @@ def separate_protein_ligand(
                     metal_obj,
                 ]
             )
+            elif hetatm == "cofactors":
+                save_prot = merge_universes(
+                    [remove_hetatoms(pdb_obj), interfacial_water, cofactor_obj, metal_obj]
+                )
+            else:
+                save_prot = merge_universes(
+                    [remove_hetatoms(pdb_obj), interfacial_water]
+                )
     return save_prot, actual_ligand
 
 
