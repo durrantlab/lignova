@@ -3,6 +3,7 @@ r"""Implementation for docking  GNINA docking."""
 from typing import override
 
 import os
+import subprocess
 from collections.abc import Iterable
 
 from loguru import logger
@@ -12,9 +13,28 @@ from lignova.structure.ligand import DockedLigand, PreparedLigand
 from lignova.structure.protein import PreparedProtein
 from lignova.yaml.docking_config import GninaConfig
 
-
 class GNINA(Docking):
     """Class to dock ligands in determined protein pocket using GNINA."""
+
+
+    _VALID_REPAIRS = {
+            "bonds_hydrogens",
+            "bonds",
+            "hydrogens",
+            "checkhydrogens",
+            "None",
+        }
+
+    _VALID_CLEANUPS = {
+            "nphs",
+            "lps",
+            "waters",
+            "nonstdres",
+            "deleteAltB",
+            "nphs_lps",
+            "nphs_lps_waters",
+            "nphs_lps_waters_nonstdres",
+        }
 
     def __init__(
         self,
@@ -38,19 +58,100 @@ class GNINA(Docking):
         if autobox and box_ligand is not None:
             if not os.path.exists(box_ligand):
                 raise FileNotFoundError(f"Box ligand file {box_ligand} does not exist.")
+    
+    def _prepare_protein(
+        self,
+        pqr_path: str,
+        repair: str = "checkhydrogens",
+        cleanup: str = "nphs_lps_waters_nonstdres",
+        preserve_charges: bool = True,
+    ) -> str:
+        r"""Convert a PQR file to PDBQT using prepare_receptor4.py.
+        Args:
+            pqr_path
+                Path to the input PQR file.
+            repair
+                Repair mode (-A flag). Default is checkhydrogens
+                to add missing hydrogens.
+            cleanup
+                Cleanup mode (-U flag).Default is nphs_lps_waters_nonstdres to remove non-polar hydrogens, 
+                lone pairs, waters, and non-standard residues.
+            preserve_charges
+                pass -C to keep the charges assigned by pdb2pqr 
+                rather than recalculating Gasteiger charges. Default is True.
+
+        Returns:
+            Path to the generated PDBQT file.
+        """
+        if not os.path.exists(pqr_path):
+            raise FileNotFoundError(f"PQR file not found: {pqr_path}")
+
+        if not pqr_path.endswith(".pqr"):
+            raise ValueError(f"Expected a .pqr file, got '{pqr_path}'.")
+
+        if repair not in self._VALID_REPAIRS:
+            raise ValueError(
+                f"Invalid repair mode '{repair}'. Must be one of {sorted(self._VALID_REPAIRS)}."
+            )
+
+        if cleanup not in self._VALID_CLEANUPS:
+            raise ValueError(
+                f"Invalid cleanup mode '{cleanup}. Must be one of {sorted(self._VALID_CLEANUPS)}."
+            )
+        if not isinstance(preserve_charges, bool):
+            raise ValueError(f"preserve_charges must be a boolean, got {type(preserve_charges)}")
+        out_dir = os.path.dirname(os.path.abspath(pqr_path))
+        basename = os.path.splitext(os.path.basename(pqr_path))[0]
+        pdbqt_path = os.path.join(out_dir, f"{basename}.pdbqt")
+
+        cmd = [
+            "prepare_receptor4.py",
+            "-r", pqr_path,
+            "-o", pdbqt_path,
+            "-A", repair,
+            "-U", cleanup,
+        ]
+        if preserve_charges:
+            cmd.append("-C")
+
+        logger.warning(
+            f"Receptor is not in PDBQT format. Converting {pqr_path} to'{pdbqt_path}"
+        )
+        logger.info(f"Running: {' '.join(cmd)}")
+
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            logger.error(f"prepare_receptor4.py stderr:\n{result.stderr}")
+            raise RuntimeError(
+                f"prepare_receptor4.py failed with exit code {result.returncode}"
+            )
+        if result.stdout:
+            logger.debug(f"prepare_receptor4.py stdout:\n{result.stdout}")
+
+        if not os.path.exists(pdbqt_path):
+            raise RuntimeError(
+                f"prepare_receptor4.py completed but output not found at {pdbqt_path}"
+            )
+
+        logger.info(f"PDBQT receptor written to {pdbqt_path}")
+        return pdbqt_path
 
     def _validate_target(self, target: PreparedProtein | str) -> PreparedProtein:
         """Convert target to PreparedProtein if needed."""
         if isinstance(target, PreparedProtein):
-            return target
-
-        if not os.path.exists(target):
-            raise FileNotFoundError(f"Receptor file {target} does not exist.")
-
-        if not target.endswith((".pdbqt", ".pdb")):
-            raise ValueError(f"Receptor file {target} must be in PDBQT or PDB format.")
-
-        return PreparedProtein(target)
+            path = target.file_path
+        else:
+            path = target
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Receptor file {path} does not exist.")
+        
+        if not path.endswith((".pdbqt", ".pdb",".pqr")):
+            raise ValueError(f"Receptor file {path} must be in PDBQT or PDB or PQR format.")
+        
+        if path.endswith(".pqr"):
+            target = self._prepare_protein(path)
+            return PreparedProtein(target)
+        return target if isinstance(target, PreparedProtein) else PreparedProtein(path)
 
     def _validate_ligand(
         self,

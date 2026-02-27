@@ -1,33 +1,58 @@
-r"""Test the YAML configuration handler for GNINA."""
+r"""Test the YAML configuration handler for GNINA & proper file handling."""
 
 from typing import Any, LiteralString
 
 import os
 from copy import deepcopy
+import shutil
 
 import pytest
 import yaml
 from loguru import logger
 
 from lignova.yaml.docking_config import GninaConfig
+from lignova.docking.gnina import GNINA
+from lignova.structure.ligand import PreparedLigand
+from lignova.structure.protein import PreparedProtein
 
-# Ensures we execute from file directory (for relative paths).
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
+PQR_FILE = os.path.join(os.path.dirname(__file__), "files", "receptor.pqr")
+
+HAS_PREPARE_RECEPTOR = shutil.which("prepare_receptor4.py") is not None
+SKIP_MSG = "prepare_receptor4.py not found on PATH"
 
 def read_yaml(file_path: str) -> dict[str, Any]:
     """Helper to read a YAML file into a dictionary."""
     with open(file_path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
+def _make_file(path: str, content: str = "dummy\n") -> str:
+    """Create a minimal file and return its path."""
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+    return path
+
+
+def _make_gnina(tmp_path: str) -> GNINA:
+    """Create a GNINA instance with a valid autobox ligand."""
+    lig = _make_file(os.path.join(tmp_path, "box.sdf"), "$$$$\n")
+    return GNINA(autobox=True, box_ligand=lig)
+
+
+def _copy_pqr(tmp_path: str) -> str:
+    """Copy the test PQR fixture into tmp_path."""
+    dest = os.path.join(tmp_path, os.path.basename(PQR_FILE))
+    shutil.copy2(PQR_FILE, dest)
+    return dest
+
 
 def make_cfg_dict() -> dict[str, Any]:
     """Start from defaults to keep tests focused; tweak per-test."""
     tmp = GninaConfig(
         "does_not_exist_gnina.yaml", data_dict=None
-    )  # writes defaults in CWD
+    )
     d = tmp.declare_defaults()
-    # clean up the accidental file if created
     if os.path.exists("does_not_exist_gnina.yaml"):
         os.remove("does_not_exist_gnina.yaml")
     return d
@@ -398,8 +423,6 @@ def test_invalid_vector_expansion_population(tmp_path: str):
     d = make_cfg_dict()
 
     d["gnina"]["docking_region"]["center"] = [0.0, "bad", 2.0]
-    # Need size too so we don't fail later for missing explicit box if you intend to use it
-    # d["gnina"]["docking_region"]["size"] = [10.0, 10.0, 10.0]
 
     with pytest.raises(TypeError, match="'center_y' must be numeric or None"):
         _ = GninaConfig(str(cfg_path), data_dict=d)
@@ -422,3 +445,72 @@ def test_cpu_less_than_exhaustiveness_warns(tmp_path: str):
         logger.remove(sink_id)
 
     assert any("cpu is less than exhaustiveness" in str(m) for m in logs)
+ 
+def test_invalid_protein_prep(tmp_path: str):
+    """ivalid run issue for gnina"""
+    g = _make_gnina(tmp_path)
+    lig = _make_file(os.path.join(tmp_path, "box.sdf"), "$$$$\n")
+    with pytest.raises(FileNotFoundError, match="PQR file not found"):
+        g._prepare_protein(os.path.join(tmp_path, "missing.pqr"))
+    pdb = _make_file(os.path.join(tmp_path, "receptor.pdb"))
+    with pytest.raises(ValueError, match="Expected a .pqr file"):
+        g._prepare_protein(pdb)
+    pqr=os.path.join(tmp_path, "receptor.pqr")
+    cfg_path = os.path.join(tmp_path, "gnina.yaml")
+    with pytest.raises(FileNotFoundError, match="Receptor file .*does not exist"):
+        g.run(PreparedProtein(pqr),PreparedLigand(lig),cfg_path)
+
+
+def test_invalid_pqr_converstions(tmp_path: str):
+    """different invalid conditions for prepare function pre-gnina"""
+    g = _make_gnina(tmp_path)
+    pqr = _make_file(os.path.join(tmp_path, "receptor.pqr"))
+    with pytest.raises(ValueError, match="Invalid repair mode"):
+        g._prepare_protein(pqr, repair="nonexistent")
+    with pytest.raises(ValueError, match="Invalid cleanup mode"):
+        g._prepare_protein(pqr, cleanup="funny")
+    with pytest.raises(ValueError, match="preserve_charges must be a boolean"):
+        g._prepare_protein(pqr, preserve_charges="nothing") 
+
+def test_valid_pqr_conversion(tmp_path: str):
+    """test valid conditions for prepare function pre-gnina"""
+    g = _make_gnina(tmp_path)
+    actual_pqr = _copy_pqr(tmp_path)
+    g._prepare_protein(actual_pqr)
+    assert os.path.exists(actual_pqr.replace(".pqr", ".pdbqt"))
+
+
+def test_run_command(tmp_path: str):
+    """run() with a .pdbqt target returns a single gnina command string."""
+    box_lig = _make_file(os.path.join(tmp_path, "box.sdf"), "$$$$\n")
+    g = GNINA(autobox=True, box_ligand=box_lig)
+
+    rec = _make_file(os.path.join(tmp_path, "receptor.pdbqt"))
+    lig = _make_file(os.path.join(tmp_path, "mol.sdf"), "$$$$\n")
+    cfg_path: LiteralString = os.path.join(tmp_path, "gnina.yaml")
+
+    cmd = g.run(target=rec, ligand=lig, context=cfg_path)
+
+    assert isinstance(cmd, str)
+    assert cmd.startswith("gnina ")
+    assert "--autobox_ligand" in cmd
+    assert box_lig in cmd
+
+
+def test_multiple_ligands_run(tmp_path: str):
+    """run() with multiple ligands returns one command per ligand."""
+    box_lig = _make_file(os.path.join(tmp_path, "box.sdf"), "$$$$\n")
+    g = GNINA(autobox=True, box_ligand=box_lig)
+
+    rec = _make_file(os.path.join(tmp_path, "receptor.pdbqt"))
+    ligs = [
+        _make_file(os.path.join(tmp_path, f"mol{i}.sdf"), "$$$$\n")
+        for i in range(3)
+    ]
+    cfg_path: LiteralString = os.path.join(tmp_path, "gnina.yaml")
+
+    cmd = g.run(target=rec, ligand=ligs, context=cfg_path)
+
+    assert isinstance(cmd, list)
+    assert len(cmd) == 3
+    assert all(cmd.startswith("gnina ") for cmd in cmd)

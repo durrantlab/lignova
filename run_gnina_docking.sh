@@ -7,8 +7,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=48
 #SBATCH --mem=32G
-#SBATCH --time=1-12:00:00
-#SBATCH --array=1-12
+#SBATCH --time=1-22:00:00
+#SBATCH --array=51,96,104,163,190,201-300
 #SBATCH --output=../logs/dock/%x_%A_%a.out
 #SBATCH --error=../logs/dock/%x_%A_%a.err
 
@@ -57,11 +57,19 @@ echo "Processing directory: ${pdb_dir}"
 echo "PDB name: ${pdb_name}"
 
 # Validate required files exist
-receptor=$(find "${pdb_dir}" -maxdepth 1 -name "*_cleaned.pdb" -type f | head -n 1)
-if [[ -z "${receptor}" ]]; then
-    echo "ERROR: No receptor (*_cleaned.pdb) found for ${pdb_name}, exiting."
-    exit 1
+receptor=$(find "${pdb_dir}" -maxdepth 1 -name "*_protonated.pdbqt" -type f | head -n 1)
+if [[ -n "${receptor}" ]]; then
+    echo "Receptor (pdbqt): ${receptor}"
+else
+    receptor=$(find "${pdb_dir}" -maxdepth 1 -name "*_protonated.pqr" -type f | head -n 1)
+    if [[ -n "${receptor}" ]]; then
+        echo "Receptor (pqr fallback): ${receptor}"
+    else
+        echo "ERROR: No receptor (*_protonated.pdbqt or *_protonated.pqr) found for ${pdb_name}, exiting."
+        exit 1
+    fi
 fi
+
 
 box_ligand=$(find "${pdb_dir}" -maxdepth 1 -name "*_ligand.pdb" -type f | head -n 1)
 if [[ -z "${box_ligand}" ]]; then
