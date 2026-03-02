@@ -3,6 +3,8 @@ r"""Implementation for docking  GNINA docking."""
 from typing import override
 
 import os
+import re
+import shutil
 import subprocess
 from collections.abc import Iterable
 
@@ -12,6 +14,7 @@ from lignova.docking.docking import Docking
 from lignova.structure.ligand import DockedLigand, PreparedLigand
 from lignova.structure.protein import PreparedProtein
 from lignova.yaml.docking_config import GninaConfig
+
 
 class GNINA(Docking):
     """Class to dock ligands in determined protein pocket using GNINA."""
@@ -59,6 +62,147 @@ class GNINA(Docking):
             if not os.path.exists(box_ligand):
                 raise FileNotFoundError(f"Box ligand file {box_ligand} does not exist.")
     
+    def _fix_pqr_spacing(self, pqr_path: str, cleanup: str = "nphs_lps_waters_nonstdres") -> str:
+        r"""PQR files from PDB2PQR can have columns that 
+        run together when coordinates or charges are large negative numbers 
+        (e.g. ``-18.713-100.168``).MGLTools uses a strict fixed-width
+        PDB parser that fails on these lines. This rewrites 
+        every ATOM/HETATM line with proper column widths.
+        
+        Additionally, HETATM lines that would be removed by
+        prepare_receptor4.py's -U cleanup flag are stripped early,
+        since MGLTools often cannot parse them from PQR files.
+        
+        The original file is backed up to ``*_org.pqr`` before overwriting.
+
+        Args:
+            pqr_path
+                Path to the PQR file to fix.
+            cleanup
+                The cleanup mode passed to prepare_receptor4.py (-U flag).
+                Used to determine which HETATM lines to strip.
+
+        Returns:
+            Path to the (overwritten) fixed PQR file."""
+        backup_path = pqr_path.replace(".pqr", "_org.pqr")
+        if not os.path.exists(backup_path):
+            shutil.copy2(pqr_path, backup_path)
+            logger.info(f"Backed up original PQR to {backup_path}")
+
+        # Determine what to strip based on the cleanup flag
+        strip_waters = "waters" in cleanup
+        strip_nonstdres = "nonstdres" in cleanup
+
+        _WATER_RESNAMES = {"HOH", "WAT", "TIP", "TIP3", "SOL"}
+
+        float_pattern = re.compile(r"-?\d+\.\d+")
+
+        with open(pqr_path) as fh:
+            lines = fh.read().splitlines()
+
+        removed_waters = 0
+        removed_hetatm = 0
+        fixed = []
+        for line in lines:
+            if line.startswith("HETATM"):
+                tokens = line.split()
+                is_water = any(t in _WATER_RESNAMES for t in tokens[1:6])
+
+                if is_water and strip_waters:
+                    removed_waters += 1
+                    continue
+                if not is_water and strip_nonstdres:
+                    removed_hetatm += 1
+                    continue
+
+            if not line.startswith(("ATOM", "HETATM")):
+                fixed.append(line)
+                continue
+
+            floats = float_pattern.findall(line)
+            if len(floats) < 5:
+                fixed.append(line)
+                continue
+
+            x, y, z = float(floats[-5]), float(floats[-4]), float(floats[-3])
+            charge, radius = float(floats[-2]), float(floats[-1])
+
+            # Locate where the numeric tail begins to preserve the prefix
+            tail_parts = [re.escape(f) for f in floats[-5:]]
+            tail_match = re.search(r"\s*".join(tail_parts), line)
+            if not tail_match:
+                fixed.append(line)
+                continue
+
+            prefix = line[: tail_match.start()].rstrip()
+
+            if line.startswith("HETATM"):
+                record = "HETATM"
+                rest = prefix[6:]
+            else:
+                record = "ATOM  "
+                rest = prefix[4:]
+
+            tokens = rest.split()
+            if len(tokens) < 4:
+                fixed.append(line)
+                continue
+
+            serial = int(tokens[0])
+            atom_name = tokens[1]
+            resname = tokens[2]
+
+            if len(tokens) >= 5:
+                chain = tokens[3]
+                resseq = tokens[4]
+            elif len(tokens) == 4:
+                field = tokens[3]
+                if len(field) >= 2 and field[0].isalpha() and field[1:].lstrip("-").isdigit():
+                    chain = field[0]
+                    resseq = field[1:]
+                else:
+                    chain = " "
+                    resseq = field
+            else:
+                chain = " "
+                resseq = "0"
+
+            resseq_int = int(resseq)
+
+            if len(atom_name) >= 4 or atom_name[0].isdigit():
+                atom_name_fmt = f"{atom_name:<4s}"
+            else:
+                atom_name_fmt = f" {atom_name:<3s}"
+
+            fixed.append(
+                f"{record}{serial:>5d} "
+                f"{atom_name_fmt}"
+                f" "
+                f"{resname:>3s}"
+                f" "
+                f"{chain:1s}"
+                f"{resseq_int:>4d}"
+                f"    "
+                f"{x:8.3f}"
+                f"{y:8.3f}"
+                f"{z:8.3f}"
+                f"{charge:8.4f}"
+                f"{radius:7.4f}"
+            )
+
+        with open(pqr_path, "w") as fh:
+            fh.write("\n".join(fixed) + "\n")
+
+        if removed_waters or removed_hetatm:
+            logger.info(
+                f"Removed {removed_waters} water and {removed_hetatm} other "
+                f"HETATM lines from {pqr_path}"
+            )
+        logger.info(f"Fixed PQR spacing written to {pqr_path}")
+        return pqr_path
+
+
+    
     def _prepare_protein(
         self,
         pqr_path: str,
@@ -98,8 +242,9 @@ class GNINA(Docking):
             raise ValueError(
                 f"Invalid cleanup mode '{cleanup}. Must be one of {sorted(self._VALID_CLEANUPS)}."
             )
+      #check if perseve_charges is bool
         if not isinstance(preserve_charges, bool):
-            raise ValueError(f"preserve_charges must be a boolean, got {type(preserve_charges)}")
+            raise TypeError(f"preserve_charges must be a boolean, got {type(preserve_charges)}")     
         out_dir = os.path.dirname(os.path.abspath(pqr_path))
         basename = os.path.splitext(os.path.basename(pqr_path))[0]
         pdbqt_path = os.path.join(out_dir, f"{basename}.pdbqt")
@@ -121,9 +266,22 @@ class GNINA(Docking):
 
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
-            logger.error(f"prepare_receptor4.py stderr:\n{result.stderr}")
-            raise RuntimeError(
-                f"prepare_receptor4.py failed with exit code {result.returncode}"
+            logger.warning(
+                f"prepare_receptor4.py failed on first attempt:\n{result.stderr}"
+            )
+            logger.info("Attempting to fix PQR column spacing and retrying...")
+
+            # Fix the PQR in-place (backs up original as *_org.pqr)
+            self._fix_pqr_spacing(pqr_path,cleanup=cleanup)
+
+            # Remove any partial PDBQT from the failed attempt
+            if os.path.exists(pdbqt_path):
+                os.remove(pdbqt_path)
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode != 0:
+                logger.error(f"prepare_receptor4.py stderr:\n{result.stderr}")
+                raise RuntimeError(
+                f"Even after spacing fix, prepare_receptor4.py failed with exit code {result.returncode}"
             )
         if result.stdout:
             logger.debug(f"prepare_receptor4.py stdout:\n{result.stdout}")
@@ -278,9 +436,9 @@ class GNINA(Docking):
         """Dock one or multiple ligands to a single target.
 
         Args:
-            ta: PreparedProteinrget
+            target: PreparedProtein
                 Prepared protein or path to receptor file (PDBQT or PDB format).
-            ligand
+            ligand:
                 Prepared ligand(s) or path(s) to ligand file(s) (smi, mol, or sdf format).
             context
                 Configuration object or path to GNINA config YAML file.

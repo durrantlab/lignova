@@ -7,8 +7,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=48
 #SBATCH --mem=32G
-#SBATCH --time=1-22:00:00
-#SBATCH --array=51,96,104,163,190,201-300
+#SBATCH --time=2-22:00:00
+#SBATCH --array=101-200
 #SBATCH --output=../logs/dock/%x_%A_%a.out
 #SBATCH --error=../logs/dock/%x_%A_%a.err
 
@@ -34,7 +34,17 @@ export NUMEXPR_NUM_THREADS="${PER_RUN_CPUS}"
 module purge
 module load gnina
 
-TASK_ID="${SLURM_ARRAY_TASK_ID}"
+#to mitigate the 500 job array limit, Added an offset to the task ID 
+#so we can run multiple arrays without overlap
+ARRAY_OFFSET=500
+TASK_ID=$(( SLURM_ARRAY_TASK_ID + ARRAY_OFFSET ))
+
+#Rename log files to include the offset-adjusted task ID
+ORIG_OUT="../logs/dock/${SLURM_JOB_NAME}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.out"
+ORIG_ERR="../logs/dock/${SLURM_JOB_NAME}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.err"
+NEW_OUT="../logs/dock/${SLURM_JOB_NAME}_${SLURM_ARRAY_JOB_ID}_${TASK_ID}.out"
+NEW_ERR="../logs/dock/${SLURM_JOB_NAME}_${SLURM_ARRAY_JOB_ID}_${TASK_ID}.err"
+
 
 echo "Job ID: ${SLURM_JOB_ID}"
 echo "Array Task ID: ${TASK_ID}"
@@ -180,3 +190,9 @@ else
 fi
 
 crc-job-stats || true
+
+# Rename logs to include offset-adjusted task ID
+if [[ "${ARRAY_OFFSET}" -ne 0 ]]; then
+    mv "${ORIG_OUT}" "${NEW_OUT}" 2>/dev/null || true
+    mv "${ORIG_ERR}" "${NEW_ERR}" 2>/dev/null || true
+fi

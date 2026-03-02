@@ -3,17 +3,17 @@ r"""Test the YAML configuration handler for GNINA & proper file handling."""
 from typing import Any, LiteralString
 
 import os
-from copy import deepcopy
 import shutil
+from copy import deepcopy
 
 import pytest
 import yaml
 from loguru import logger
 
-from lignova.yaml.docking_config import GninaConfig
 from lignova.docking.gnina import GNINA
 from lignova.structure.ligand import PreparedLigand
 from lignova.structure.protein import PreparedProtein
+from lignova.yaml.docking_config import GninaConfig
 
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
@@ -469,7 +469,7 @@ def test_invalid_pqr_converstions(tmp_path: str):
         g._prepare_protein(pqr, repair="nonexistent")
     with pytest.raises(ValueError, match="Invalid cleanup mode"):
         g._prepare_protein(pqr, cleanup="funny")
-    with pytest.raises(ValueError, match="preserve_charges must be a boolean"):
+    with pytest.raises(TypeError, match="preserve_charges must be a boolean"):
         g._prepare_protein(pqr, preserve_charges="nothing") 
 
 def test_valid_pqr_conversion(tmp_path: str):
