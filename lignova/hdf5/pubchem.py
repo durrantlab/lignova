@@ -1,4 +1,4 @@
-r""" Implementation of the PubChem API parser class.
+r"""Implementation of the PubChem API parser class.
 https://pubchemdocs.ncbi.nlm.nih.gov/pug-rest
 """
 

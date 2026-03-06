@@ -13,7 +13,7 @@ from lignova.yaml.protonation_contig import ProtonationConfig
 # Ensures we execute from file directory (for relative paths).
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
-pdbfile ="./files/6oav/6oav.pdb"
+pdbfile = "./files/6oav/6oav.pdb"
 tmp_path = "./tmp"
 
 
@@ -165,7 +165,7 @@ def test_pdb2pqr_run(tmp_path):
     cfg_path = tmp_path / "protonation.yaml"
     d = make_cfg_dict()
     pc = ProtonationConfig(str(cfg_path), data_dict=d)
-    output_pqr =os.path.join(tmp_path, "tmp.pqr")
+    output_pqr = os.path.join(tmp_path, "tmp.pqr")
     prep = PDB2PQR(pdb_file=pdbfile, outfile=output_pqr, config_obj=pc)
     prep.run()
     reference = "./files/6oav/6oav_reference.pqr"

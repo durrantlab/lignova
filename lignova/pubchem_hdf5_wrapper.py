@@ -1,4 +1,4 @@
-r""" Implementation of the PubChem wrapper."""
+r"""Implementation of the PubChem wrapper."""
 
 import time
 

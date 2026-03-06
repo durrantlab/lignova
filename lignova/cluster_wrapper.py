@@ -1,4 +1,5 @@
 r"Implementation for a wrapper for MMseqs2 clustering"
+
 from typing import TextIO
 
 import ast

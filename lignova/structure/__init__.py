@@ -1,4 +1,4 @@
-r""" Initialization of structure classes. """
+r"""Initialization of structure classes."""
 
 from .base import Structure
 from .ligand import Ligand, PreparedLigand

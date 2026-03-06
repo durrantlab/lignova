@@ -1,4 +1,4 @@
-r""" Utility functions for structure module. """
+r"""Utility functions for structure module."""
 
 from typing import Any, Literal, TextIO
 

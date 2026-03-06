@@ -1,4 +1,4 @@
-r""" Implementation of the GlideContext class containing the configuration for Glide docking."""
+r"""Implementation of the GlideContext class containing the configuration for Glide docking."""
 
 import os
 

@@ -19,25 +19,24 @@ from lignova.yaml.docking_config import GninaConfig
 class GNINA(Docking):
     """Class to dock ligands in determined protein pocket using GNINA."""
 
-
     _VALID_REPAIRS = {
-            "bonds_hydrogens",
-            "bonds",
-            "hydrogens",
-            "checkhydrogens",
-            "None",
-        }
+        "bonds_hydrogens",
+        "bonds",
+        "hydrogens",
+        "checkhydrogens",
+        "None",
+    }
 
     _VALID_CLEANUPS = {
-            "nphs",
-            "lps",
-            "waters",
-            "nonstdres",
-            "deleteAltB",
-            "nphs_lps",
-            "nphs_lps_waters",
-            "nphs_lps_waters_nonstdres",
-        }
+        "nphs",
+        "lps",
+        "waters",
+        "nonstdres",
+        "deleteAltB",
+        "nphs_lps",
+        "nphs_lps_waters",
+        "nphs_lps_waters_nonstdres",
+    }
 
     def __init__(
         self,
@@ -61,18 +60,20 @@ class GNINA(Docking):
         if autobox and box_ligand is not None:
             if not os.path.exists(box_ligand):
                 raise FileNotFoundError(f"Box ligand file {box_ligand} does not exist.")
-    
-    def _fix_pqr_spacing(self, pqr_path: str, cleanup: str = "nphs_lps_waters_nonstdres") -> str:
-        r"""PQR files from PDB2PQR can have columns that 
-        run together when coordinates or charges are large negative numbers 
+
+    def _fix_pqr_spacing(
+        self, pqr_path: str, cleanup: str = "nphs_lps_waters_nonstdres"
+    ) -> str:
+        r"""PQR files from PDB2PQR can have columns that
+        run together when coordinates or charges are large negative numbers
         (e.g. ``-18.713-100.168``).MGLTools uses a strict fixed-width
-        PDB parser that fails on these lines. This rewrites 
+        PDB parser that fails on these lines. This rewrites
         every ATOM/HETATM line with proper column widths.
-        
+
         Additionally, HETATM lines that would be removed by
         prepare_receptor4.py's -U cleanup flag are stripped early,
         since MGLTools often cannot parse them from PQR files.
-        
+
         The original file is backed up to ``*_org.pqr`` before overwriting.
 
         Args:
@@ -157,7 +158,11 @@ class GNINA(Docking):
                 resseq = tokens[4]
             elif len(tokens) == 4:
                 field = tokens[3]
-                if len(field) >= 2 and field[0].isalpha() and field[1:].lstrip("-").isdigit():
+                if (
+                    len(field) >= 2
+                    and field[0].isalpha()
+                    and field[1:].lstrip("-").isdigit()
+                ):
                     chain = field[0]
                     resseq = field[1:]
                 else:
@@ -201,8 +206,6 @@ class GNINA(Docking):
         logger.info(f"Fixed PQR spacing written to {pqr_path}")
         return pqr_path
 
-
-    
     def _prepare_protein(
         self,
         pqr_path: str,
@@ -218,10 +221,10 @@ class GNINA(Docking):
                 Repair mode (-A flag). Default is checkhydrogens
                 to add missing hydrogens.
             cleanup
-                Cleanup mode (-U flag).Default is nphs_lps_waters_nonstdres to remove non-polar hydrogens, 
+                Cleanup mode (-U flag).Default is nphs_lps_waters_nonstdres to remove non-polar hydrogens,
                 lone pairs, waters, and non-standard residues.
             preserve_charges
-                pass -C to keep the charges assigned by pdb2pqr 
+                pass -C to keep the charges assigned by pdb2pqr
                 rather than recalculating Gasteiger charges. Default is True.
 
         Returns:
@@ -242,19 +245,25 @@ class GNINA(Docking):
             raise ValueError(
                 f"Invalid cleanup mode '{cleanup}. Must be one of {sorted(self._VALID_CLEANUPS)}."
             )
-      #check if perseve_charges is bool
+        # check if perseve_charges is bool
         if not isinstance(preserve_charges, bool):
-            raise TypeError(f"preserve_charges must be a boolean, got {type(preserve_charges)}")     
+            raise TypeError(
+                f"preserve_charges must be a boolean, got {type(preserve_charges)}"
+            )
         out_dir = os.path.dirname(os.path.abspath(pqr_path))
         basename = os.path.splitext(os.path.basename(pqr_path))[0]
         pdbqt_path = os.path.join(out_dir, f"{basename}.pdbqt")
 
         cmd = [
             "prepare_receptor4.py",
-            "-r", pqr_path,
-            "-o", pdbqt_path,
-            "-A", repair,
-            "-U", cleanup,
+            "-r",
+            pqr_path,
+            "-o",
+            pdbqt_path,
+            "-A",
+            repair,
+            "-U",
+            cleanup,
         ]
         if preserve_charges:
             cmd.append("-C")
@@ -272,7 +281,7 @@ class GNINA(Docking):
             logger.info("Attempting to fix PQR column spacing and retrying...")
 
             # Fix the PQR in-place (backs up original as *_org.pqr)
-            self._fix_pqr_spacing(pqr_path,cleanup=cleanup)
+            self._fix_pqr_spacing(pqr_path, cleanup=cleanup)
 
             # Remove any partial PDBQT from the failed attempt
             if os.path.exists(pdbqt_path):
@@ -281,8 +290,8 @@ class GNINA(Docking):
             if result.returncode != 0:
                 logger.error(f"prepare_receptor4.py stderr:\n{result.stderr}")
                 raise RuntimeError(
-                f"Even after spacing fix, prepare_receptor4.py failed with exit code {result.returncode}"
-            )
+                    f"Even after spacing fix, prepare_receptor4.py failed with exit code {result.returncode}"
+                )
         if result.stdout:
             logger.debug(f"prepare_receptor4.py stdout:\n{result.stdout}")
 
@@ -302,10 +311,12 @@ class GNINA(Docking):
             path = target
         if not os.path.exists(path):
             raise FileNotFoundError(f"Receptor file {path} does not exist.")
-        
-        if not path.endswith((".pdbqt", ".pdb",".pqr")):
-            raise ValueError(f"Receptor file {path} must be in PDBQT or PDB or PQR format.")
-        
+
+        if not path.endswith((".pdbqt", ".pdb", ".pqr")):
+            raise ValueError(
+                f"Receptor file {path} must be in PDBQT or PDB or PQR format."
+            )
+
         if path.endswith(".pqr"):
             target = self._prepare_protein(path)
             return PreparedProtein(target)

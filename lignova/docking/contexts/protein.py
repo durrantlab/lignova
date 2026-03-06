@@ -1,4 +1,4 @@
-r""" Implementation of the ProteinContext class containing the configuration for PDB/protein validation."""
+r"""Implementation of the ProteinContext class containing the configuration for PDB/protein validation."""
 
 _default_glide_context: "[ProteinContext]" = None
 

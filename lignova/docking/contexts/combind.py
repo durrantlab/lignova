@@ -1,4 +1,4 @@
-r""" Implementation of the CombindContext class containing the configuration for Glide docking."""
+r"""Implementation of the CombindContext class containing the configuration for Glide docking."""
 
 import os
 import subprocess

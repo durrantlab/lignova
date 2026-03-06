@@ -1,4 +1,5 @@
 r"Implementation for the wrapper for the docking program Schrodinger GLIDE."
+
 import os
 
 import MDAnalysis as mda

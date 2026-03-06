@@ -1,4 +1,4 @@
-r""" Implementation for editing protein structures using MDAnalysis."""
+r"""Implementation for editing protein structures using MDAnalysis."""
 
 from typing import Literal
 

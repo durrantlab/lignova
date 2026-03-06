@@ -22,10 +22,12 @@ PQR_FILE = os.path.join(os.path.dirname(__file__), "files", "receptor.pqr")
 HAS_PREPARE_RECEPTOR = shutil.which("prepare_receptor4.py") is not None
 SKIP_MSG = "prepare_receptor4.py not found on PATH"
 
+
 def read_yaml(file_path: str) -> dict[str, Any]:
     """Helper to read a YAML file into a dictionary."""
     with open(file_path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
+
 
 def _make_file(path: str, content: str = "dummy\n") -> str:
     """Create a minimal file and return its path."""
@@ -49,9 +51,7 @@ def _copy_pqr(tmp_path: str) -> str:
 
 def make_cfg_dict() -> dict[str, Any]:
     """Start from defaults to keep tests focused; tweak per-test."""
-    tmp = GninaConfig(
-        "does_not_exist_gnina.yaml", data_dict=None
-    )
+    tmp = GninaConfig("does_not_exist_gnina.yaml", data_dict=None)
     d = tmp.declare_defaults()
     if os.path.exists("does_not_exist_gnina.yaml"):
         os.remove("does_not_exist_gnina.yaml")
@@ -445,7 +445,8 @@ def test_cpu_less_than_exhaustiveness_warns(tmp_path: str):
         logger.remove(sink_id)
 
     assert any("cpu is less than exhaustiveness" in str(m) for m in logs)
- 
+
+
 def test_invalid_protein_prep(tmp_path: str):
     """ivalid run issue for gnina"""
     g = _make_gnina(tmp_path)
@@ -455,10 +456,10 @@ def test_invalid_protein_prep(tmp_path: str):
     pdb = _make_file(os.path.join(tmp_path, "receptor.pdb"))
     with pytest.raises(ValueError, match="Expected a .pqr file"):
         g._prepare_protein(pdb)
-    pqr=os.path.join(tmp_path, "receptor.pqr")
+    pqr = os.path.join(tmp_path, "receptor.pqr")
     cfg_path = os.path.join(tmp_path, "gnina.yaml")
     with pytest.raises(FileNotFoundError, match="Receptor file .*does not exist"):
-        g.run(PreparedProtein(pqr),PreparedLigand(lig),cfg_path)
+        g.run(PreparedProtein(pqr), PreparedLigand(lig), cfg_path)
 
 
 def test_invalid_pqr_converstions(tmp_path: str):
@@ -470,7 +471,8 @@ def test_invalid_pqr_converstions(tmp_path: str):
     with pytest.raises(ValueError, match="Invalid cleanup mode"):
         g._prepare_protein(pqr, cleanup="funny")
     with pytest.raises(TypeError, match="preserve_charges must be a boolean"):
-        g._prepare_protein(pqr, preserve_charges="nothing") 
+        g._prepare_protein(pqr, preserve_charges="nothing")
+
 
 def test_valid_pqr_conversion(tmp_path: str):
     """test valid conditions for prepare function pre-gnina"""
@@ -504,8 +506,7 @@ def test_multiple_ligands_run(tmp_path: str):
 
     rec = _make_file(os.path.join(tmp_path, "receptor.pdbqt"))
     ligs = [
-        _make_file(os.path.join(tmp_path, f"mol{i}.sdf"), "$$$$\n")
-        for i in range(3)
+        _make_file(os.path.join(tmp_path, f"mol{i}.sdf"), "$$$$\n") for i in range(3)
     ]
     cfg_path: LiteralString = os.path.join(tmp_path, "gnina.yaml")
 

@@ -1,4 +1,5 @@
-r" Implementation of the tanimoto clustering algorithm."
+r"Implementation of the tanimoto clustering algorithm."
+
 from collections.abc import Iterable
 
 from loguru import logger
