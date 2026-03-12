@@ -60,7 +60,7 @@ class ParquetParser(FormatManager):
         lazy: bool = False,
     ) -> pa.Table | ds.Scanner:
         r"""Read a Parquet file using PyArrow and offers two apporaches
-            - memory intensive approach when lazy is false, where the entire file is loaded 
+            - memory intensive approach when lazy is false, where the entire file is loaded
                 into memory as a PyArrow Table.
             - When lazy is true, it returns a PyArrow Dataset object that
                 allows for more efficient querying and filtering
@@ -78,7 +78,9 @@ class ParquetParser(FormatManager):
             raise ValueError("Schema must be provided to read the Parquet file")
         if lazy:
             dataset = ds.dataset(
-                self.file_path, format="parquet", schema=self.schema,
+                self.file_path,
+                format="parquet",
+                schema=self.schema,
             )
             scanner_kwargs: dict = {}
             if columns is not None:
@@ -172,7 +174,9 @@ class ParquetParser(FormatManager):
         if parent:
             os.makedirs(parent, exist_ok=True)
         return pq.ParquetWriter(
-            self.file_path, schema=schema, compression=compression,
+            self.file_path,
+            schema=schema,
+            compression=compression,
         )
 
     def convert_to_table(self, column_names: str | list | None = None) -> pa.Table:

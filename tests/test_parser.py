@@ -220,7 +220,7 @@ def test_parquet_read_metadata():
             },
         },
     ]
-    parser.write(data,1)
+    parser.write(data, 1)
     metadata = parser.read_metadata()
     assert metadata.num_row_groups == 2
     parser.write(data, group_size=2)
@@ -261,12 +261,8 @@ def test_parquet_open_writer():
         },
     ]
     with parser.open_writer() as writer:
-        writer.write_table(
-            pa.Table.from_pandas(pd.DataFrame(batch_1), schema=schema)
-        )
-        writer.write_table(
-            pa.Table.from_pandas(pd.DataFrame(batch_2), schema=schema)
-        )
+        writer.write_table(pa.Table.from_pandas(pd.DataFrame(batch_1), schema=schema))
+        writer.write_table(pa.Table.from_pandas(pd.DataFrame(batch_2), schema=schema))
     assert os.path.exists(writer_path)
     result = parser.convert_to_pandas()
     assert len(result) == 2
