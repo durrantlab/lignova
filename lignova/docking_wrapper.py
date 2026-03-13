@@ -837,7 +837,7 @@ def main(
                         f"{pdbid.upper()}_lig_pubchem_docking_pv_top_poses_pv.maegz",
                     )
                 ):
-                    if water is "interfacial":
+                    if water == "interfacial":
                         continue
                     combind_context = CombindContext.get_current()
                     combind_context.work_dir = directory
