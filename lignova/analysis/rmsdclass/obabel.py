@@ -1,8 +1,7 @@
 r"""Implementation of RMSD using OpenBabel."""
 
-from typing import TextIO, override
-
 import subprocess
+from typing import TextIO, override
 
 from loguru import logger
 

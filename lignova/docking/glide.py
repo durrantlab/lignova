@@ -1,11 +1,10 @@
 """Implements the Docking class."""
 
-from typing import override
-
 import glob
 import os
 import shutil
 import subprocess
+from typing import override
 
 from loguru import logger
 

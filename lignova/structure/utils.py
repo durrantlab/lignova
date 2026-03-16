@@ -1,9 +1,8 @@
 r"""Utility functions for structure module."""
 
-from typing import Any, Literal, TextIO
-
 import os
 import time
+from typing import Any, Literal, TextIO
 
 import MDAnalysis as mda
 import pandas as pd

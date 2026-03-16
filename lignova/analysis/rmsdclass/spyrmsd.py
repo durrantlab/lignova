@@ -1,9 +1,8 @@
 """Class for calculating RMSD using Spyrmsd tool."""
 
-from typing import TextIO, override
-
 import os
 import subprocess
+from typing import TextIO, override
 
 from loguru import logger
 

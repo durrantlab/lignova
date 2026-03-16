@@ -707,9 +707,7 @@ def main(
             logger.info(f"Downloading PDB file for {pdbid}")
             get_pdb_coordinates(pdbid, pdbfile_dir)
         pdbfile = os.path.join(pdbfile_dir, f"{pdbid.lower()}.pdb")
-        ref_lig_n_list = (
-            []
-        )  # Initialize with a default value to avoid unassigned variable usage
+        ref_lig_n_list = []  # Initialize with a default value to avoid unassigned variable usage
         for directory, column_name in output_files_dir.items():
             # check the directory to determine water
             if "./water" in directory:

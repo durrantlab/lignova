@@ -1,9 +1,8 @@
 r"""Implementation for the yaml class to write configuration for GNINA."""
 
-from typing import Any, override
-
 import os
 from collections.abc import Sequence
+from typing import Any, override
 
 from loguru import logger
 

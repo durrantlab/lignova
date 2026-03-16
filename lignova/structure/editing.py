@@ -1,8 +1,7 @@
 r"""Implementation for editing protein structures using MDAnalysis."""
 
-from typing import Literal
-
 from collections.abc import Iterable
+from typing import Literal
 
 import gemmi
 import MDAnalysis as mda

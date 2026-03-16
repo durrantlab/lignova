@@ -1,10 +1,9 @@
 r"""Test the YAML configuration handler for GNINA & proper file handling."""
 
-from typing import Any, LiteralString
-
 import os
 import shutil
 from copy import deepcopy
+from typing import Any, LiteralString
 
 import pytest
 import yaml

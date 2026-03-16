@@ -1,9 +1,8 @@
 r"""Implementation for yaml class to write configuration files."""
 
-from typing import Any
-
 import os
 from collections.abc import Iterator
+from typing import Any
 
 import yaml
 

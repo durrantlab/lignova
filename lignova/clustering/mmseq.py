@@ -1,11 +1,10 @@
 r"Implementation of the MMSeq2 clustering algorithm. https://github.com/soedinglab/MMseqs2"
 
-from typing import TextIO
-
 import os
 import shutil
 import subprocess
 import time
+from typing import TextIO
 
 import pandas as pd
 from loguru import logger

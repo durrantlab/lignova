@@ -1,10 +1,9 @@
 r"""Test the YAML configuration handler for Gypsum-DL."""
 
-from typing import Any, LiteralString
-
 import os
 import re
 from copy import deepcopy
+from typing import Any, LiteralString
 
 import numpy as np
 import pytest

@@ -1,8 +1,7 @@
 r"""Implementation for the yaml class to write configuration for Gypsum-DL."""
 
-from typing import Any, override
-
 import os
+from typing import Any, override
 
 from loguru import logger
 

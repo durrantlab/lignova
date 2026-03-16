@@ -1,9 +1,8 @@
 r"""testing for yaml class to write configuration files."""
 
-from typing import Any
-
 import os
 import re
+from typing import Any
 
 import pytest
 import yaml

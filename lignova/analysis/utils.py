@@ -1,10 +1,9 @@
 """Implementation of utility functions for the analysis module."""
 
-from typing import TextIO
-
 import os
 import subprocess
 from collections.abc import Iterable
+from typing import TextIO
 
 import pandas as pd
 from loguru import logger

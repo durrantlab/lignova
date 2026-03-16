@@ -1,11 +1,10 @@
 r"""Implementation of combind."""
 
-from typing import TextIO
-
 import glob
 import os
 import subprocess
 from collections.abc import Iterable
+from typing import TextIO
 
 import pandas as pd
 from loguru import logger

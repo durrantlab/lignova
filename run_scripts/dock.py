@@ -4,16 +4,18 @@ Run GNINA docking to dock ligands into protein pockets.
 """
 
 import argparse
-import sys
 import os
+import sys
+
 from loguru import logger
 
 from lignova.docking.gnina import GNINA
 from lignova.yaml.docking_config import GninaConfig
 
+
 def clean_sdf(input_path: str, output_path: str | None = None) -> str:
-    r"""Remove the empty molecule that Gypsum-dl adds 
-        at the start of SDF files. Additionally it  removes any 
+    r"""Remove the empty molecule that Gypsum-dl adds
+        at the start of SDF files. Additionally it  removes any
         molecules with 0 atoms.
     Args:
         input_path: Path to the input SDF file.
@@ -23,40 +25,41 @@ def clean_sdf(input_path: str, output_path: str | None = None) -> str:
     """
     if output_path is None:
         output_path = input_path
-    
+
     with open(input_path, "r") as f:
         content = f.read()
-    
+
     # Split by molecule delimiter
     molecules = content.split("$$$$\n")
-    
+
     valid_molecules = []
     removed = 0
-    
+
     for mol in molecules:
         if not mol.strip():
             continue
-        
+
         # Check for empty molecule marker: "  0  0  0  0  0  0  0  0  0  0999 V2000"
         if "  0  0  0  0  0  0  0  0  0  0999 V2000" in mol:
             logger.warning("Found empty gypsum metadata molecule, removing.")
             removed += 1
             continue
-        
+
         valid_molecules.append(mol)
-    
+
     if removed > 0:
         logger.info(f"Removed {removed} empty molecule(s) from {input_path}")
-        
+
         # Write back with delimiters
         with open(output_path, "w") as f:
             f.write("$$$$\n".join(valid_molecules))
             if valid_molecules:
                 f.write("$$$$\n")
-        
+
         logger.info(f"Wrote {len(valid_molecules)} molecules to {output_path}")
-    
+
     return output_path
+
 
 def dock(
     receptor: str,
@@ -106,7 +109,9 @@ def dock(
         with open(output_file, "w") as f:
             for cmd in commands:
                 f.write(f"{cmd}\n")
-        logger.info(f"GNINA commands written to {output_file} ({len(commands)} commands)")
+        logger.info(
+            f"GNINA commands written to {output_file} ({len(commands)} commands)"
+        )
     else:
         for cmd in commands:
             print(cmd)
@@ -118,20 +123,23 @@ def run_cli():
         description="Dock ligands into protein pockets using GNINA."
     )
     parser.add_argument(
-        "-r", "--receptor",
+        "-r",
+        "--receptor",
         type=str,
         required=True,
         help="Path to the receptor file (PDBQT or PDB format).",
     )
     parser.add_argument(
-        "-l", "--ligand",
+        "-l",
+        "--ligand",
         type=str,
         nargs="+",
         required=True,
         help="Path(s) to the ligand file(s) (smi, mol, or sdf format). Multiple files can be specified.",
     )
     parser.add_argument(
-        "-c", "--config",
+        "-c",
+        "--config",
         type=str,
         required=False,
         default="gnina_config.yaml",
@@ -149,13 +157,15 @@ def run_cli():
         help="Disable autobox and use explicit box coordinates from config.",
     )
     parser.add_argument(
-        "-b", "--box-ligand",
+        "-b",
+        "--box-ligand",
         type=str,
         required=False,
         help="Path to the ligand file for autobox. Required if autobox is enabled.",
     )
     parser.add_argument(
-        "-o", "--output",
+        "-o",
+        "--output",
         type=str,
         required=False,
         help="Path to write the GNINA command(s). If not provided, prints to stdout.",
@@ -176,7 +186,9 @@ def run_cli():
 
     # Validate box_ligand requirement
     if autobox and args.box_ligand is None:
-        parser.error("--box-ligand is required when autobox is enabled. Use --no-autobox to disable.")
+        parser.error(
+            "--box-ligand is required when autobox is enabled. Use --no-autobox to disable."
+        )
 
     # Handle single vs multiple ligands
     ligand = args.ligand[0] if len(args.ligand) == 1 else args.ligand
@@ -189,7 +201,6 @@ def run_cli():
         box_ligand=args.box_ligand,
         output_file=args.output,
         clean_ligands=not args.no_clean,
-
     )
 
 

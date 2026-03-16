@@ -1,10 +1,9 @@
 r"""Implementation for RMSD analysis."""
 
 # pylint: disable=R0801
-from typing import Iterable, TextIO
-
 import os
 import subprocess
+from typing import Iterable, TextIO
 
 import MDAnalysis as mda
 from loguru import logger
