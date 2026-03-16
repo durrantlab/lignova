@@ -1,12 +1,11 @@
 r"""Implementation for docking  GNINA docking."""
 
-from typing import override
-
 import os
 import re
 import shutil
 import subprocess
 from collections.abc import Iterable
+from typing import override
 
 from loguru import logger
 
@@ -214,6 +213,7 @@ class GNINA(Docking):
         preserve_charges: bool = True,
     ) -> str:
         r"""Convert a PQR file to PDBQT using prepare_receptor4.py.
+
         Args:
             pqr_path
                 Path to the input PQR file.
@@ -221,41 +221,48 @@ class GNINA(Docking):
                 Repair mode (-A flag). Default is checkhydrogens
                 to add missing hydrogens.
             cleanup
-                Cleanup mode (-U flag).Default is nphs_lps_waters_nonstdres to remove non-polar hydrogens,
-                lone pairs, waters, and non-standard residues.
+                Cleanup mode (-U flag). Default is nphs_lps_waters_nonstdres to remove
+                non-polar hydrogens, lone pairs, waters, and non-standard residues.
             preserve_charges
-                pass -C to keep the charges assigned by pdb2pqr
-                rather than recalculating Gasteiger charges. Default is True.
+                Pass -C to keep the charges assigned by pdb2pqr rather than
+                recalculating Gasteiger charges. Default is True.
 
         Returns:
             Path to the generated PDBQT file.
         """
         if not os.path.exists(pqr_path):
             raise FileNotFoundError(f"PQR file not found: {pqr_path}")
-
         if not pqr_path.endswith(".pqr"):
             raise ValueError(f"Expected a .pqr file, got '{pqr_path}'.")
-
         if repair not in self._VALID_REPAIRS:
             raise ValueError(
                 f"Invalid repair mode '{repair}'. Must be one of {sorted(self._VALID_REPAIRS)}."
             )
-
         if cleanup not in self._VALID_CLEANUPS:
             raise ValueError(
-                f"Invalid cleanup mode '{cleanup}. Must be one of {sorted(self._VALID_CLEANUPS)}."
+                f"Invalid cleanup mode '{cleanup}'. Must be one of {sorted(self._VALID_CLEANUPS)}."
             )
-        # check if perseve_charges is bool
         if not isinstance(preserve_charges, bool):
             raise TypeError(
                 f"preserve_charges must be a boolean, got {type(preserve_charges)}"
             )
+
         out_dir = os.path.dirname(os.path.abspath(pqr_path))
         basename = os.path.splitext(os.path.basename(pqr_path))[0]
         pdbqt_path = os.path.join(out_dir, f"{basename}.pdbqt")
 
+        # pythonsh is mgltools' own Python 2.7 wrapper.
+        pythonsh = shutil.which("pythonsh")
+        if pythonsh is None:
+            raise RuntimeError("pythonsh not found in PATH. ")
+
+        script = shutil.which("prepare_receptor4.py")
+        if script is None:
+            raise RuntimeError("prepare_receptor4.py not found in PATH.")
+
         cmd = [
-            "prepare_receptor4.py",
+            pythonsh,
+            script,
             "-r",
             pqr_path,
             "-o",
@@ -269,7 +276,7 @@ class GNINA(Docking):
             cmd.append("-C")
 
         logger.warning(
-            f"Receptor is not in PDBQT format. Converting {pqr_path} to'{pdbqt_path}"
+            f"Receptor is not in PDBQT format. Converting {pqr_path} to '{pdbqt_path}'"
         )
         logger.info(f"Running: {' '.join(cmd)}")
 
@@ -279,11 +286,7 @@ class GNINA(Docking):
                 f"prepare_receptor4.py failed on first attempt:\n{result.stderr}"
             )
             logger.info("Attempting to fix PQR column spacing and retrying...")
-
-            # Fix the PQR in-place (backs up original as *_org.pqr)
             self._fix_pqr_spacing(pqr_path, cleanup=cleanup)
-
-            # Remove any partial PDBQT from the failed attempt
             if os.path.exists(pdbqt_path):
                 os.remove(pdbqt_path)
             result = subprocess.run(cmd, capture_output=True, text=True)
@@ -292,6 +295,7 @@ class GNINA(Docking):
                 raise RuntimeError(
                     f"Even after spacing fix, prepare_receptor4.py failed with exit code {result.returncode}"
                 )
+
         if result.stdout:
             logger.debug(f"prepare_receptor4.py stdout:\n{result.stdout}")
 
