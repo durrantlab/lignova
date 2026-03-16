@@ -1,6 +1,5 @@
 # pylint: skip-file
 
-import glob
 import os
 import shutil
 
