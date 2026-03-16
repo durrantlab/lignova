@@ -42,9 +42,7 @@ pyyaml = ">=6.0.3,<7"
 mgltools = ">=1.5.7,<2"
 
 [feature.dev.dependencies]
-black = ">=24.10.0,<25"
 ruff = ">=0.7.3,<0.8"
-isort = ">=5.13.2,<6"
 mypy = ">=1.13.0,<2"
 pip = ">=24.3.1,<25"
 bump-my-version = ">=0.28.1,<0.29"
@@ -54,10 +52,7 @@ coverage = ">=7.6.4,<8"
 types-requests = ">=2.32.0.20241016,<3"
 
 [feature.dev.tasks]
-mdlint = { cmd = ["markdownlint-cli2", '"**/*.{md,markdown}"', "--fix", "--config", ".markdownlint.yaml", "||", "true"] }
-isort = { cmd = ["isort", "--settings-path", ".isort.cfg", "./lignova", "./tests", "||", "true"] }
-black = { cmd = ["black", "--config", ".black.toml", "./lignova", "./tests", "||", "true"] }
-format = { depends-on = ["mdlint", "isort", "black"] }
+format = { cmd = ["ruff", "check", "--select", "I", "--fix", "--config", ".ruff.toml", "&&", "ruff", "format", "--config", ".ruff.toml", "./"] }
 tests = { cmd = [
     "PYTHONPATH=.",
     "pytest",
@@ -71,7 +66,6 @@ tests = { cmd = [
 coverage = { cmd = ["coverage", "report"] }
 cleanup-build = { cmd = ["rm", "-rf", "./build"] }
 build = { cmd = ["python3", "-m", "build"], depends-on = ["cleanup-build"]}
-
 
 [feature.docs.dependencies]
 mkdocs = ">=1.6.1,<2"
