@@ -60,6 +60,15 @@ _PROP_RE = re.compile(r">\s+<([^>]+)>\n([^\n]*)")
 _VALID_EXTENSIONS = (".sdf", ".sdf.gz")
 
 
+class TruncatedSDFError(Exception):
+    """Raised when an SDF file appears truncated and allow_truncated=False."""
+
+    def __init__(self, filepath: str, reason: str):
+        self.filepath = filepath
+        self.reason = reason
+        super().__init__(f"Truncated SDF: {filepath} — {reason}")
+
+
 class GNINA_Results:
     r"""Lazy-indexed parser for a single GNINA docked SDF file."""
 
@@ -69,6 +78,7 @@ class GNINA_Results:
         num_modes: int | list[int] | None = 9,
         protein_id: str | None = None,
         keep_raw: bool = False,
+        allow_truncated: bool = True,
     ):
         r"""Initialize the GNINA_Results parser.
         Args:
@@ -83,6 +93,7 @@ class GNINA_Results:
             keep_raw: Whether to keep the full decompressed text in memory after
                 parsing. Default is False, the raw text is released after the table is built
                 and a seekable file on disk is used for subsequent block retrieval.
+            allow_truncated: Whether to allow files that appear truncated (e.g. missing some expected blocks).
         """
         if not os.path.isfile(filepath):
             raise ValueError(f"File {filepath} does not exist.")
@@ -98,6 +109,7 @@ class GNINA_Results:
         self._raw: str | None = ""
         self._seekable_path: str | None = None
         self._owns_seekable: bool = False
+        self._allow_truncated = allow_truncated
         self._load_offsets()
 
         self._group_num_modes: int | dict[tuple[str, int], int]
@@ -125,7 +137,7 @@ class GNINA_Results:
             self._seekable_path = tmp_path
             self._owns_seekable = True
             logger.debug(
-                f"Decompressed {os.path.basename(self._filepath)} → {tmp_path}"
+                f"Decompressed {os.path.basename(self._filepath)} to {tmp_path}"
             )
 
     def _build_table(
@@ -416,6 +428,15 @@ class GNINA_Results:
                 if actual_start < actual_end:
                     self._offsets.append((actual_start, actual_end))
             start = end + len(delimiter)
+        if not self._allow_truncated:
+            stripped = self._raw.rstrip()
+            if not self._offsets:
+                raise TruncatedSDFError(self._filepath, "No SDF blocks found")
+            if not stripped.endswith("$$$$"):
+                raise TruncatedSDFError(
+                    self._filepath,
+                    "File does not end with $$$$ delimiter (last block incomplete)",
+                )
 
     @staticmethod
     def _parse_block_meta(block_text: str) -> dict[str, str | float | int]:
@@ -1468,6 +1489,7 @@ class DockingDataset:
     ) -> int:
         r"""
         Groups proteins into batch files, each containing *proteins_per_batch* proteins sorted by protein_id.
+        Batch files are named by the first and last PDB ID within e.g. bt_0_10GS_4HVP.parquet.
         Args:
             output_dir :Destination directory for batch_000.parquet, etc.
             proteins_per_batch : How many proteins per batch file.
@@ -1487,14 +1509,18 @@ class DockingDataset:
 
         for batch_start in range(0, len(pq_files), proteins_per_batch):
             chunk = pq_files[batch_start : batch_start + proteins_per_batch]
-            tables = []
-            batch_path = os.path.join(output_dir, f"batch_{n_batches:03d}.parquet")
+
+            first_pid = os.path.splitext(os.path.basename(chunk[0]))[0]
+            last_pid = os.path.splitext(os.path.basename(chunk[-1]))[0]
+            batch_name = f"bt_{n_batches}_{first_pid}_{last_pid}.parquet"
+            batch_path = os.path.join(output_dir, batch_name)
+
             if not overwrite and os.path.isfile(batch_path):
-                logger.debug(
-                    f"Skipping batch, file exists: {os.path.basename(batch_path)}"
-                )
+                logger.debug(f"Skipping batch, file exists: {batch_name}")
                 n_batches += 1
                 continue
+
+            tables = []
             for f in chunk:
                 pid = os.path.splitext(os.path.basename(f))[0]
                 tables.append(self._parser_for(pid).read())
@@ -1506,11 +1532,11 @@ class DockingDataset:
             total_rows += combined.num_rows
             n_batches += 1
             logger.debug(
-                f"  Batch {n_batches}: {len(chunk)} proteins has {combined.num_rows:,} rows in {os.path.basename(batch_path)}"
+                f"  Batch {n_batches}: {len(chunk)} proteins, has {combined.num_rows:,} rows {batch_name}"
             )
 
         logger.info(
-            f" wrote {total_rows:,} rows across {n_batches} batch files in {output_dir}"
+            f"Wrote {total_rows:,} rows across {n_batches} batch files in {output_dir}"
         )
         return n_batches
 

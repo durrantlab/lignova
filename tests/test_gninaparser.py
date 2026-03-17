@@ -713,7 +713,7 @@ def test_dataset_build_from_tree(tmp_path):
 def test_dataset_batched_parquets(tmp_path):
     out1 = str(tmp_path / "b1")
     assert _dds.to_batched_parquets(out1, proteins_per_batch=1) == 2
-    assert len(glob.glob(os.path.join(out1, "batch_*.parquet"))) == 2
+    assert len(glob.glob(os.path.join(out1, "bt_*.parquet"))) == 2
 
     out2 = str(tmp_path / "b2")
     assert _dds.to_batched_parquets(out2, proteins_per_batch=100) == 1
