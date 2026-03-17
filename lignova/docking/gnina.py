@@ -3,13 +3,13 @@ r"""Implementation for docking  GNINA docking."""
 import os
 import re
 import shutil
-import subprocess
 from collections.abc import Iterable
 from typing import override
 
 from loguru import logger
 
 from lignova.docking.docking import Docking
+from lignova.io import run_mgltools_command
 from lignova.structure.ligand import DockedLigand, PreparedLigand
 from lignova.structure.protein import PreparedProtein
 from lignova.yaml.docking_config import GninaConfig
@@ -250,19 +250,9 @@ class GNINA(Docking):
         out_dir = os.path.dirname(os.path.abspath(pqr_path))
         basename = os.path.splitext(os.path.basename(pqr_path))[0]
         pdbqt_path = os.path.join(out_dir, f"{basename}.pdbqt")
-
-        # pythonsh is mgltools' own Python 2.7 wrapper.
-        pythonsh = shutil.which("pythonsh")
-        if pythonsh is None:
-            raise RuntimeError("pythonsh not found in PATH. ")
-
-        script = shutil.which("prepare_receptor4.py")
-        if script is None:
-            raise RuntimeError("prepare_receptor4.py not found in PATH.")
-
         cmd = [
-            pythonsh,
-            script,
+            "pythonsh",
+            "prepare_receptor4.py",
             "-r",
             pqr_path,
             "-o",
@@ -280,7 +270,8 @@ class GNINA(Docking):
         )
         logger.info(f"Running: {' '.join(cmd)}")
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = run_mgltools_command(cmd, capture_output=True, text=True)
+
         if result.returncode != 0:
             logger.warning(
                 f"prepare_receptor4.py failed on first attempt:\n{result.stderr}"
@@ -289,7 +280,7 @@ class GNINA(Docking):
             self._fix_pqr_spacing(pqr_path, cleanup=cleanup)
             if os.path.exists(pdbqt_path):
                 os.remove(pdbqt_path)
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = run_mgltools_command(cmd, capture_output=True, text=True)
             if result.returncode != 0:
                 logger.error(f"prepare_receptor4.py stderr:\n{result.stderr}")
                 raise RuntimeError(
