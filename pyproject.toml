@@ -15,16 +15,16 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "h5py>=3.12.1,<4",
-    "numpy>=1.26.0,<3",
-    "rdkit>=2024.9.2,<2026",
-    "loguru>=0.7.2,<0.8",
-    "mdanalysis>=2.1.0,<3",
-    "pandas>=2.2.3,<3",
-    "scipy>=1.14.1,<2",
-    "spyrmsd>=0.8.0,<1.0",
-    "gemmi>=0.6.4,<1.0",
-    "fasteners>=0.17.3,<1.0",
+    "h5py>=3.15.1,<4",
+    "numpy>=2.4.2,<3",
+    "rdkit>=2025.9.5,<2026",
+    "loguru>=0.7.3,<0.8",
+    "mdanalysis>=2.10.0,<3",
+    "pandas>=3.0.1,<4",
+    "scipy>=1.17.1,<2",
+    "spyrmsd>=0.9.0,<0.10",
+    "gemmi>=0.7.5,<0.8",
+    "fasteners>=0.19,<0.20",
 ]
 
 [build-system]
