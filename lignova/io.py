@@ -86,6 +86,7 @@ def _get_mgltools_prefix() -> str:
         "mgltools not found. Run from within the lignova project (pixi.toml must be present)."
     )
 
+
 def run_mgltools_command(
     cmd: list[str], **subprocess_kwargs
 ) -> subprocess.CompletedProcess:
