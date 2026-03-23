@@ -5,7 +5,6 @@ import subprocess
 from tempfile import NamedTemporaryFile
 
 import MDAnalysis as mda
-import pandas as pd
 from loguru import logger
 
 
@@ -22,7 +21,7 @@ def get_file_ext(file_path: str) -> str:
 
 
 def write_text(
-    text: str | pd.DataFrame | mda.Universe,
+    text: str | mda.Universe,
     write_path: None | str = None,
     file_ext: None | str = None,
 ) -> str:
@@ -30,23 +29,22 @@ def write_text(
 
     Args:
         text : Text to write to file.
-        write_path : Path to write to file. If `None`, then a `NamedTemporaryFile` will
+        write_path : Path to write to file. If None, then a NamedTemporaryFile will
             be created instead.
-        file_ext : Specify the file extension if `write_path` is `None`.
+        file_ext : Specify the file extension if write_path is None.
 
     Returns:
         Path to file that was just written.
     """
     if write_path is None:
+        if file_ext is None:
+            raise ValueError("file_ext must be specified if write_path is None.")
         with NamedTemporaryFile(
             mode="w+", encoding="utf-8", suffix=file_ext, delete=False
         ) as temp_file:
             write_path = temp_file.name
             logger.info(f"Writing to temporary file: {write_path}")
-
-            if isinstance(text, pd.DataFrame):
-                text.to_csv(temp_file, index=False, header=True)
-            elif isinstance(text, mda.core.groups.AtomGroup):
+            if isinstance(text, mda.core.groups.AtomGroup):
                 text.write(temp_file.name)
             else:
                 temp_file.write(text)
