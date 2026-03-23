@@ -6,7 +6,6 @@ from typing import TextIO, override
 
 from loguru import logger
 
-from lignova.docking.contexts import GlideContext
 from lignova.structure.ligand import DockedLigand
 from lignova.structure.protein import Protein
 
@@ -19,7 +18,7 @@ class spyrmsdRMSD(RMSDBase):
     This class uses the Spyrmsd tool to calculate RMSD between a reference ligand
     and a target ligand. It can handle symmetry, hydrogens, and superimposition."""
 
-    def __init__(self, target: DockedLigand, reference: Protein, context: GlideContext):
+    def __init__(self, target: DockedLigand, reference: Protein):
         r"""Initialize the spyrmsdRMSD class."""
         super().__init__(target, reference, context)
         state: int = self._validate_file_format()

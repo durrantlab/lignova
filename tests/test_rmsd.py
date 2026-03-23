@@ -13,9 +13,9 @@ if os.getenv("SCHRODINGER") is None:
         allow_module_level=True,
     )
 
-from lignova.analysis.rmsdclass.mda import mdaRMSD
-from lignova.analysis.rmsdclass.obabel import obabelRMSD
-from lignova.analysis.rmsdclass.spyrmsd import spyrmsdRMSD
+from lignova.analysis.rmsd.mda import mdaRMSD
+from lignova.analysis.rmsd.obabel import obabelRMSD
+from lignova.analysis.rmsd.spyrmsd import spyrmsdRMSD
 from lignova.analysis.utils import obabel_convert
 from lignova.docking.contexts import GlideContext
 from lignova.structure.ligand import DockedLigand

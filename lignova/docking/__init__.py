@@ -1,6 +1,6 @@
 r"""Initialize docking module."""
 
-from .combind import Combind
-from .glide import Glide
+from .docking import Docking
+from .gnina import GNINA
 
-__all__ = ["Glide", "Combind"]
+__all__ = ["Docking", "GNINA"]
