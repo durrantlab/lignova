@@ -1,7 +1,9 @@
 r"""Implements methods for reading and writing files."""
 
+import gzip
 import os
 import subprocess
+from contextlib import contextmanager
 from tempfile import NamedTemporaryFile
 
 import MDAnalysis as mda
@@ -54,6 +56,40 @@ def write_text(
             file.write(text)
 
     return write_path
+
+
+@contextmanager
+def decompress(input_file: str):
+    """Decompress a gzipped file to a temporary file.
+
+    Yields the path to the decompressed temporary file and cleans it up on
+    exit. If the input file is not gzipped, yields the original file path
+
+    Args:
+        input_file: Path to any file, possibly gzip-compressed.
+
+    Yields:
+        Path to the decompressed file.
+    """
+    ext = get_file_ext(input_file)
+    if ext == ".gz":
+        inner_ext = get_file_ext(os.path.splitext(input_file)[0])
+    elif ext.endswith("gz"):
+        inner_ext = ext[: -len("gz")]
+    else:
+        yield input_file
+        return
+
+    tmp = NamedTemporaryFile(suffix=inner_ext, delete=False)
+    try:
+        with gzip.open(input_file, "rb") as f_in:
+            tmp.write(f_in.read())
+        tmp.close()
+        logger.info(f"Decompressed {input_file} to temporary {inner_ext} file")
+        yield tmp.name
+    finally:
+        if os.path.exists(tmp.name):
+            os.unlink(tmp.name)
 
 
 def _get_mgltools_prefix() -> str:

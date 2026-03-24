@@ -1,10 +1,7 @@
-r"""Implementation of rmsd analysis using MDAnalysis."""
+r"""Implementation of RMSD analysis using MDAnalysis."""
 
 from typing import override
 
-import MDAnalysis as mda
-from loguru import logger
-from MDAnalysis.analysis import align
 from MDAnalysis.analysis.rms import rmsd
 
 from ...structure.editing import filter_hetatoms, get_mda_universe
@@ -12,20 +9,31 @@ from .base import RMSDBase
 
 
 class mdaRMSD(RMSDBase):
-    r"""Class to calculate ligand rmsd using MDAnalysis."""
+    r"""Calculate ligand RMSD using MDAnalysis."""
 
     @override
     def calculate(
-        self, selection: str = "(not resname HOH) and (not name H*)"
+        self,
+        selection: str = "(not resname HOH) and (not name H*)",
+        superimpose: bool = False,
+        save: bool = False,
+        output_filename: str | None = None,
     ) -> list[float]:
-        r"""Calculate rmsd between docked ligand and reference ligand using MDAnalysis.
+        r"""Calculate RMSD between docked and reference ligand using MDAnalysis.
 
         Args:
-            selection : Atom selection language for rmsd calculations.
-                Default is (not resname HOH) and (not name H*)".
+            selection: MDAnalysis atom selection string.
+                Default excludes waters and hydrogens.
+            superimpose: If True, optimally superimpose the ligand onto the
+                reference before computing RMSD (minimized RMSD). If False,
+                compute in-place RMSD using the docked coordinates as-is.
+                Default is False.
+            save: If True, write results to a text file. Default is False.
+            output_filename: Output file path (without extension) if save
+                is True.
 
         Returns:
-            List of rmsd values for each frame in the trajectory.
+            List of RMSD values, one per frame in the trajectory.
         """
         # check if the extensions are not pdb then raise an error using .file_ext
         if self.target.file_ext != "pdb":
@@ -38,30 +46,31 @@ class mdaRMSD(RMSDBase):
             )
         if not self.target.file_path:
             raise ValueError("Target file path is None.")
-        docked_traj: mda.Universe = get_mda_universe(self.target.file_path)
-        reference: mda.Universe = get_mda_universe(self.reference.file_path)
 
-        # Select the ligands
-        ref_ligand_het: mda.Universe = filter_hetatoms(reference)
-        dock_ligand_het: mda.Universe = filter_hetatoms(docked_traj)
+        docked_traj = get_mda_universe(self.target.file_path)
+        reference = get_mda_universe(self.reference.file_path)
 
-        ref_ligand: mda.AtomGroup = ref_ligand_het.select_atoms(selection)
-        dock_ligand: mda.AtomGroup = dock_ligand_het.select_atoms(selection)
-        # Check if the length of the ligands is the same
+        ref_ligand = filter_hetatoms(reference).select_atoms(selection)
+        dock_ligand = filter_hetatoms(docked_traj).select_atoms(selection)
+
         if len(ref_ligand.atoms) != len(dock_ligand.atoms):
-            logger.error(len(ref_ligand.atoms))
-            logger.error(len(dock_ligand.atoms))
             raise ValueError(
-                f"Reference ligand {self.reference.file_path} and docked ligand "
-                + f"{self.target.file_path} have different number of atoms."
+                f"Atom count mismatch: reference has {len(ref_ligand.atoms)}, "
+                f"target has {len(dock_ligand.atoms)}. "
+                f"Files: {self.reference.file_path}, {self.target.file_path}"
             )
-        # Calculate the rmsd between the ligands
-        rmsd_values: list[float] = []
+
+        rmsd_values = []
         for _ in docked_traj.trajectory:
-            rmsd_value: float = rmsd(
+            rmsd_value = rmsd(
                 dock_ligand.positions,
                 ref_ligand.positions,
-                center=True,
+                center=superimpose,
+                superposition=superimpose,
             )
             rmsd_values.append(float(rmsd_value))
+
+        if save:
+            self._save_result(rmsd_values, output_filename)
+
         return rmsd_values
