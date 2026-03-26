@@ -6,9 +6,7 @@ import numpy as np
 import pytest
 from rdkit.Chem import rdmolfiles
 
-from lignova.analysis.rmsd.mda import mdaRMSD
-from lignova.analysis.rmsd.obabel import obabelRMSD
-from lignova.analysis.rmsd.spyrmsd import spyrmsdRMSD
+from lignova.analysis import mdaRMSD, obabelRMSD, spyrmsdRMSD
 from lignova.analysis.utils import (
     mae_convert,
     obabel_convert,

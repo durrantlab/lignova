@@ -10,14 +10,14 @@ import numpy as np
 import pyarrow.compute as pc
 import pytest
 
-from lignova.analysis.gnina_parser import (
-    _SCORE_DIRECTIONS,
+from lignova.analysis import (
     DOCKING_SCHEMA,
     DockedPose,
     DockingDataset,
     GNINA_Results,
     as_poses,
 )
+from lignova.analysis.gnina_parser import _SCORE_DIRECTIONS
 
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
