@@ -6,7 +6,7 @@ import h5py
 import requests
 from loguru import logger
 
-from lignova.hdf5.pubchem import PubChemAPI
+from lignova.APIs import PubChemAPI
 
 
 def process_hdf5_file(hdf5_file_path: str) -> None:

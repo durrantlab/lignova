@@ -2,7 +2,7 @@ r"""Test PubChem API."""
 
 import os
 
-from lignova.hdf5.pubchem import PubChemAPI
+from lignova.APIs import PubChemAPI
 
 # Ensures we execute from file directory (for relative paths).
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
