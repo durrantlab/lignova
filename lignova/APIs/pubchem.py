@@ -2,11 +2,6 @@ r"""Implementation of the PubChem API parser class.
 https://pubchemdocs.ncbi.nlm.nih.gov/pug-rest
 """
 
-import time
-from collections.abc import Iterable
-from typing import Any, override
-
-import requests
 from loguru import logger
 
 from .base import BaseAPI
@@ -26,7 +21,7 @@ class PubChemAPI(BaseAPI):
 
     _BASE_URL = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
 
-    def get_cids(self, aid: int, active: bool = True) -> list[int]:
+    def get_cids(self, aid: int, active: bool = True) -> list[str]:
         r"""Get compound IDs from PubChem API.
 
         Args:
