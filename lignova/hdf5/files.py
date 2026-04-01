@@ -1,7 +1,5 @@
 r"""Implementation for a base class for file parsers."""
 
-from typing import Optional
-
 import os
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
@@ -13,7 +11,7 @@ from loguru import logger
 class FormatManager(ABC):
     r"""Abstract class for FormatManager ."""
 
-    def __init__(self, file_path: str, schema: Optional[pa.schema] = None) -> None:
+    def __init__(self, file_path: str, schema: pa.Schema | None = None) -> None:
         r"""Initialize the FormatManager class.
         Args:
             file_path: the path to the file.

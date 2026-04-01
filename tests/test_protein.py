@@ -2,6 +2,8 @@ r"""Tests for protein structure class and relevant functions."""
 
 import os
 
+import numpy as np
+
 from lignova.structure.editing import convert_cif2pdb, read_cif, select_water
 from lignova.structure.protein import Protein
 from lignova.structure.utils import (
@@ -130,7 +132,7 @@ def test_separate_protein_ligand():
     )
     protein_p, ligand_p = separate_protein_ligand(protein.file_path)
     assert len(set(protein_p.segments.segids)) == 1
-    assert ligand_p.resnames.all() == "M3A"
+    assert np.all(ligand_p.resnames == "M3A")
     protein.load(
         pdb_id="4ZBG",
         write=True,
@@ -138,7 +140,7 @@ def test_separate_protein_ligand():
     )
     protein_p, ligand_p = separate_protein_ligand(protein.file_path)
     assert len(set(protein_p.segments.segids)) == 1
-    assert ligand_p.resnames.all() == "ACO"
+    assert np.all(ligand_p.resnames == "ACO")
 
 
 def test_select_residues():
@@ -151,7 +153,7 @@ def test_select_residues():
     )
     protein_p = get_mda_universe(protein.file_path)
     protein_p = select_residues(protein_p, residues=["M3A"])
-    assert protein_p.resnames.all() == "M3A"
+    assert np.all(protein_p.resnames == "M3A")
 
 
 def test_get_rcsb_data():
@@ -272,10 +274,9 @@ def test_separate_protein_ligand_water():
         protein.file_path, water_selection="all", remove_water=False
     )
     assert (
-        ligand_suf.resnames.all()
-        == "FHC"
-        == ligand_bridge.resnames.all()
-        == ligand_all.resnames.all()
+        (np.all(ligand_suf.resnames == "FHC"))
+        and (np.all(ligand_bridge.resnames == "FHC"))
+        and (np.all(ligand_all.resnames == "FHC"))
     )
     assert (
         len(set(protein_surf.segments.segids))
@@ -289,6 +290,6 @@ def test_separate_protein_ligand_water():
     assert 2008 in [
         atom.resid for atom in protein_surf.atoms if atom.resname == "HOH"
     ] and 2008 in [atom.resid for atom in protein_all.atoms if atom.resname == "HOH"]
-    assert 2149 in [
+    assert 2149 not in [
         atom.resid for atom in protein_bridge.atoms if atom.resname == "HOH"
     ] and 2149 in [atom.resid for atom in protein_all.atoms if atom.resname == "HOH"]

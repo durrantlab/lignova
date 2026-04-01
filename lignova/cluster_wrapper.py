@@ -1,9 +1,9 @@
 r"Implementation for a wrapper for MMseqs2 clustering"
-from typing import TextIO
 
 import ast
 import os
 import time
+from typing import TextIO
 
 import pandas as pd
 import pyarrow as pa

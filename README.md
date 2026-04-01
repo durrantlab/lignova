@@ -1,6 +1,6 @@
 <h1 align="center">lignova</h1>
 
-<h4 align="center">TODO</h4>
+<h4 align="center">Generate high-quality docked protein–ligand complexes at scale.</h4>
 
 <h4 align="center" style="padding-bottom: 0.5em;"><a href="https://durrantlab.github.io/lignova">Documentation</a></h4>
 
@@ -16,7 +16,7 @@
   </a>
 </p>
 
-TODO: Add in outline
+LIGNOVA is an open-source, automated pipeline that pairs bioactive compounds from PubChem with high-resolution protein structures from the PDB to generate large-scale docked protein–ligand complexes using GNINA.
 
 ## Installation
 

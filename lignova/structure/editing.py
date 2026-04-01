@@ -1,8 +1,7 @@
-r""" Implementation for editing protein structures using MDAnalysis."""
-
-from typing import Literal
+r"""Implementation for editing protein structures using MDAnalysis."""
 
 from collections.abc import Iterable
+from typing import Literal
 
 import gemmi
 import MDAnalysis as mda
@@ -76,9 +75,9 @@ def select_chains(
         chains : Chains to keep if None then select chain A. Default is None.
     """
     n_chains = len(set(mda_univ.segments.segids))
-    logger.info("There are {} chains in the structure", n_chains)
+    logger.info(f"There are {n_chains} chains in the structure")
     if n_chains == 1:
-        logger.info("Selecting the only chain available")
+        logger.warning("There is only one Chain available. Selecting it")
         return mda_univ
 
     # There are multiple chains in the structure
@@ -102,7 +101,7 @@ def validate_chains(mda_univ: mda.Universe, chains: str | Iterable[str]) -> bool
     if isinstance(chains, str):
         chains = [chains]
     n_chains = len(set(mda_univ.segments.segids))
-    logger.info("There are {} chains in the structure", n_chains)
+    logger.info(f"There are {n_chains} chains in the structure")
     if set(chains).issubset(set(mda_univ.segments.segids)):
         return True
     return False
@@ -172,7 +171,7 @@ def select_residues(
     elif all(isinstance(residue, str) for residue in residues):
         selection = " or ".join([f"resname {r}" for r in residues])
 
-    logger.info("MDAnalysis selection: {}", selection)
+    logger.debug(f"MDAnalysis selection: {selection}")
     return mda_univ.select_atoms(selection)
 
 

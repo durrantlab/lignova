@@ -1,102 +1,209 @@
 """Implementation of utility functions for the analysis module."""
 
-from typing import TextIO
-
 import os
 import subprocess
-from collections.abc import Iterable
+from typing import TextIO
 
 import pandas as pd
 from loguru import logger
 from rdkit.Chem import rdchem, rdmolfiles, rdmolops
 
-from ..docking.contexts import GlideContext
+from lignova.io import decompress, get_file_ext
+
+STANDARD_RESIDUES = {
+    "ALA",
+    "ARG",
+    "ASN",
+    "ASP",
+    "CYS",
+    "GLN",
+    "GLU",
+    "GLY",
+    "HIS",
+    "ILE",
+    "LEU",
+    "LYS",
+    "MET",
+    "PHE",
+    "PRO",
+    "SER",
+    "THR",
+    "TRP",
+    "TYR",
+    "VAL",
+    "HIE",
+    "HID",
+    "HIP",
+    "CYX",
+    "ASH",
+    "GLH",
+}
 
 
-def interconvert_mae_sdf(
-    test_file: str | TextIO,
-    output_filename: str,
-    ntruct: int | str | None = None,
-    context: GlideContext = GlideContext.get_current(),
-) -> None:
-    r"""Convert ligand(s) to SDF format.
+def _is_protein(mol: rdchem.Mol) -> bool:
+    r"""Check whether a molecule is a protein based on its PDB residue names.
 
-    Args:
-        test_file : Test file name or file object.
-        output_filename : Output file name.
-        ntruct : Number of structures to convert. Default 1:5 i.e the first 5 structures.
-        context : Docking context to run the command.
+    Returns True if the majority of unique residue names are standard
+    amino acids (or common variants like HIE/HID/CYX).
     """
-    # GET THE path of the file extension using the os.path.splitext() function
-    # if the file extension is .sdf, then the file is in SDF format
-    # if the file extension is .mae, then the file is in MAE format
-    # if the file extension is neither .sdf nor .mae, then the file format is not supported
-    if not os.path.exists(test_file):
-        logger.error(f"File {test_file} does not exist.")
-        return
-    logger.info(os.path.splitext(test_file)[1])
-    if os.path.splitext(test_file)[1] == ".sdf":
-        logger.info("Input file is in SDF format.Converting to MAE format.")
-        fileformat = "-isdf"
-        outformat = "-omae"
-    elif (
-        os.path.splitext(test_file)[1] == ".maegz"
-        or os.path.splitext(test_file)[1] == ".mae"
-    ):
-        logger.info("Input file is in MAE format.Converting to SDF format.")
-        fileformat = "-imae"
-        outformat = "-osdf"
-    else:
-        logger.error(
-            "Input file format not supported. Please provide a file in MAE or SDF format."
-        )
-        return
+    residue_names = set()
+    for atom in mol.GetAtoms():
+        info = atom.GetPDBResidueInfo()
+        if info is not None:
+            residue_names.add(info.GetResidueName().strip())
+    if not residue_names:
+        return False
+    return len(residue_names & STANDARD_RESIDUES) / len(residue_names) > 0.5
 
-    command = [
-        context.command + "/utilities/sdconvert",
-        fileformat,
-        test_file,
-        outformat,
-        output_filename,
-    ]
-    if ntruct is not None:
-        command.extend(["-n", str(ntruct)])
-    else:
-        command.extend(["-all"])
-    logger.info(f"Running command: {' '.join(command)}")
-    try:
-        with subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True,
-        ) as process:
-            stdout, stderr = process.communicate()
-        if process.returncode == 0:
-            logger.info("File format conversion completed")
-            logger.info(f"Output:\n{stdout}")
-        else:
-            logger.error("File format conversion failed ")
-            logger.error(f"Error Output:\n{stderr}")
-            raise subprocess.CalledProcessError(process.returncode, " ".join(command))
-    except Exception as e:
-        logger.error(f"An error occurred during rmsd calculation: {str(e)}")
-        raise e
+
+def _set_pdb_record_type(mol: rdchem.Mol) -> None:
+    r"""Set ATOM/HETATM record types based on residue identity.
+
+    Standard amino acid residues are written as ATOM records,
+    everything else (ligands, waters, ions, cofactors) as HETATM.
+    Args:
+        mol: RDKit molecule with PDB residue info.
+    """
+    for atom in mol.GetAtoms():
+        info = atom.GetPDBResidueInfo()
+        if info is not None:
+            resname = info.GetResidueName().strip()
+            info.SetIsHeteroAtom(resname not in STANDARD_RESIDUES)
+
+
+def mae_convert(
+    input_file: str,
+    output_file: str,
+    concatenate: bool = True,
+    remove_hs: bool = True,
+    sanitize: bool = False,
+    protein: bool = False,
+) -> list[str]:
+    r"""Convert a .mae file to SDF or PDB using maeparser from RDKit.
+    Args:
+        input_file: Path to the input .mae or .maegz file.
+        output_file: Path to the output file (.sdf or .pdb).
+        concatenate: Whether to concatenate all molecules into a single file
+            (only applies to SDF). Default is True.
+        remove_hs: Whether to remove hydrogens. Default is True.
+        sanitize: Whether to sanitize molecules. Default is False.
+            Set to False for docked poses to preserve coordinates.
+        protein: Whether to output the protein if exists to a separate file with
+            a _protein suffix. Default is False.
+    Returns:
+        List of output file paths written.
+    """
+    if not os.path.exists(input_file):
+        raise FileNotFoundError(f"Input file not found: {input_file}")
+
+    ext_in = get_file_ext(input_file).lower()
+    if ext_in not in [".mae", ".maegz"]:
+        raise ValueError(f"Invalid input format: {ext_in}. Expected .mae or .maegz")
+
+    ext_out = get_file_ext(output_file).lower()
+    if ext_out not in [".sdf", ".pdb"]:
+        raise ValueError(f"Invalid output format: {ext_out}. Expected .sdf or .pdb")
+
+    base, ext = os.path.splitext(output_file)
+    output_paths = []
+
+    with decompress(input_file) as mae_path:
+        suppl = rdmolfiles.MaeMolSupplier(mae_path, removeHs=False, sanitize=sanitize)
+
+        protein_mol = None
+        ligands = []
+
+        for i, mol in enumerate(suppl):
+            if mol is None:
+                logger.warning(
+                    f"Molecule at index {i} in {input_file} could not be loaded."
+                )
+                continue
+
+            if remove_hs:
+                mol = rdmolops.RemoveAllHs(mol, sanitize=False)
+
+            if protein_mol is None and _is_protein(mol):
+                protein_mol = mol
+                logger.info(
+                    f"Detected protein at index {i} with ({mol.GetNumAtoms()} atoms).Removing it."
+                )
+                continue
+            ligands.append(mol)
+
+        if not ligands:
+            raise ValueError(f"No valid ligand molecules found in {input_file}")
+
+        logger.info(f"Loaded {len(ligands)} ligands from {input_file}")
+
+        if protein_mol is not None and protein:
+            protein_path = f"{base}_protein.pdb"
+            _set_pdb_record_type(protein_mol)
+            rdmolfiles.MolToPDBFile(protein_mol, protein_path)
+            output_paths.append(protein_path)
+            logger.info(f"Wrote protein to {protein_path}")
+
+        if ext_out == ".sdf":
+            if concatenate:
+                writer = rdmolfiles.SDWriter(output_file)
+                for mol in ligands:
+                    writer.write(mol)
+                writer.close()
+                output_paths.append(output_file)
+                logger.info(f"Wrote {len(ligands)} ligand(s) to {output_file}")
+            else:
+                for i, mol in enumerate(ligands):
+                    path = f"{base}_{i}{ext}"
+                    rdmolfiles.MolToMolFile(mol, path)
+                    output_paths.append(path)
+                logger.info(f"Wrote {len(ligands)} SDF file(s)")
+
+        elif ext_out == ".pdb":
+            for mol in ligands:
+                _set_pdb_record_type(mol)
+            if len(ligands) == 1:
+                rdmolfiles.MolToPDBFile(ligands[0], output_file)
+                output_paths.append(output_file)
+                logger.info(f"Wrote 1 ligand to {output_file}")
+            else:
+                for i, mol in enumerate(ligands):
+                    path = f"{base}_{i}{ext}"
+                    rdmolfiles.MolToPDBFile(mol, path)
+                    output_paths.append(path)
+                logger.info(f"Wrote {len(ligands)} PDB files")
+    return output_paths
 
 
 def obabel_convert(
     test_file: str | TextIO, output_filename: str, hydrogen: bool = False
 ) -> None:
-    """Convert ligand(s) from MAE format to SDF format using obabel.
+    r"""Interconvert ligand(s) file formats using obabel.
 
     Args:
         test_file : Test file name or file object.
         output_filename : Output file name.
         hydrogen: Whether to add hydrogens to the molecule. Default is False.
     """
-
+    # check if the file exists
+    if isinstance(test_file, str):
+        if not os.path.exists(test_file):
+            raise FileNotFoundError(f"Input file not found: {test_file}")
+    if os.path.exists(output_filename):
+        logger.warning(
+            f"Output file {output_filename} already exists. Skipping conversion."
+        )
+        return
+    # check if the file extension is .mae or .maegz and if so use the mae_convert function instead
+    ext = os.path.splitext(str(test_file))[-1].lower()
+    if ext in [".mae", ".maegz"]:
+        logger.info(
+            f"Input file {test_file} is a .mae or .maegz file. Using mae_convert instead of obabel."
+        )
+        mae_convert(str(test_file), output_filename, remove_hs=not hydrogen)
+        return
     # Construct the command
     command: list[str] = ["obabel", test_file, "-O", output_filename]
+    logger.info(f"Running command: {' '.join(command)}")
     if hydrogen:
         command.append("-h")
     try:
@@ -117,41 +224,6 @@ def obabel_convert(
     except Exception as e:
         logger.error(f"An error occurred during file format conversion: {str(e)}")
         raise e
-
-
-def obabel_result_parser(output):
-    """
-    Parses the output from the obabel command and returns the numeric values found per line.
-
-    Args:
-        output : The output from the obabel command.
-
-    Returns:
-        A dictionary where the keys are arbitrary numbers (1, 2, 3, ...)
-            and the values are lists of numeric values found per line.
-    """
-    # Split the output into lines
-    lines = output.strip().split("\n")
-
-    # Initialize a dictionary to store the numeric values per line
-    values = {}
-
-    # Iterate through each line and extract the numeric values
-    for i, line in enumerate(lines, start=1):
-        parts = line.split(",")
-        line_values = []
-        for part in parts:
-            part = part.strip()
-            if part != "inf":
-                try:
-                    value = float(part)
-                    line_values.append(value)
-                except ValueError:
-                    pass  # Ignore parts that cannot be converted to float
-        # Store the numeric values for the current line in the dictionary
-        values[i] = line_values
-
-    return values
 
 
 # pylint: disable=no-member,c-extension-no-member

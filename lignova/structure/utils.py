@@ -1,16 +1,15 @@
-r""" Utility functions for structure module. """
-
-from typing import Literal, TextIO
+r"""Utility functions for structure module."""
 
 import os
 import time
+from typing import Any, Literal, TextIO
 
 import MDAnalysis as mda
 import pandas as pd
 import requests
 from loguru import logger
 
-from ..docking.contexts import ProteinContext
+from ..yaml.protein import ProteinContext
 from .editing import (
     filter_hetatoms,
     get_mda_universe,
@@ -132,6 +131,8 @@ def separate_protein_ligand(
     remove_water: bool | None = True,
     keep_het_chain: str | list | None = None,
     water_selection: Literal["surface", "interfacial", "all"] | None = None,
+    hetatm: Literal["valid_ligand", "no_hetam", "cofactors"] = "valid_ligand",
+    context: ProteinContext | None | str | dict[str, Any] = ProteinContext.default(),
 ) -> tuple[mda.Universe, mda.Universe]:
     r"""Separate protein and ligand from a PDB file.
 
@@ -144,20 +145,56 @@ def separate_protein_ligand(
             Chain(s) to keep their HETATM in the protein structure.
             Default is None. If None, all HETATM will be kept.
         water_selection : str
-            The selection of water molecules to keep if remove_water is False. Default is "none".
-
+            The selection of water molecules to keep if remove_water is False. Default is "none"
+        hetatm : str
+            The selection of hetatoms to keep in the protein structure. Default is "valid_ligand".
+        context : ProteinContext or None or str or dict
+            ProteinContext object or path to ProteinContext YAML file. Default is ProteinContext.
     Returns:
-        Universe object containing the protein.
-
-        Universe object containing the ligand.
+        a tuple of:
+        - mda Universe object containing the protein.
+        - mda Universe object containing the ligand.
     """
+    # check valide context type and convert to ProteinContext object if needed
+    if not isinstance(context, (ProteinContext, str, dict, type(None))):
+        logger.warning(
+            f"Invalid type for context: {type(context).__name__}. Defaulting to ProteinContext."
+        )
+        context = ProteinContext.default()
+    if context is None:
+        logger.warning("No protein context provided. Using default context.")
+        context = ProteinContext.default()
+    elif isinstance(context, str):
+        context = ProteinContext(context)
+    elif isinstance(context, dict):
+        context = ProteinContext("protein_context.yaml", data_dict=context)
+    else:
+        context = context
     save_prot = None
+    if not isinstance(context, ProteinContext):
+        raise TypeError(
+            f"Expected ProteinContext, str, dict, or None; got {type(context).__name__}"
+        )
+
+    if hetatm not in ["valid_ligand", "no_hetam", "cofactors"]:
+        logger.warning(
+            f"Invalid option for hetatm: {hetatm}. Defaulting to 'valid_ligand'."
+        )
+        hetatm = "valid_ligand"
     if water_selection is None and remove_water is False:
         logger.warning("No water selection specified. Retaining all water molecules.")
         raise ValueError("Please specify a water selection.")
     pdb_obj = get_mda_universe(pdb)
     logger.debug(f"Chains in the pdb file: {list(set(pdb_obj.segments.segids))}")
     water_object = select_residues(pdb_obj, residues=["HOH"])
+    impurities = context.impurities
+    cofactor_obj = select_residues(pdb_obj, residues=context.cofactors)
+    metal_tmpobj = filter_hetatoms(pdb_obj)
+    # Extract only the HETATMs with residue names of length less than 3
+    metal_obj = select_residues(
+        metal_tmpobj,
+        residues=[res.resname for res in metal_tmpobj.residues if len(res.resname) < 3],
+    )
     # check if the file has hetatoms in chain A or not
     if keep_het_chain is not None:
         if validate_chains(pdb_obj, keep_het_chain) is False:
@@ -171,7 +208,6 @@ def separate_protein_ligand(
         selection = select_chains(pdb_obj, chains=keep_het_chain)
         # check if the hetatoms in the selection (the residue names)
         # are valid using the protein context impurities
-        impurities = ProteinContext.get_current().impurities
         valid_hetatoms = [
             hetatom.resname
             for hetatom in filter_hetatoms(selection)
@@ -195,7 +231,7 @@ def separate_protein_ligand(
             ]
             # Remove self-assignment
             # keep_het_chain = keep_het_chain
-        hetatm = filter_hetatoms(pdb_obj, keep_het_chain)
+        hetatm_selection = filter_hetatoms(pdb_obj, keep_het_chain)
     else:
         logger.debug(
             f"No chain specified. Selecting all chains.i.e {list(set(pdb_obj.segments.segids))}"
@@ -206,37 +242,95 @@ def separate_protein_ligand(
         keep_het_chain = [i for i in keep_het_chain if i]
         logger.debug(f"Chains in the pdb file: {keep_het_chain}")
         selection = select_chains(pdb_obj, chains=keep_het_chain)
-        hetatm = filter_hetatoms(pdb_obj)
+        hetatm_selection = filter_hetatoms(pdb_obj)
     # delete any hetatoms in hetatm that exist in the crystal additive list
-    additatives = ProteinContext.get_current().crystal_additives
-    hetatm = remove_residues(hetatm, residues=additatives)
-    actual_ligand = remove_residues(hetatm, residues=["HOH"])
+    hetatm_selection = remove_residues(hetatm_selection, residues=impurities)
+    actual_ligand = remove_residues(
+        hetatm_selection,
+        residues=["HOH"]
+        + [res.resname for res in hetatm_selection.residues if len(res.resname) < 3],
+    )
     ligand_name = actual_ligand.resnames.all()
     if remove_water:
-        save_prot = merge_universes([remove_hetatoms(pdb_obj), actual_ligand])
+        if hetatm == "valid_ligand":
+            save_prot = merge_universes(
+                [remove_hetatoms(pdb_obj), actual_ligand, cofactor_obj, metal_obj]
+            )
+        elif hetatm == "cofactors":
+            save_prot = merge_universes(
+                [remove_hetatoms(pdb_obj), cofactor_obj, metal_obj]
+            )
+        else:
+            save_prot = remove_hetatoms(pdb_obj)
     else:
         logger.warning(
             "Crystallographic Water molecules are not removed from the structure."
         )
         if water_selection == "all":
-            save_prot = merge_universes(
-                [remove_hetatoms(pdb_obj), actual_ligand, water_object]
-            )
+            if hetatm == "valid_ligand":
+                save_prot = merge_universes(
+                    [
+                        remove_hetatoms(pdb_obj),
+                        actual_ligand,
+                        water_object,
+                        cofactor_obj,
+                        metal_obj,
+                    ]
+                )
+            elif hetatm == "cofactors":
+                save_prot = merge_universes(
+                    [remove_hetatoms(pdb_obj), water_object, cofactor_obj, metal_obj]
+                )
+            else:
+                save_prot = merge_universes([remove_hetatoms(pdb_obj), water_object])
         elif water_selection == "surface":
             surface_water = select_water(
                 pdb=pdb_obj, ligand=ligand_name, water_selection=water_selection
             )
             print(surface_water)
-            save_prot = merge_universes(
-                [remove_hetatoms(pdb_obj), actual_ligand, surface_water]
-            )
+            if hetatm == "valid_ligand":
+                save_prot = merge_universes(
+                    [
+                        remove_hetatoms(pdb_obj),
+                        actual_ligand,
+                        surface_water,
+                        cofactor_obj,
+                        metal_obj,
+                    ]
+                )
+            elif hetatm == "cofactors":
+                save_prot = merge_universes(
+                    [remove_hetatoms(pdb_obj), surface_water, cofactor_obj, metal_obj]
+                )
+            else:
+                save_prot = merge_universes([remove_hetatoms(pdb_obj), surface_water])
         elif water_selection == "interfacial":
             interfacial_water = select_water(
                 pdb=pdb_obj, ligand=ligand_name, water_selection=water_selection
             )
-            save_prot = merge_universes(
-                [remove_hetatoms(pdb_obj), actual_ligand, interfacial_water]
-            )
+            if hetatm == "valid_ligand":
+                save_prot = merge_universes(
+                    [
+                        remove_hetatoms(pdb_obj),
+                        actual_ligand,
+                        interfacial_water,
+                        cofactor_obj,
+                        metal_obj,
+                    ]
+                )
+            elif hetatm == "cofactors":
+                save_prot = merge_universes(
+                    [
+                        remove_hetatoms(pdb_obj),
+                        interfacial_water,
+                        cofactor_obj,
+                        metal_obj,
+                    ]
+                )
+            else:
+                save_prot = merge_universes(
+                    [remove_hetatoms(pdb_obj), interfacial_water]
+                )
     return save_prot, actual_ligand
 
 
@@ -464,20 +558,34 @@ def get_nonpolymer_names(pdb_id: str, rcsb_data: dict | None = None) -> list:
 
 
 def validate_ligands(
-    pdb: str, impurities: list | None = ProteinContext.get_current().impurities
+    pdb: str,
+    impurities: list | None | ProteinContext = ProteinContext.default().impurities,
 ) -> bool:
     r"""Validate the ligands from pdb id using the impurities list.
 
     Args:
         pdb : str
             The PDB ID to validate.
-        impurities : list or None
+        impurities : list or None or ProteinContext
             List of impurities to check against. Default is impurities from the ProteinContext.
 
     Returns:
         True if the ligands are valid, False otherwise.
     """
     ligands = get_nonpolymer_names(pdb)
+    # ensure that impurities is a valid type
+    if not isinstance(impurities, (list, type(None), ProteinContext)):
+        logger.warning(
+            f"Invalid type for impurities: {type(impurities).__name__}. Defaulting to ProteinContext impurities."
+        )
+        impurities = ProteinContext.default().impurities
+    if isinstance(impurities, ProteinContext):
+        impurities = impurities.impurities
+    elif impurities is None:
+        logger.warning(
+            "No impurities list provided. Using default impurities from ProteinContext."
+        )
+        impurities = ProteinContext.default().impurities
     if len(ligands) == 0:
         return False
     # logger.debug(f"Ligands in {pdb}: {ligands}")
@@ -532,7 +640,7 @@ def get_ligand_names(pdb: str | TextIO) -> list:
     ligand_resname = ligand.residues.resnames
     if len(ligand_resname) > 1:
         logger.warning("The ligand has more than one residue.")
-        impurities = ProteinContext.get_current().impurities
+        impurities = ProteinContext.default().impurities
         # delete ant values with less than 3 characters from the list
 
         ligand_resname = {
