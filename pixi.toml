@@ -44,6 +44,7 @@ pyarrow = ">=21.0.0,<22"
 posebusters = ">=0.6.5,<0.7"
 typing-extensions = ">=4.15.0,<5"
 pyyaml = ">=6.0.3,<7"
+openbabel = ">=3.1.1,<4"
 
 [feature.dev.dependencies]
 ruff = ">=0.7.3,<0.8"
