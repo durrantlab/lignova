@@ -3,6 +3,7 @@ r"""Implementation for docking  GNINA docking."""
 import os
 import re
 import shutil
+import string
 from collections.abc import Iterable
 from typing import override
 
@@ -10,7 +11,7 @@ from loguru import logger
 
 from lignova.docking.docking import Docking
 from lignova.io import run_mgltools_command
-from lignova.structure.ligand import DockedLigand, PreparedLigand
+from lignova.structure.ligand import PreparedLigand
 from lignova.structure.protein import PreparedProtein
 from lignova.yaml.docking_config import GninaConfig
 
@@ -89,13 +90,13 @@ class GNINA(Docking):
             shutil.copy2(pqr_path, backup_path)
             logger.info(f"Backed up original PQR to {backup_path}")
 
-        # Determine what to strip based on the cleanup flag
         strip_waters = "waters" in cleanup
         strip_nonstdres = "nonstdres" in cleanup
-
         _WATER_RESNAMES = {"HOH", "WAT", "TIP", "TIP3", "SOL"}
 
-        float_pattern = re.compile(r"-?\d+\.\d+")
+        _FLOAT_RE = re.compile(r"-?\d+\.\d+")
+
+        _RECORD_RE = re.compile(r"^(HETATM|ATOM)\s*(\d+)")
 
         with open(pqr_path) as fh:
             lines = fh.read().splitlines()
@@ -103,11 +104,16 @@ class GNINA(Docking):
         removed_waters = 0
         removed_hetatm = 0
         fixed = []
-        for line in lines:
-            if line.startswith("HETATM"):
-                tokens = line.split()
-                is_water = any(t in _WATER_RESNAMES for t in tokens[1:6])
 
+        for line in lines:
+            if not line.startswith(("ATOM", "HETATM")):
+                fixed.append(line)
+                continue
+
+            if line.startswith("HETATM"):
+                columns = line.split()
+                hetatm_set = set(columns)
+                is_water = bool(hetatm_set & _WATER_RESNAMES)
                 if is_water and strip_waters:
                     removed_waters += 1
                     continue
@@ -115,11 +121,7 @@ class GNINA(Docking):
                     removed_hetatm += 1
                     continue
 
-            if not line.startswith(("ATOM", "HETATM")):
-                fixed.append(line)
-                continue
-
-            floats = float_pattern.findall(line)
+            floats = _FLOAT_RE.findall(line)
             if len(floats) < 5:
                 fixed.append(line)
                 continue
@@ -129,39 +131,38 @@ class GNINA(Docking):
 
             # Locate where the numeric tail begins to preserve the prefix
             tail_parts = [re.escape(f) for f in floats[-5:]]
-            tail_match = re.search(r"\s*".join(tail_parts), line)
+            tail_re = re.compile(r"[\s\-]*".join(tail_parts).replace(r"\-", "-"))
+            tail_match = tail_re.search(line)
             if not tail_match:
                 fixed.append(line)
                 continue
 
-            prefix = line[: tail_match.start()].rstrip()
+            prefix = line[: tail_match.start()]
 
-            if line.startswith("HETATM"):
-                record = "HETATM"
-                rest = prefix[6:]
-            else:
-                record = "ATOM  "
-                rest = prefix[4:]
-
-            tokens = rest.split()
-            if len(tokens) < 4:
+            rec_match = _RECORD_RE.match(prefix)
+            if not rec_match:
                 fixed.append(line)
                 continue
 
-            serial = int(tokens[0])
-            atom_name = tokens[1]
-            resname = tokens[2]
+            record = rec_match.group(1)
+            serial = int(rec_match.group(2))
 
-            if len(tokens) >= 5:
-                chain = tokens[3]
-                resseq = tokens[4]
-            elif len(tokens) == 4:
-                field = tokens[3]
-                if (
-                    len(field) >= 2
-                    and field[0].isalpha()
-                    and field[1:].lstrip("-").isdigit()
-                ):
+            remainder = prefix[rec_match.end() :].split()
+
+            if len(remainder) < 3:
+                fixed.append(line)
+                continue
+
+            atom_name = remainder[0]
+            resname = remainder[1]
+
+            if len(remainder) >= 4:
+                chain = remainder[2]
+                resseq = remainder[3]
+            elif len(remainder) == 3:
+                field = remainder[2]
+                resseq_part = field[1:].lstrip("-").rstrip(string.ascii_letters)
+                if len(field) >= 2 and field[0].isalpha() and resseq_part.isdigit():
                     chain = field[0]
                     resseq = field[1:]
                 else:
@@ -171,6 +172,12 @@ class GNINA(Docking):
                 chain = " "
                 resseq = "0"
 
+            if resseq and resseq[-1].isalpha():
+                icode = resseq[-1]
+                resseq = resseq[:-1]
+            else:
+                icode = " "
+
             resseq_int = int(resseq)
 
             if len(atom_name) >= 4 or atom_name[0].isdigit():
@@ -178,20 +185,42 @@ class GNINA(Docking):
             else:
                 atom_name_fmt = f" {atom_name:<3s}"
 
+            for label, val in [("x", x), ("y", y), ("z", z)]:
+                if abs(val) >= 1000.0:
+                    logger.warning(
+                        f"Coordinate {label}={val:.3f} overflows PDB 8.3f "
+                        f"column in {pqr_path} (serial {serial})"
+                    )
+
+            def _fmt(
+                val: float, width: int, max_dec: int, need_space: bool = True
+            ) -> str:
+                for dec in range(max_dec, 0, -1):
+                    s = f"{val:{width}.{dec}f}"
+                    if len(s) == width and (not need_space or s[0] == " "):
+                        return s
+                s = f"{val:{width}.0f}"
+                if len(s) == width:
+                    return s
+                return f"{val:{width}.{max_dec}f}"
+
+            numeric_tail = (
+                _fmt(x, 8, 3, need_space=False)
+                + _fmt(y, 8, 3)
+                + _fmt(z, 8, 3)
+                + _fmt(charge, 8, 4)
+                + _fmt(radius, 7, 4)
+            )
             fixed.append(
-                f"{record}{serial:>5d} "
+                f"{record:<6s}"
+                f"{serial:>5d} "
                 f"{atom_name_fmt}"
                 f" "
                 f"{resname:>3s}"
                 f" "
                 f"{chain:1s}"
                 f"{resseq_int:>4d}"
-                f"    "
-                f"{x:8.3f}"
-                f"{y:8.3f}"
-                f"{z:8.3f}"
-                f"{charge:8.4f}"
-                f"{radius:7.4f}"
+                f"    " + numeric_tail
             )
 
         with open(pqr_path, "w") as fh:
@@ -213,7 +242,6 @@ class GNINA(Docking):
         preserve_charges: bool = True,
     ) -> str:
         r"""Convert a PQR file to PDBQT using prepare_receptor4.py.
-
         Args:
             pqr_path
                 Path to the input PQR file.
