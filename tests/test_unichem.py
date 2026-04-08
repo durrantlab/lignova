@@ -1,5 +1,6 @@
 r"""Test unichem API."""
 
+import json
 import os
 
 from lignova.APIs import UniChemAPI
@@ -36,8 +37,29 @@ def test_sources_update():
     api._SOURCES["chembl"] = -999
 
     assert api._SOURCES["chembl"] == -999
-
     api._update_sources()
 
     assert api._SOURCES["chembl"] == original_id
     assert api._SOURCES["chembl"] != -999
+
+
+def test_mapping_url():
+    url_a = UniChemAPI._mapping_url(1, 2)
+    url_b = UniChemAPI._mapping_url(2, 1)
+    assert url_a == url_b
+    assert "src1src2" in url_a
+    url = UniChemAPI._mapping_url(1, 22)
+    assert url.startswith(UniChemAPI._FTP_BASE)
+    assert url.endswith("src1src22.txt.gz")
+    assert "/src_id1/" in url
+    url = UniChemAPI._mapping_url(1, 1)
+    assert "src1src1" in url
+
+
+def test_get_remote_etag():
+    api = UniChemAPI(task="mapping")
+    url = UniChemAPI._mapping_url(1, 2)
+    etag = api._get_remote_etag(url)
+    assert isinstance(etag, str)
+    etag = api._get_remote_etag("https://ftp.ebi.ac.uk/this/does/not/exist.gz")
+    assert etag == ""

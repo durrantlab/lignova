@@ -2,12 +2,16 @@ r"""Implementation of the ChemBL API parser class."""
 
 import gzip
 import io
+import json
+import os
 import urllib.request
 from typing import Any, override
 
 import pandas as pd
+import pyarrow as pa
 from loguru import logger
 
+from ..hdf5 import ParquetParser
 from .base import BaseAPI
 
 
@@ -115,6 +119,13 @@ class UniChemAPI(BaseAPI):
     def _mapping_url(src_a: int, src_b: int) -> str:
         lo, hi = sorted((src_a, src_b))
         return (
-            f"{UniChemAPI._FTP_BASE}/wholeSourceMapping/src_id{lo}/"
+            f"{UniChemAPI._FTP_BASE}/data/wholeSourceMapping/src_id{lo}/"
             f"src{lo}src{hi}.txt.gz"
         )
+
+    def _get_remote_etag(self, url: str) -> str:
+        """HEAD request to grab an ETag or Last-Modified string from the server."""
+        resp = self._request("HEAD", url)
+        if resp is None:
+            return ""
+        return resp.headers.get("ETag", "") or resp.headers.get("Last-Modified", "")
