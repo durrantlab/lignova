@@ -1,9 +1,11 @@
 """Implementation of utility functions for the analysis module."""
 
+import math
 import os
 import subprocess
 from typing import TextIO
 
+import numpy as np
 import pandas as pd
 from loguru import logger
 from rdkit.Chem import rdchem, rdmolfiles, rdmolops
@@ -563,3 +565,32 @@ def eval_pose(
     except Exception as e:
         logger.error(f"An error occurred during pose evaluation: {str(e)}")
         raise e
+
+
+_R_KCAL = 1.98721e-3
+
+_KD_UNITS = {"M": 1e0, "mM": 1e3, "uM": 1e6, "nM": 1e9, "pM": 1e12}
+
+
+def to_delta_g(
+    affinity: float | np.ndarray, temperature: float = 300.0
+) -> float | np.ndarray:
+    """Convert CNNaffinity (pK) to ΔG in kcal/mol.
+
+    Args:
+        affinity: CNNaffinity value(s) in pK units.
+        temperature: Temperature in Kelvin. Defaults to 300K (gnina default).
+    """
+    return (-_R_KCAL) * temperature * math.log(10.0) * np.asarray(affinity)
+
+
+def to_kd(affinity: float | np.ndarray, unit: str = "uM") -> float | np.ndarray:
+    """Convert CNNaffinity (pK) to Kd.
+
+    Args:
+        affinity: CNNaffinity value(s) in pK units.
+        unit: Concentration unit. One of M, mM, uM, nM, pM. Defaults to uM.
+    """
+    if unit not in _KD_UNITS:
+        raise ValueError(f"Unknown unit {unit!r}. Choose from: {list(_KD_UNITS)}")
+    return np.power(10.0, -np.asarray(affinity)) * _KD_UNITS[unit]
