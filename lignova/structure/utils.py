@@ -665,7 +665,8 @@ def get_smiles(ligand_resname: str | TextIO) -> dict[str, str]:
     response = requests.get(url, timeout=20)
     data = response.json()
     # check if the data['rcsb_chem_comp_descriptor']['smiles'] is not found
-    if "smiles" not in data["rcsb_chem_comp_descriptor"]:
+    print(data["rcsb_chem_comp_descriptor"])
+    if "SMILES" not in data["rcsb_chem_comp_descriptor"]:
         logger.error(
             f"SMILES not found for {ligand_resname},Checking pdbx_chem_comp_descriptor"
         )
@@ -682,8 +683,8 @@ def get_smiles(ligand_resname: str | TextIO) -> dict[str, str]:
         logger.error("SMILES Canonical not found for the ligand")
         return {"smiles": "", "stereo_smiles": ""}
 
-    smiles = data["rcsb_chem_comp_descriptor"]["smiles"]
-    stereo_smiles = data["rcsb_chem_comp_descriptor"]["smilesstereo"]
+    smiles = data["rcsb_chem_comp_descriptor"]["SMILES"]
+    stereo_smiles = data["rcsb_chem_comp_descriptor"]["SMILES_stereo"]
     # logger.debug(f"SMILES: {smiles}")
     # logger.debug(f"Stereo SMILES: {stereo_smiles}")
     return {"smiles": smiles, "stereo_smiles": stereo_smiles}

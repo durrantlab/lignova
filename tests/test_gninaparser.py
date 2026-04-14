@@ -913,27 +913,27 @@ def test_real_sdf_sample():
     assert poses[0].ligand_id == "VWW_10GS"
     assert poses[51].ligand_id == "SAS_13GS"
 
+
 def test_to_kd():
     dr = GNINA_Results(_SAMPLE_SDF, num_modes=None, protein_id="10GS")
     cnn_affinity = dr.table.column("CNNaffinity").to_numpy()
     print(cnn_affinity)
-    kd=to_kd(cnn_affinity,unit="uM")
+    kd = to_kd(cnn_affinity, unit="uM")
     print(kd)
     assert kd.shape == cnn_affinity.shape
     assert np.all(kd > 3.5)
-    assert np.isclose(kd[-3],24.5,rtol=0.01)
-    revert_pk = -np.log10(kd * 1e-6) 
-    assert all (np.isclose(revert_pk, cnn_affinity, rtol=1e-6))
+    assert np.isclose(kd[-3], 24.5, rtol=0.01)
+    revert_pk = -np.log10(kd * 1e-6)
+    assert all(np.isclose(revert_pk, cnn_affinity, rtol=1e-6))
     assert np.isclose(kd[np.argmin(cnn_affinity)], kd.max(), rtol=1e-6)
     assert np.isclose(kd[np.argmax(cnn_affinity)], kd.min(), rtol=1e-6)
-    
+
+
 def test_to_delta():
-    dr= GNINA_Results(_SAMPLE_SDF, num_modes=None, protein_id="10GS")
+    dr = GNINA_Results(_SAMPLE_SDF, num_modes=None, protein_id="10GS")
     cnn_affinity = dr.table.column("CNNaffinity").to_numpy()
-    delta=to_delta_g(cnn_affinity)
+    delta = to_delta_g(cnn_affinity)
     print(delta)
     assert delta.shape == cnn_affinity.shape
     assert np.all(delta < 0)
-    assert np.isclose(delta[-3],-6.328,rtol=0.01)
-    
-    
+    assert np.isclose(delta[-3], -6.328, rtol=0.01)
