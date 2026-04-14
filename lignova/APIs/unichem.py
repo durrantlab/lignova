@@ -33,6 +33,7 @@ class UniChemAPI(BaseAPI):
         "drugbank": 2,
         "rcsb_pdb": 3,
         "gtopdb": 4,
+        "pdbe": 5,
         "chebi": 7,
         "fdasrs": 14,
         "surechembl": 15,
@@ -41,15 +42,14 @@ class UniChemAPI(BaseAPI):
         "nmrshiftdb2": 24,
         "molport": 28,
         "bindingdb": 31,
+        "comptox": 32,
         "lipidmaps": 33,
         "drugcentral": 34,
         "brenda": 37,
         "rhea": 38,
         "swisslipids": 41,
         "probes_and_drugs": 49,
-        "CCDC": 50,
-        "comptox": 32,
-        "pdbe": 5,
+        "ccdc": 50,
     }
 
     @override
@@ -107,7 +107,8 @@ class UniChemAPI(BaseAPI):
                 src_id = int(row["SRC_ID"])
                 new_src[name] = src_id
 
-            self._SOURCES = new_src
+            UniChemAPI._SOURCES = new_src
+            self._SOURCES = UniChemAPI._SOURCES
             logger.debug(f"Updated sources from FTP: {len(new_src)} sources found.")
         except Exception as e:
             logger.warning(
