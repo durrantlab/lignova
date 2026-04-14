@@ -18,6 +18,7 @@ from lignova.analysis import (
     as_poses,
     to_delta_g,
     to_kd,
+    to_pActivity,
 )
 from lignova.analysis.gnina_parser import _SCORE_DIRECTIONS
 
@@ -917,9 +918,9 @@ def test_real_sdf_sample():
 def test_to_kd():
     dr = GNINA_Results(_SAMPLE_SDF, num_modes=None, protein_id="10GS")
     cnn_affinity = dr.table.column("CNNaffinity").to_numpy()
-    print(cnn_affinity)
     kd = to_kd(cnn_affinity, unit="uM")
-    print(kd)
+    single = to_kd(cnn_affinity[0], unit="uM")
+    assert isinstance(single, float)
     assert kd.shape == cnn_affinity.shape
     assert np.all(kd > 3.5)
     assert np.isclose(kd[-3], 24.5, rtol=0.01)
@@ -933,7 +934,33 @@ def test_to_delta():
     dr = GNINA_Results(_SAMPLE_SDF, num_modes=None, protein_id="10GS")
     cnn_affinity = dr.table.column("CNNaffinity").to_numpy()
     delta = to_delta_g(cnn_affinity)
-    print(delta)
+    single = to_delta_g(cnn_affinity[0])
+    assert isinstance(single, float)
     assert delta.shape == cnn_affinity.shape
     assert np.all(delta < 0)
     assert np.isclose(delta[-3], -6.328, rtol=0.01)
+
+
+def test_to_pActivity():
+    values = np.array([35.584, 5.1445, 42.46, 0.01, 100.0])
+
+    pAct = to_pActivity(values, unit="uM")
+    single = to_pActivity(values[0], unit="uM")
+
+    assert isinstance(single, float)
+    assert pAct.shape == values.shape
+    assert np.isclose(pAct[0], 4.4488, rtol=0.01)
+    assert np.isclose(pAct[np.argmin(values)], pAct.max(), rtol=1e-6)
+    assert np.isclose(pAct[np.argmax(values)], pAct.min(), rtol=1e-6)
+    reverted = np.power(10.0, -pAct) * 1e6
+    assert np.allclose(reverted, values, rtol=1e-6)
+    assert np.isclose(
+        to_pActivity(35.584, unit="uM"),
+        to_pActivity(35584.0, unit="nM"),
+        rtol=1e-6,
+    )
+    assert np.isclose(
+        to_pActivity(0.035584, unit="mM"),
+        to_pActivity(35.584, unit="uM"),
+        rtol=1e-6,
+    )

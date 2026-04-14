@@ -580,8 +580,13 @@ def to_delta_g(
     Args:
         affinity: CNNaffinity value(s) in pK units.
         temperature: Temperature in Kelvin. Defaults to 300K (gnina default).
+    Returns:
+        A numpy array or float with the ΔG value(s) in kcal/mol.
     """
-    return (-_R_KCAL) * temperature * math.log(10.0) * np.asarray(affinity)
+    result = (-_R_KCAL) * temperature * math.log(10.0) * np.asarray(affinity)
+    if np.ndim(result) == 0:
+        return float(result)
+    return result
 
 
 def to_kd(affinity: float | np.ndarray, unit: str = "uM") -> float | np.ndarray:
@@ -590,7 +595,31 @@ def to_kd(affinity: float | np.ndarray, unit: str = "uM") -> float | np.ndarray:
     Args:
         affinity: CNNaffinity value(s) in pK units.
         unit: Concentration unit. One of M, mM, uM, nM, pM. Defaults to uM.
+    Returns:
+        A numpy array or float with the Kd value(s) in the specified unit.
     """
     if unit not in _KD_UNITS:
         raise ValueError(f"Unknown unit {unit!r}. Choose from: {list(_KD_UNITS)}")
-    return np.power(10.0, -np.asarray(affinity)) * _KD_UNITS[unit]
+    result = np.power(10.0, -np.asarray(affinity)) * _KD_UNITS[unit]
+    if np.ndim(result) == 0:
+        return float(result)
+    return result
+
+
+def to_pActivity(value: float | np.ndarray, unit: str = "uM") -> float | np.ndarray:
+    """Convert experimental affinity to pActivity (-log10(Molar)).
+
+    Args:
+        value: Kd value(s) in the specified unit.
+        unit: One of M, mM, uM, nM, pM. Defaults to uM.
+    Returns:
+        A numpy array or float with the pActivity value(s) of the experimental data.
+    """
+    if unit not in _KD_UNITS:
+        raise ValueError(f"Unknown unit {unit!r}. Choose from: {list(_KD_UNITS)}")
+    array = np.asarray(value, np.float64)
+    molar_value = array / _KD_UNITS[unit]
+    pAct = -np.log10(molar_value)
+    if np.ndim(pAct) == 0:
+        return float(pAct)
+    return pAct
