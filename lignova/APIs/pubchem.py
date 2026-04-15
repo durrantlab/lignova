@@ -20,6 +20,9 @@ class PubChemAPI(BaseAPI):
     """
 
     _BASE_URL = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
+    _MAX_RETRIES: int = 5
+    _ATTEMPTS_WAIT: float = 10.0
+    _RETRYABLE_STATUS_CODES: set[int] = {503, 429, 500}
 
     def get_cids(self, aid: int, active: bool = True) -> list[str]:
         r"""Get compound IDs from PubChem API.
@@ -99,6 +102,10 @@ class PubChemAPI(BaseAPI):
                 f"Failed to retrieve binding affinity information for CID {cid}."
             )
             return {}, None
+        if "Fault" in data:
+            fault_msg = data["Fault"].get("Message", "Unknown fault")
+            logger.info(f"AID {aid} not available on PubChem: {fault_msg}")
+            return None, None
         if "Table" in data and "Row" in data["Table"]:
             columns = data["Table"]["Columns"]["Column"]
             # from columns get the index of "CID" and "Activity Value [uM]"
@@ -112,17 +119,37 @@ class PubChemAPI(BaseAPI):
             cid_index = columns.index("CID")
             activity_index = columns.index("Activity Value [uM]")
             activity_name_index = columns.index("Activity Name")
+            outcome_index = (
+                columns.index("Activity Outcome")
+                if "Activity Outcome" in columns
+                else None
+            )
             # Extract columns and rows with "Activity" in the column name
             activity_data = {}
             for row in data["Table"]["Row"]:
+                if (
+                    outcome_index is not None
+                    and row["Cell"][outcome_index].strip().lower() == "unspecified"
+                ):
+                    continue
                 cid_value = row["Cell"][cid_index]
                 activity = row["Cell"][activity_index]
                 activity_name = row["Cell"][activity_name_index]
-                if cid_value in cid:
-                    try:
-                        activity_data[int(cid_value)] = float(activity)
-                    except ValueError:
-                        activity_data[int(cid_value)] = None
+                if not cid_value.strip():
+                    continue
+                if cid_value not in cid:
+                    continue
+                if not activity.strip():
+                    continue
+                if (
+                    int(cid_value) in activity_data
+                    and activity_data[int(cid_value)] is not None
+                ):
+                    continue
+                try:
+                    activity_data[int(cid_value)] = float(activity)
+                except ValueError:
+                    activity_data[int(cid_value)] = None
             return activity_data, activity_name
 
     def get_pubmed_id(self, aid: int) -> int | None:
