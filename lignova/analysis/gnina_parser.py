@@ -1149,7 +1149,7 @@ class DockingDataset:
     def _parser_for(self, protein_id: str) -> ParquetParser:
         """Return a ParquetParser pointed at a protein's parquet file."""
         pq_path = os.path.join(self._parquet_dir, f"{protein_id}.parquet")
-        return ParquetParser(pq_path, DOCKING_SCHEMA)
+        return ParquetParser(pq_path)
 
     @staticmethod
     def _copy_sdf_decompressed(src_path: str, dest_dir: str) -> str:
@@ -1345,7 +1345,7 @@ class DockingDataset:
 
     def _as_dataset(self) -> pds.Dataset:
         r"""Open all per-protein parquets as a unified lazy dataset."""
-        return ParquetParser.open_dataset(self._parquet_dir, schema=DOCKING_SCHEMA)
+        return ParquetParser.open_dataset(self._parquet_dir)
 
     def read_protein(
         self,
@@ -1526,7 +1526,7 @@ class DockingDataset:
                 tables.append(self._parser_for(pid).read())
             combined = pa.concat_tables(tables)
 
-            batch_parser = ParquetParser(batch_path, DOCKING_SCHEMA)
+            batch_parser = ParquetParser(batch_path)
             batch_parser.write(combined, group_size=row_group_size)
 
             total_rows += combined.num_rows
@@ -1554,7 +1554,7 @@ class DockingDataset:
         Returns:
             A PyArrow Table containing the filtered results from all batch files.
         """
-        ds = ParquetParser.open_dataset(directory, schema=DOCKING_SCHEMA)
+        ds = ParquetParser.open_dataset(directory)
         expr = None
         for k, v in filters.items():
             e = pds.field(k) == v
@@ -1577,7 +1577,7 @@ class DockingDataset:
         Returns:
             An iterator of PyArrow RecordBatch objects matching the filters.
         """
-        ds = ParquetParser.open_dataset(path, schema=DOCKING_SCHEMA)
+        ds = ParquetParser.open_dataset(path)
         expr = None
         for k, v in filters.items():
             e = pds.field(k) == v
