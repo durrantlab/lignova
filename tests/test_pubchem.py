@@ -46,16 +46,20 @@ def test_get_cids_info():
 def test_get_binding_affinity():
     r"""Retrieve binding affinity from PubChem"""
     pubchem = PubChemAPI()
-    binding_affinity_test, assay_name = pubchem.get_binding_affinity(
+    binding_affinity_test = pubchem.get_binding_affinity(
         1057958,
         [
             "135566761",
             "135566762",
         ],
     )
-    assert binding_affinity_test[135566761] == 2.12
-    assert binding_affinity_test[135566762] == 0.88
-    assert assay_name == "IC50"
+    value_1, type_1 = binding_affinity_test[135566761]
+    value_2, type_2 = binding_affinity_test[135566762]
+
+    assert value_1 == 2.12
+    assert value_2 == 0.88
+    assert type_1 == "IC50"
+    assert type_2 == "IC50"
 
 
 def test_get_pubmed_id():
