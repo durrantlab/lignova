@@ -47,7 +47,7 @@ _GNINA_FLOAT_PROPS = [
 ]
 
 # Defines the best direction for each score:
-_SCORE_DIRECTIONS: dict[str, str] = {
+SCORE_DIRECTIONS: dict[str, str] = {
     "CNNscore": "descending",
     "CNNaffinity": "descending",
     "CNN_VS": "descending",
@@ -513,12 +513,12 @@ class GNINA_Results:
         Returns:
             'ascending' or 'descending'.
         """
-        if score not in _SCORE_DIRECTIONS:
+        if score not in SCORE_DIRECTIONS:
             raise ValueError(
                 f"Unknown score {score!r}. "
-                f"Known scores: {sorted(_SCORE_DIRECTIONS)}"
+                f"Known scores: {sorted(SCORE_DIRECTIONS)}"
             )
-        return _SCORE_DIRECTIONS[score]
+        return SCORE_DIRECTIONS[score]
 
     def get_block_by_offsets(self, block_start: int, block_end: int) -> str:
         r"""Retrieve a block by byte offsets into the decompressed raw string or from disk if raw has been released.
@@ -707,7 +707,7 @@ class GNINA_Results:
         Args:
             by: Column name or list of column names to sort/rank by.
             ascending: Sort direction(s). Can be:
-                - None (default): auto-detect from _SCORE_DIRECTIONS based on the 'by' column.
+                - None (default): auto-detect from SCORE_DIRECTIONS based on the 'by' column.
                 - bool: applied to all columns in by.
                 - list[bool]: one per column in by.
             weights: Optional list of floats (one per column in `by`). When
@@ -882,7 +882,7 @@ class GNINA_Results:
                 - str: A file path to write the summary to.
         """
         t = self._table
-        score_cols = list(_SCORE_DIRECTIONS.keys())
+        score_cols = list(SCORE_DIRECTIONS.keys())
         lines = [
             f"File:           {os.path.basename(self._filepath)}",
             f"Protein:        {self._protein_id}",
