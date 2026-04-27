@@ -739,15 +739,15 @@ def test_dataset_batched_parquets(tmp_path):
 def test_dataset_schema(tmp_path):
     ds = str(tmp_path / "schema_ds")
     dds = DockingDataset(ds)
-    dds.build_from_docking_tree(
-        _tree
-    )
+    dds.build_from_docking_tree(_tree)
     t = dds.read_all()
-    result=DockingDataset.topn_per_pair(t, "CNNscore", n=2)
-    assert result.num_rows == 4 *2
-    result_conf=DockingDataset.topn_per_pair(t, "CNNscore", n=2, group_keys=["ligand_id", "UniqueID", "protein_id"])
+    result = DockingDataset.topn_per_pair(t, "CNNscore", n=2)
+    assert result.num_rows == 4 * 2
+    result_conf = DockingDataset.topn_per_pair(
+        t, "CNNscore", n=2, group_keys=["ligand_id", "UniqueID", "protein_id"]
+    )
     assert result_conf.schema.names == DOCKING_SCHEMA.names + ["pair_rank"]
-    assert result_conf.num_rows == 10 * 2 
+    assert result_conf.num_rows == 10 * 2
     assert result.schema.names == DOCKING_SCHEMA.names + ["pair_rank"]
     df = result.to_pandas()
     rank0 = df[df["pair_rank"] == 0]["CNNscore"].values
