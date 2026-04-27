@@ -92,7 +92,7 @@ class ParquetParser(FormatManager):
         table = pq.read_table(
             self.file_path,
             columns=columns,
-            filters=filters or None,
+            filters=filters,
         )
         logger.info(f"Data read from Parquet file at {self.file_path}")
         return table

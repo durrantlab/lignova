@@ -12,6 +12,7 @@ import pytest
 
 from lignova.analysis import (
     DOCKING_SCHEMA,
+    SCORE_DIRECTIONS,
     DockedPose,
     DockingDataset,
     GNINA_Results,
@@ -20,7 +21,6 @@ from lignova.analysis import (
     to_kd,
     to_pActivity,
 )
-from lignova.analysis.gnina_parser import _SCORE_DIRECTIONS
 
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
@@ -483,7 +483,7 @@ def test_get_best_per_ligand():
 
 
 def test_best_direction():
-    for score, direction in _SCORE_DIRECTIONS.items():
+    for score, direction in SCORE_DIRECTIONS.items():
         assert GNINA_Results.best_direction(score) == direction
     with pytest.raises(ValueError, match="Unknown score"):
         GNINA_Results.best_direction("not_a_score")
@@ -734,6 +734,31 @@ def test_dataset_batched_parquets(tmp_path):
     os.makedirs(os.path.join(ds, "parquet"))
     with pytest.raises(FileNotFoundError):
         DockingDataset(ds).to_batched_parquets(str(tmp_path / "out"))
+
+
+def test_dataset_schema(tmp_path):
+    ds = str(tmp_path / "schema_ds")
+    dds = DockingDataset(ds)
+    dds.build_from_docking_tree(
+        _tree
+    )
+    t = dds.read_all()
+    result=DockingDataset.topn_per_pair(t, "CNNscore", n=2)
+    assert result.num_rows == 4 *2
+    result_conf=DockingDataset.topn_per_pair(t, "CNNscore", n=2, group_keys=["ligand_id", "UniqueID", "protein_id"])
+    assert result_conf.schema.names == DOCKING_SCHEMA.names + ["pair_rank"]
+    assert result_conf.num_rows == 10 * 2 
+    assert result.schema.names == DOCKING_SCHEMA.names + ["pair_rank"]
+    df = result.to_pandas()
+    rank0 = df[df["pair_rank"] == 0]["CNNscore"].values
+    rank1 = df[df["pair_rank"] == 1]["CNNscore"].values
+    assert (rank0 >= rank1).all()
+    result_vina = DockingDataset.topn_per_pair(t, rank_by="Vina_affinity", n=2)
+    assert result_vina.num_rows == 4 * 2
+    dfv = result_vina.to_pandas()
+    rank0_vina = dfv[dfv["pair_rank"] == 0]["Vina_affinity"].values
+    rank1_vina = dfv[dfv["pair_rank"] == 1]["Vina_affinity"].values
+    assert (rank0_vina <= rank1_vina).all()
 
 
 # Test against real GNINA output sample

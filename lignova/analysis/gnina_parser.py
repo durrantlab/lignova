@@ -515,8 +515,7 @@ class GNINA_Results:
         """
         if score not in SCORE_DIRECTIONS:
             raise ValueError(
-                f"Unknown score {score!r}. "
-                f"Known scores: {sorted(SCORE_DIRECTIONS)}"
+                f"Unknown score {score!r}. " f"Known scores: {sorted(SCORE_DIRECTIONS)}"
             )
         return SCORE_DIRECTIONS[score]
 
@@ -1591,3 +1590,65 @@ class DockingDataset:
             f"DockingDataset({self._root!r}, "
             f"proteins={s['n_proteins']}, poses={s['total_poses']:,})"
         )
+
+    @property
+    def schema(self) -> pa.Schema:
+        r"""Aggregated schema across all per-protein parquets in this dataset."""
+        return self._as_dataset().schema
+
+    @staticmethod
+    def topn_per_pair(
+        table: pa.Table,
+        rank_by: str = "CNNscore",
+        n: int = 5,
+        add_rank_col: bool = True,
+        group_keys: tuple[str, ...] = ("protein_id", "ligand_id"),
+        rank_col: str = "pair_rank",
+    ) -> pa.Table:
+        r"""Return the top-N rows per protein-lifand with a rank column added if requested.
+        Args:
+            table: PyArrow table.
+            rank_by: Score column used for ranking within each group.
+            n: Keep only top n rowa based on the score.
+            group_keys: Columns defining the group.
+            rank_col: Name of the 0-indexed rank column added to the output.
+        Returns:
+            A PyArrow Table, pre-sorted by (group_keys, rank_by), with rank column added if requested.
+        """
+        if add_rank_col and rank_col in table.column_names:
+            logger.error(f"Rank column {rank_col!r} already exists in the input table")
+            raise ValueError(
+                f"Column {rank_col!r} already exists in table pass a different rank_col or set add_rank_col=False."
+            )
+        if table.num_rows == 0:
+            if add_rank_col:
+                return table.append_column(rank_col, pa.array([], type=pa.int32()))
+            return table
+
+        direction = GNINA_Results.best_direction(rank_by)
+        sort_keys = [(k, "ascending") for k in group_keys]
+        sort_keys.append((rank_by, direction))
+        sorted_t = table.sort_by(sort_keys)
+
+        m = sorted_t.num_rows
+        group_start = np.zeros(m, dtype=bool)
+        group_start[0] = True
+        if m > 1:
+            changes = np.zeros(m - 1, dtype=bool)
+            for k in group_keys:
+                col = sorted_t.column(k).to_numpy(zero_copy_only=False)
+                changes |= col[1:] != col[:-1]
+            group_start[1:] = changes
+
+        start_positions = np.where(group_start)[0]
+        last_start = np.searchsorted(start_positions, np.arange(m), side="right") - 1
+        rank_in_group = (np.arange(m) - start_positions[last_start]).astype(np.int32)
+
+        keep = rank_in_group < n
+        out = sorted_t.filter(pa.array(keep, type=pa.bool_()))
+        if add_rank_col:
+            out = out.append_column(
+                rank_col,
+                pa.array(rank_in_group[keep], type=pa.int32()),
+            )
+        return out
