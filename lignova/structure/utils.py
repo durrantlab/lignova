@@ -722,7 +722,7 @@ def map_genid_to_pdb(gene_ids: list[str]) -> list[dict]:
     response = requests.get(url, timeout=5)
     while response.status_code != 200:
         logger.error(f"Job ID {job_id} is not ready. Retrying in 5 seconds.")
-        time.sleep(5)
+        time.sleep(10)
         response = requests.get(url, timeout=5)
 
     logger.debug(f"Job ID {job_id} is ready.")
@@ -737,6 +737,7 @@ def map_genid_to_pdb(gene_ids: list[str]) -> list[dict]:
         uniprot_result = {
             "Gene ID": data["from"],
             "UniprotID": data["to"]["primaryAccession"],
+            "Reviewed": data["to"]["entryType"] == "UniProtKB reviewed (Swiss-Prot)",
             "Organism": data["to"]["organism"]["scientificName"],
             "Protein Name": (
                 data["to"]["proteinDescription"]["recommendedName"]["fullName"]["value"]
@@ -749,6 +750,9 @@ def map_genid_to_pdb(gene_ids: list[str]) -> list[dict]:
                 data["to"]["genes"][0]["geneName"]["value"]
                 if "genes" in data["to"] and "geneName" in data["to"]["genes"][0]
                 else ""
+            ),
+            "Sequence": (
+                data["to"]["sequence"]["value"] if "sequence" in data["to"] else ""
             ),
             "PDB IDs": [
                 ref["id"]
