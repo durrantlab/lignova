@@ -4,10 +4,8 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.dataset as ds
-from loguru import logger
 
-from lignova.hdf5.parquet import ParquetParser
-from lignova.hdf5.parser import HDF5Parser
+from lignova.hdf5 import HDF5Parser, ParquetParser
 
 # Ensures we execute from file directory (for relative paths).
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
