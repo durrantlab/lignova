@@ -8,7 +8,8 @@ from typing import TextIO
 import numpy as np
 import pandas as pd
 from loguru import logger
-from rdkit.Chem import rdchem, rdmolfiles, rdmolops
+from rdkit import Chem
+from rdkit.Chem import rdchem, rdFMCS, rdmolfiles, rdmolops
 
 from lignova.io import decompress, get_file_ext
 
@@ -279,9 +280,75 @@ def load_mol(path: str, add_hs: bool = False) -> rdchem.Mol | None:
             return rdmolfiles.MolFromPDBFile(path, removeHs=not add_hs, sanitize=False)
         elif path.endswith(".mol2"):
             return rdmolfiles.MolFromMol2File(path, removeHs=not add_hs, sanitize=False)
+        elif path.endswith(".sdf"):
+            suppl = rdmolfiles.SDMolSupplier(path, removeHs=not add_hs, sanitize=False)
+            if len(suppl) > 0:
+                logger.warning(
+                    f"Multiple molecules found in this sdf file {path}.Loading only the first one."
+                )
+                return suppl[0]
     except Exception as e:
         logger.warning(f"Failed to load molecule from {path}: {e}")
     return None
+
+
+def write_sdf(path: str | list[str], remove_hs: bool = True) -> str | list[str]:
+    r"""Write a molecule or list of molecules to an SDF file, optionally removing hydrogens.
+    Args:
+        path: Path to the imput file (PDB or MOL2) or list of paths.
+        remove_hs: Whether to remove hydrogens from the molecule(s) before writing. Default is True.
+    Returns:
+        Path(s) to the output SDF file(s).
+    """
+    if isinstance(path, str):
+        path = [path]
+    output_paths = []
+    for p in path:
+        mol = load_mol(p, add_hs=not remove_hs)
+        if mol is None:
+            logger.warning(f"Failed to load molecule from {p}. Skipping.")
+            continue
+        if remove_hs:
+            mol = rdmolops.RemoveAllHs(mol, sanitize=False)
+        output_path = os.path.splitext(p)[0] + ".sdf"
+        rdmolfiles.MolToMolFile(mol, output_path)
+        output_paths.append(output_path)
+    return output_paths if len(output_paths) > 1 else output_paths[0]
+
+
+def calc_mcs(
+    ref_file: str,
+    target_file: str,
+    timeout: int = 10,
+    add_hs: bool = False,
+) -> tuple[list[int], list[int]]:
+    """Find the MCS between two molecule files. Returns aligned atom indices.
+    Args:
+        ref_file : Path to the reference molecule file (PDB, MOL2, or SDF).
+        target_file : Path to the target molecule file (PDB, MOL2, or SDF).
+        timeout : Maximum time (in seconds) to spend on MCS calculation. Default is 10 seconds.
+        add_hs : Whether to add hydrogens when loading molecules. Default is False.
+    Returns:
+        A tuple of two lists: (ref_indices, target_indices) corresponding to the MCS atom indices in the reference and target molecules, respectively.
+    """
+    ref = load_mol(ref_file, add_hs=add_hs)
+    target = load_mol(target_file, add_hs=add_hs)
+    if ref is None or target is None:
+        raise ValueError("Failed to parse one or both input files.")
+    result = rdFMCS.FindMCS(
+        [ref, target],
+        atomCompare=rdFMCS.AtomCompare.CompareElements,
+        bondCompare=rdFMCS.BondCompare.CompareAny,
+        timeout=timeout,
+    )
+    if result.numAtoms == 0:
+        raise ValueError("No common substructure found.")
+
+    query = Chem.MolFromSmarts(result.smartsString)
+    return (
+        list(ref.GetSubstructMatch(query)),
+        list(target.GetSubstructMatch(query)),
+    )
 
 
 # pylint: disable=no-member,c-extension-no-member
