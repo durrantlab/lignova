@@ -26,6 +26,8 @@ python = "*"
 pytest = "*"
 rdkit = "*"
 numpy = "*"
+make = ">=4.4.1,<5"
+git = ">=2.53.0,<3"
 
 [feature.gnina.activation.env]
 LD_LIBRARY_PATH = "$CONDA_PREFIX/lib:$CONDA_PREFIX/targets/x86_64-linux/lib/stubs"
