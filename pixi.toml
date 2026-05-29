@@ -32,16 +32,18 @@ LD_LIBRARY_PATH = "$CONDA_PREFIX/lib:$CONDA_PREFIX/targets/x86_64-linux/lib/stub
 
 [feature.gnina.target.linux-64.dependencies]
 sysroot_linux-64 = "2.34.*"
+cuda-runtime = ">=12.8,<12.9"
 cuda-version = ">=12.8,<12.9"
 cuda-cudart-dev = ">=12.8,<12.9"
-libprotobuf = "*"
-protobuf = "*"
 cuda-nvcc = ">=12.8,<12.9"
 cuda-libraries-dev = { version = ">=12.8.1,<13", channel = "conda-forge" }
 cuda-nvtx-dev = { version = ">=12.8.90,<13", channel = "conda-forge" }
 cuda-cccl = { version = ">=12.8.90,<13", channel = "conda-forge" }
 libcublas-dev = { version = ">=12.8.3.14,<13", channel = "conda-forge" }
 cmake = ">=4.3.0,<5"
+libprotobuf = "*"
+protobuf = "*"
+setuptools = "*"
 gxx = { version = "*", channel = "conda-forge" }
 gcc = { version = "*", channel = "conda-forge" }
 libboost-devel = "*"

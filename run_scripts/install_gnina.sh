@@ -21,7 +21,7 @@ fi
 echo " Using CONDA_PREFIX = ${CONDA_PREFIX}"
 
 
-export LD_LIBRARY_PATH="${CONDA_PREFIX}/lib:${LD_LIBRARY_PATH:-}"
+
 export LDFLAGS="-L${CONDA_PREFIX}/lib -Wl,-rpath,${CONDA_PREFIX}/lib"
 export CPATH="${CONDA_PREFIX}/include:${CPATH:-}"
 
@@ -77,13 +77,13 @@ if [ -z "$CUDA_INC_DIR" ]; then
     exit 1
 fi
 CUDA_ROOT="$(dirname "$CUDA_INC_DIR")"
-echo " CUDA headers at:  ${CUDA_INC_DIR}"
-echo " CUDA toolkit root: ${CUDA_ROOT}"
+echo "CUDA headers at:  ${CUDA_INC_DIR}"
+echo "CUDA toolkit root: ${CUDA_ROOT}"
 
 export CPATH="${CUDA_INC_DIR}:${CPATH}"
-
 export LIBRARY_PATH="${CUDA_ROOT}/lib:${LIBRARY_PATH:-}"
 export LD_LIBRARY_PATH="${CUDA_ROOT}/lib:${LD_LIBRARY_PATH}"
+
 cmake .. \
     -DCMAKE_INSTALL_PREFIX="${CONDA_PREFIX}" \
     -DCMAKE_PREFIX_PATH="${CONDA_PREFIX}" \
@@ -94,17 +94,32 @@ cmake .. \
     -DCMAKE_CUDA_ARCHITECTURES=all \
     -DCMAKE_CXX_STANDARD=17 \
     -DCMAKE_BUILD_TYPE=Release
+
 NPROC="$(nproc)"
-echo " Building with -j${NPROC}"
+echo "Building with -j${NPROC}"
 make -j"$NPROC"
 
-echo " Installing into ${CONDA_PREFIX}"
+echo "Installing into ${CONDA_PREFIX}"
 make install
+
+echo "Installing libmolgrid Python bindings into env"
+PY_VER="$(python -c 'import sys; print(f"python{sys.version_info.major}.{sys.version_info.minor}")')"
+ENV_SP="${CONDA_PREFIX}/lib/${PY_VER}/site-packages"
+MOLGRID_DIR="$(find "${GNINA_BUILD}" -type d -path "*/site-packages/molgrid" 2>/dev/null | head -1)"
+if [ -n "${MOLGRID_DIR}" ] && [ -d "${MOLGRID_DIR}" ]; then
+    SRC_PARENT="$(dirname "${MOLGRID_DIR}")"
+    rm -rf "${ENV_SP}/molgrid" "${ENV_SP}"/molgrid-*.egg-info
+    cp -r "${MOLGRID_DIR}" "${ENV_SP}/"
+    cp -r "${SRC_PARENT}"/molgrid-*.egg-info "${ENV_SP}/" 2>/dev/null || true
+    echo "molgrid copied to ${ENV_SP}/molgrid"
+else
+    echo "WARNING: libmolgrid Python bindings not found in build tree"
+fi
 
 # Create libcuda.so.1 symlinks so the binary can load on no-GPU hosts.
 for stub_dir in "${CONDA_PREFIX}/targets/x86_64-linux/lib/stubs" "${CONDA_PREFIX}/lib/stubs"; do
     if [ -f "${stub_dir}/libcuda.so" ] && [ ! -e "${stub_dir}/libcuda.so.1" ]; then
-        echo " Creating libcuda.so.1 symlink in ${stub_dir}"
+        echo "Creating libcuda.so.1 symlink in ${stub_dir}"
         ln -s libcuda.so "${stub_dir}/libcuda.so.1"
     fi
 done
@@ -114,15 +129,14 @@ if [ ! -x "$BIN" ]; then
     echo "ERROR: gnina binary was not produced at ${BIN}" >&2
     exit 1
 fi
-echo " Verifying installation"
-HELP_OUT="$("$BIN" --help 2>&1 || true)"
-VERSION_OUT="$("$BIN" --version 2>&1 || true)"
 
+echo "Verifying installation"
+HELP_OUT="$("$BIN" --help 2>&1 || true)"
 if echo "$HELP_OUT" | grep -q "^Usage:" || "$BIN" --version >/dev/null 2>&1; then
-    echo " Done. Binary at: ${BIN}"
+    echo "Done. Binary at: ${BIN}"
 elif echo "$HELP_OUT" | grep -q "libcuda.so.1"; then
-    echo " Built successfully, but libcuda.so.1 missing (no-GPU host)."
-    echo " Binary at: ${BIN}"
+    echo "Built successfully, but libcuda.so.1 missing i.e.,CPU-only mode."
+    echo "Binary at: ${BIN}"
 else
     echo "WARNING: gnina --help failed unexpectedly:" >&2
     echo "$HELP_OUT" | head -10 >&2

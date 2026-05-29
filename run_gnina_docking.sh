@@ -40,9 +40,7 @@ export MKL_NUM_THREADS="${PER_RUN_CPUS}"
 export OPENBLAS_NUM_THREADS="${PER_RUN_CPUS}"
 export NUMEXPR_NUM_THREADS="${PER_RUN_CPUS}"
 
-# Load GNINA module
 module purge
-module load gnina
 
 
 #Rename log files to include the offset-adjusted task ID
@@ -185,7 +183,7 @@ dock_one() {
     
     echo "Running: ${gnina_cmd}"
     
-    if ! eval "${gnina_cmd}"; then
+    if ! eval "pixi run -e gnina ${gnina_cmd}"; then
         echo "Warning: GNINA failed for ${ligand_name}" >&2
         echo "${ligand}" >> "${failed_file}"
         return 0
