@@ -23,6 +23,7 @@ if not os.path.exists(context_unichem["write_dir"]):
 
 def test_default_sources():
     api = UniChemAPI()
+    assert UniChemAPI._SOURCES.items() <= api._SOURCES.items()
     assert len(api._SOURCES) == len(UniChemAPI._SOURCES)
 
     assert api._SOURCES.get("chembl") == 1
