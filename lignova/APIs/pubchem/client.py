@@ -4,6 +4,7 @@ https://pubchemdocs.ncbi.nlm.nih.gov/pug-rest
 
 import asyncio
 from collections.abc import Awaitable, Callable
+from typing import Any
 
 import httpx
 from aiolimiter import AsyncLimiter
@@ -88,7 +89,7 @@ class PubChemAPI(BaseAPI):
             return None
         return AssayInfo.from_concise(aid, data)
 
-    async def get_cids_info(self, cid: int, properties: list[str]) -> dict[str, str]:
+    async def _get_cids_info(self, cid: int, properties: list[str]) -> dict[str, Any]:
         r"""Get compound property information from PubChem API.
 
         Args:
@@ -146,7 +147,7 @@ class PubChemAPI(BaseAPI):
         properties = list(dict.fromkeys(DEFAULT_PROPERTIES + (extra_properties or [])))
         by_cid: dict[int, CompoundProperties | None] = {}
         for cid in assay_data.unique_cids:
-            compound_info = await self.get_cids_info(cid, properties)
+            compound_info = await self._get_cids_info(cid, properties)
             by_cid[cid] = (
                 CompoundProperties.model_validate(compound_info)
                 if compound_info
