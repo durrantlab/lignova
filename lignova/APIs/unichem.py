@@ -1,22 +1,14 @@
-# SPDX-License-Identifier: Apache-2.0
-# Copyright 2026 University of Pittsburgh — Of the Commonwealth System of Higher Education
-# Source: https://github.com/durrantlab/lignova
-
-r"""Implementation of the ChemBL API parser class."""
+r"""Implementation of the UniChem API parser class."""
 
 import gzip
 import io
-import json
-import os
 import urllib.request
-from typing import Any, override
+from typing import Any
 
 import pandas as pd
-import pyarrow as pa
 from loguru import logger
-
-from ..hdf5 import ParquetParser
-from .base import BaseAPI
+from wqm.api import BaseAPI, ClientConfig
+from wqm.api.errors import PermanentAPIError, TransientAPIError
 
 
 class UniChemAPI(BaseAPI):
@@ -56,14 +48,15 @@ class UniChemAPI(BaseAPI):
         "ccdc": 50,
     }
 
-    @override
     def __init__(
         self,
         base_url: str | None = None,
         task: str = "search",
         output_dir: str | None = None,
+        **kwargs: Any,
     ):
         r"""Initialize the UniChemAPI object.
+
         Args:
             base_url: Override for the base URL. Falls back to _BASE_URL
             task: Task type: search, connectivity, or mapping. Defaults to search.
@@ -73,16 +66,8 @@ class UniChemAPI(BaseAPI):
             raise ValueError(f"Invalid task. Choose {self._TASKS}")
         self.task = task
         self.output_dir = output_dir
-        super().__init__(base_url=self._default_url())
-        self._update_sources()
-
-    @override
-    def _default_headers(self) -> dict[str, str]:
-        r"""Override default headers for the session, ensuring JSON content type for API calls."""
-        return {
-            "accept": "application/json",
-            "Content-Type": "application/json",
-        }
+        config = ClientConfig(headers={"Content-Type": "application/json"})
+        super().__init__(self._default_url(), config=config, **kwargs)
 
     def _default_url(self) -> str:
         r"""Ensures the base URL is set according to the task type, defaulting to the appropriate API endpoint or FTP base URL."""
@@ -94,6 +79,7 @@ class UniChemAPI(BaseAPI):
 
     def _update_sources(self) -> dict[str, int]:
         """Fetch the latest _SOURCES from the API and update the _SOURCES dictionary. if the FTP fetch fails, fallback to the default _SOURCES.
+
         Returns:
             dict: Updated _SOURCES dictionary with source names as keys and their corresponding IDs as values.
         """
@@ -128,9 +114,9 @@ class UniChemAPI(BaseAPI):
             f"src{lo}src{hi}.txt.gz"
         )
 
-    def _get_remote_etag(self, url: str) -> str:
-        """HEAD request to grab an ETag or Last-Modified string from the server."""
-        resp = self._request("HEAD", url)
-        if resp is None:
+    async def _get_remote_etag(self, url: str) -> str:
+        try:
+            resp = await self._request("HEAD", url)
+        except (PermanentAPIError, TransientAPIError):
             return ""
         return resp.headers.get("ETag", "") or resp.headers.get("Last-Modified", "")
