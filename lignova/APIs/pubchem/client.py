@@ -93,21 +93,27 @@ class PubChemAPI(BaseAPI):
             return None
         return AssayInfo.from_concise(aid, data)
 
-    async def _get_cids_info(self, cid: int, properties: list[str]) -> dict[str, Any]:
-        r"""Get compound property information from PubChem API.
+    async def _get_cids_info(
+        self, cid: list[int], properties: list[str]
+    ) -> dict[int, dict[str, Any]]:
+        r"""Get compound property information from PubChem API of one or more CIDs.
 
         Args:
-            cid : PubChem Compound ID.
+            cid : List of PubChem Compound IDs.
             properties : list of properties to retrieve.
 
         Returns:
-            A dictionary with the compound information, or an empty dict.
+            A dictionary mapping each CID to its compound information, or an
+            empty dict.
         """
         if len(properties) == 0:
             logger.error("No properties provided.")
             raise ValueError("No properties provided.")
+        if not cid:
+            return {}
+        cid_str = ",".join(str(c) for c in cid)
         properties_str = ",".join(properties)
-        url = f"compound/cid/{cid}/property/{properties_str}/{self.response_format}"
+        url = f"compound/cid/{cid_str}/property/{properties_str}/{self.response_format}"
         try:
             data = await self._get_json(url)
         except PermanentAPIError:
@@ -120,20 +126,25 @@ class PubChemAPI(BaseAPI):
                 "No data available to retrieve information for CID {cid}.", cid=cid
             )
             return {}
-        compound_info: dict[str, str] = {}
+        results: dict[int, dict[str, Any]] = {}
         if "PropertyTable" in data and "Properties" in data["PropertyTable"]:
-            properties_data = data["PropertyTable"]["Properties"][0]
-            for prop in properties:
-                if str(prop) in properties_data:
-                    compound_info[str(prop)] = properties_data[str(prop)]
-                else:
-                    logger.warning(
-                        "Failed to find {prop} information for CID {cid}.",
-                        prop=prop,
-                        cid=cid,
-                    )
-                    compound_info[str(prop)] = ""
-        return compound_info
+            for properties_data in data["PropertyTable"]["Properties"]:
+                entry_cid = properties_data.get("CID")
+                if entry_cid is None:
+                    continue
+                compound_info: dict[str, Any] = {}
+                for prop in properties:
+                    if str(prop) in properties_data:
+                        compound_info[str(prop)] = properties_data[str(prop)]
+                    else:
+                        logger.warning(
+                            "Failed to find {prop} information for CID {cid}.",
+                            prop=prop,
+                            cid=entry_cid,
+                        )
+                        compound_info[str(prop)] = None
+                results[int(entry_cid)] = compound_info
+        return results
 
     async def enrich_cid_properties(
         self, assay_data: AssayInfo, extra_properties: list[str] | None = None
@@ -149,14 +160,11 @@ class PubChemAPI(BaseAPI):
             The same AssayInfo, with each record's properties populated.
         """
         properties = list(dict.fromkeys(DEFAULT_PROPERTIES + (extra_properties or [])))
-        by_cid: dict[int, CompoundProperties | None] = {}
-        for cid in assay_data.unique_cids:
-            compound_info = await self._get_cids_info(cid, properties)
-            by_cid[cid] = (
-                CompoundProperties.model_validate(compound_info)
-                if compound_info
-                else None
-            )
+        results = await self._get_cids_info(assay_data.unique_cids, properties)
+        by_cid: dict[int, CompoundProperties | None] = {
+            cid: CompoundProperties.model_validate(info) if info else None
+            for cid, info in results.items()
+        }
         for r in assay_data.records:
             if r.cid is not None:
                 r.properties = by_cid.get(r.cid)
