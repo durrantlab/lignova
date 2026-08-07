@@ -1,9 +1,53 @@
 r"""Test PubChem API."""
 
+import os
+
 import numpy as np
+import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 
-from lignova.APIs.pubchem.client import PubChemAPI
+from lignova.APIs.pubchem import PubChemAPI, PubChemBulk
+
+# Column names exactly as they appear in bioactivities.tsv / the ingested parquet.
+_DUMP_COLUMNS = [
+    "AID",
+    "CID",
+    "Activity Outcome",
+    "Activity Name",
+    "Activity Value",
+    "Activity Qualifier",
+    "Activity Unit",
+    "Protein Accession",
+    "Gene ID",
+    "PMID",
+]
+
+_TEST_AID = 999999
+
+
+def _write_mini_parquet(path: str) -> None:
+    """Write a small synthetic parquet using the real dump column names.
+
+    Rows cover the interesting cases: a CID with both Active and Inactive rows
+    (100), a blank-CID row (dropped by the model), a second CID (200), and an
+    Unspecified row (300). All non-blank PMIDs agree (24188023), so the
+    assay-level pubmed_id accessor returns that value.
+    """
+    rows = {
+        "AID": [str(_TEST_AID)] * 5,
+        "CID": ["100", "100", "200", "", "300"],
+        "Activity Outcome": ["Active", "Inactive", "Active", "Active", "Unspecified"],
+        "Activity Name": ["IC50", "IC50", "Ki", "IC50", "IC50"],
+        "Activity Value": ["2.5", "40.0", "1.1", "5.0", "9.9"],
+        "Activity Qualifier": ["=", "=", ">", "=", "="],
+        "Activity Unit": ["uM", "uM", "nM", "uM", "uM"],
+        "Protein Accession": ["P12345", "P12345", "", "P12345", "P12345"],
+        "Gene ID": ["7157", "7157", "", "7157", "7157"],
+        "PMID": ["24188023", "24188023", "", "", ""],
+    }
+    table = pa.table({c: pa.array(rows[c], type=pa.string()) for c in _DUMP_COLUMNS})
+    pq.write_table(table, path)
 
 
 @pytest.mark.asyncio
@@ -28,10 +72,11 @@ async def test_active_inactive_cids():
 async def test_get_cids_info():
     r"""Retrieve SMILES and ExactMass for a compound (aspirin, CID 2244)."""
     async with PubChemAPI() as pubchem:
-        info = await pubchem._get_cids_info(2244, ["SMILES", "ExactMass"])
+        info = await pubchem._get_cids_info([2244], ["SMILES", "ExactMass"])
+    props = info[2244]
+    assert props["SMILES"] == "CC(=O)OC1=CC=CC=C1C(=O)O"
+    assert np.isclose(float(props["ExactMass"]), 180.04225873, rtol=0.01)
 
-    assert info["SMILES"] == "CC(=O)OC1=CC=CC=C1C(=O)O"
-    assert np.isclose(float(info["ExactMass"]), 180.04225873, rtol=0.01)
 
 @pytest.mark.asyncio
 async def test_binding_affinity():
@@ -106,3 +151,113 @@ async def test_enrichment_values():
     assert np.isclose(p.molecular_weight, 200.24, rtol=0.01)
     assert np.isclose(p.complexity, 324.0, rtol=0.01)
     assert np.isclose(p.tpsa, 32.7, rtol=0.01)
+
+
+@pytest.mark.asyncio
+async def test_load_assay_pmid_per_row(tmp_path):
+    r"""PMID rides per-record; blanks become None; assay-level agrees when unique."""
+    pqpath = os.path.join(str(tmp_path), "mini.parquet")
+    _write_mini_parquet(pqpath)
+
+    assay = PubChemBulk().load_assay(_TEST_AID, pqpath)
+
+    by_cid = {r.cid: r.pubmed_id for r in assay.records if r.cid is not None}
+    assert by_cid[100] == 24188023
+    assert by_cid[200] is None
+    assert by_cid[300] is None
+    assert assay.pubmed_id == 24188023
+    assay = PubChemBulk().load_assay(111111, pqpath)
+    assert assay.aid == 111111
+    assert assay.records == []
+    assert assay.pubmed_id is None
+
+
+@pytest.mark.asyncio
+async def test_load_assay_maps_columns(tmp_path):
+    r"""load_assay maps dump columns onto AssayInfo records correctly."""
+    pqpath = os.path.join(str(tmp_path), "mini.parquet")
+    _write_mini_parquet(pqpath)
+
+    assay = PubChemBulk().load_assay(_TEST_AID, pqpath)
+
+    assert assay.aid == _TEST_AID
+    assert len([r for r in assay.records if r.cid is not None]) == 4
+    assert assay.pubmed_id == 24188023
+
+    ki_row = next(r for r in assay.records if r.activity_name == "Ki")
+    assert ki_row.activity_qualifier == ">"
+    assert ki_row.activity_unit == "nM"
+
+
+@pytest.mark.asyncio
+async def test_load_assay_cid_accessors(tmp_path):
+    r"""CID 100 is both Active and Inactive; accessors dedupe within each list."""
+    pqpath = os.path.join(str(tmp_path), "mini.parquet")
+    _write_mini_parquet(pqpath)
+
+    assay = PubChemBulk().load_assay(_TEST_AID, pqpath)
+
+    assert set(assay.active_cids) == {100, 200}
+    assert set(assay.inactive_cids) == {100}
+    assert 100 in assay.active_cids and 100 in assay.inactive_cids
+    assert set(assay.unique_cids) == {100, 200, 300}
+
+    aff = assay.binding_affinity(cids=[100])
+    values = {(round(v, 2), name, outcome) for v, name, outcome in aff[100]}
+    assert (2.5, "IC50", "Active") in values
+    assert (40.0, "IC50", "Inactive") in values
+
+    active = assay.binding_affinity(cids=[100], outcome="active")
+    assert active[100] == [(2.5, "IC50", "Active")]
+
+
+@pytest.mark.asyncio
+async def test_load_assay_missing_file(tmp_path):
+    r"""A missing parquet raises a clear FileNotFoundError, not a schema error."""
+    with pytest.raises(FileNotFoundError):
+        PubChemBulk().load_assay(
+            _TEST_AID, os.path.join(str(tmp_path), "does_not_exist.parquet")
+        )
+
+
+@pytest.mark.asyncio
+async def test_remote_signature():
+    r"""remote_signature returns a Last-Modified|Content-Length signature."""
+    async with PubChemBulk() as bulk:
+        sig = await bulk.remote_signature()
+
+    assert isinstance(sig, str)
+    assert "|" in sig
+
+    last_mod, length = sig.split("|")
+    assert last_mod
+    assert int(length) > 0
+
+
+@pytest.mark.asyncio
+async def test_load_assay_pmid_disagrees_is_none(tmp_path):
+    r"""When records cite different PMIDs, assay-level pubmed_id is None; rows keep theirs."""
+    pqpath = tmp_path / "disagree.parquet"
+    rows = {
+        c: v
+        for c, v in {
+            "AID": ["777777", "777777"],
+            "CID": ["100", "200"],
+            "Activity Outcome": ["Active", "Active"],
+            "Activity Name": ["IC50", "IC50"],
+            "Activity Value": ["2.5", "1.1"],
+            "Activity Qualifier": ["=", "="],
+            "Activity Unit": ["uM", "uM"],
+            "Protein Accession": ["P1", "P1"],
+            "Gene ID": ["7157", "7157"],
+            "PMID": ["111", "222"],
+        }.items()
+    }
+    pq.write_table(
+        pa.table({c: pa.array(rows[c], type=pa.string()) for c in _DUMP_COLUMNS}),
+        str(pqpath),
+    )
+    assay = PubChemBulk().load_assay(777777, pqpath)
+    by_cid = {r.cid: r.pubmed_id for r in assay.records}
+    assert by_cid[100] == 111 and by_cid[200] == 222
+    assert assay.pubmed_id is None
