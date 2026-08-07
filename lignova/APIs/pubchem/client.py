@@ -146,6 +146,12 @@ class PubChemAPI(BaseAPI):
                 results[int(entry_cid)] = compound_info
         return results
 
+    async def get_properties(
+        self, cids: list[int], properties: list[str]
+    ) -> dict[int, dict]:
+        """Public wrapper to fetch compound properties for a list of CIDs."""
+        return await self._get_cids_info(cids, properties)
+
     async def enrich_cid_properties(
         self, assay_data: AssayInfo, extra_properties: list[str] | None = None
     ) -> AssayInfo:
