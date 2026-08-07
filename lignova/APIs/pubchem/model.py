@@ -157,7 +157,7 @@ class _AssayRecord(BaseModel):
 
     pubmed_id: int | None = Field(default=None, alias="PMID")
     """PubMed ID associated with the CID , or None if not reported."""
-    
+
     activity_qualifier: str = Field(default="", alias="Activity Qualifier")
     """Relation for the activity value (e.g. '<', '=', '>') for Bulk dump only."""
 
@@ -167,8 +167,7 @@ class _AssayRecord(BaseModel):
     properties: CompoundProperties | None = None
     """Compound properties for this row's CID, filled by enrich_properties."""
 
-
-    @field_validator("cid", "target_geneid", "pubmed_id", mode="before")    
+    @field_validator("cid", "target_geneid", "pubmed_id", mode="before")
     @classmethod
     def _id_blank_to_none(cls, v: Any) -> Any:
         return _blank_to_none(v)
