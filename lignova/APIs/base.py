@@ -1,5 +1,6 @@
 r"""Implementation for a base class for file parsers."""
 
+import random
 import time
 from abc import ABC
 from typing import Any
@@ -77,7 +78,7 @@ class BaseAPI(ABC):
                 )
 
                 if resp.status_code in self._RETRYABLE_STATUS_CODES:
-                    wait = self._ATTEMPTS_WAIT * attempt
+                    wait = self._ATTEMPTS_WAIT * attempt + random.uniform(0, 5)
                     logger.warning(
                         f"HTTP {resp.status_code} from {url} (attempt {attempt}/{self._MAX_RETRIES}). Retrying in {wait} seconds."
                     )
@@ -125,7 +126,8 @@ class BaseAPI(ABC):
         if resp is None:
             return None
         try:
-            return resp.json()
+            data = resp.json()
+            return data
         except ValueError:
             logger.error(f"Failed to parse JSON from {url}")
             return None

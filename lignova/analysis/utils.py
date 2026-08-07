@@ -1,12 +1,15 @@
 """Implementation of utility functions for the analysis module."""
 
+import math
 import os
 import subprocess
 from typing import TextIO
 
+import numpy as np
 import pandas as pd
 from loguru import logger
-from rdkit.Chem import rdchem, rdmolfiles, rdmolops
+from rdkit import Chem
+from rdkit.Chem import rdchem, rdFMCS, rdmolfiles, rdmolops
 
 from lignova.io import decompress, get_file_ext
 
@@ -277,9 +280,75 @@ def load_mol(path: str, add_hs: bool = False) -> rdchem.Mol | None:
             return rdmolfiles.MolFromPDBFile(path, removeHs=not add_hs, sanitize=False)
         elif path.endswith(".mol2"):
             return rdmolfiles.MolFromMol2File(path, removeHs=not add_hs, sanitize=False)
+        elif path.endswith(".sdf"):
+            suppl = rdmolfiles.SDMolSupplier(path, removeHs=not add_hs, sanitize=False)
+            if len(suppl) > 0:
+                logger.warning(
+                    f"Multiple molecules found in this sdf file {path}.Loading only the first one."
+                )
+                return suppl[0]
     except Exception as e:
         logger.warning(f"Failed to load molecule from {path}: {e}")
     return None
+
+
+def write_sdf(path: str | list[str], remove_hs: bool = True) -> str | list[str]:
+    r"""Write a molecule or list of molecules to an SDF file, optionally removing hydrogens.
+    Args:
+        path: Path to the imput file (PDB or MOL2) or list of paths.
+        remove_hs: Whether to remove hydrogens from the molecule(s) before writing. Default is True.
+    Returns:
+        Path(s) to the output SDF file(s).
+    """
+    if isinstance(path, str):
+        path = [path]
+    output_paths = []
+    for p in path:
+        mol = load_mol(p, add_hs=not remove_hs)
+        if mol is None:
+            logger.warning(f"Failed to load molecule from {p}. Skipping.")
+            continue
+        if remove_hs:
+            mol = rdmolops.RemoveAllHs(mol, sanitize=False)
+        output_path = os.path.splitext(p)[0] + ".sdf"
+        rdmolfiles.MolToMolFile(mol, output_path)
+        output_paths.append(output_path)
+    return output_paths if len(output_paths) > 1 else output_paths[0]
+
+
+def calc_mcs(
+    ref_file: str,
+    target_file: str,
+    timeout: int = 10,
+    add_hs: bool = False,
+) -> tuple[list[int], list[int]]:
+    """Find the MCS between two molecule files. Returns aligned atom indices.
+    Args:
+        ref_file : Path to the reference molecule file (PDB, MOL2, or SDF).
+        target_file : Path to the target molecule file (PDB, MOL2, or SDF).
+        timeout : Maximum time (in seconds) to spend on MCS calculation. Default is 10 seconds.
+        add_hs : Whether to add hydrogens when loading molecules. Default is False.
+    Returns:
+        A tuple of two lists: (ref_indices, target_indices) corresponding to the MCS atom indices in the reference and target molecules, respectively.
+    """
+    ref = load_mol(ref_file, add_hs=add_hs)
+    target = load_mol(target_file, add_hs=add_hs)
+    if ref is None or target is None:
+        raise ValueError("Failed to parse one or both input files.")
+    result = rdFMCS.FindMCS(
+        [ref, target],
+        atomCompare=rdFMCS.AtomCompare.CompareElements,
+        bondCompare=rdFMCS.BondCompare.CompareAny,
+        timeout=timeout,
+    )
+    if result.numAtoms == 0:
+        raise ValueError("No common substructure found.")
+
+    query = Chem.MolFromSmarts(result.smartsString)
+    return (
+        list(ref.GetSubstructMatch(query)),
+        list(target.GetSubstructMatch(query)),
+    )
 
 
 # pylint: disable=no-member,c-extension-no-member
@@ -563,3 +632,61 @@ def eval_pose(
     except Exception as e:
         logger.error(f"An error occurred during pose evaluation: {str(e)}")
         raise e
+
+
+_R_KCAL = 1.98721e-3
+
+_KD_UNITS = {"M": 1e0, "mM": 1e3, "uM": 1e6, "nM": 1e9, "pM": 1e12}
+
+
+def to_delta_g(
+    affinity: float | np.ndarray, temperature: float = 300.0
+) -> float | np.ndarray:
+    """Convert CNNaffinity (pK) to ΔG in kcal/mol.
+
+    Args:
+        affinity: CNNaffinity value(s) in pK units.
+        temperature: Temperature in Kelvin. Defaults to 300K (gnina default).
+    Returns:
+        A numpy array or float with the ΔG value(s) in kcal/mol.
+    """
+    result = (-_R_KCAL) * temperature * math.log(10.0) * np.asarray(affinity)
+    if np.ndim(result) == 0:
+        return float(result)
+    return result
+
+
+def to_kd(affinity: float | np.ndarray, unit: str = "uM") -> float | np.ndarray:
+    """Convert CNNaffinity (pK) to Kd.
+
+    Args:
+        affinity: CNNaffinity value(s) in pK units.
+        unit: Concentration unit. One of M, mM, uM, nM, pM. Defaults to uM.
+    Returns:
+        A numpy array or float with the Kd value(s) in the specified unit.
+    """
+    if unit not in _KD_UNITS:
+        raise ValueError(f"Unknown unit {unit!r}. Choose from: {list(_KD_UNITS)}")
+    result = np.power(10.0, -np.asarray(affinity)) * _KD_UNITS[unit]
+    if np.ndim(result) == 0:
+        return float(result)
+    return result
+
+
+def to_pActivity(value: float | np.ndarray, unit: str = "uM") -> float | np.ndarray:
+    """Convert experimental affinity to pActivity (-log10(Molar)).
+
+    Args:
+        value: Kd value(s) in the specified unit.
+        unit: One of M, mM, uM, nM, pM. Defaults to uM.
+    Returns:
+        A numpy array or float with the pActivity value(s) of the experimental data.
+    """
+    if unit not in _KD_UNITS:
+        raise ValueError(f"Unknown unit {unit!r}. Choose from: {list(_KD_UNITS)}")
+    array = np.asarray(value, np.float64)
+    molar_value = array / _KD_UNITS[unit]
+    pAct = -np.log10(molar_value)
+    if np.ndim(pAct) == 0:
+        return float(pAct)
+    return pAct

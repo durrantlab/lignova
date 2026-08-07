@@ -162,11 +162,15 @@ def test_spyrmsd_calculation(docked_sdf, reference_sdf):
     ligand = DockedLigand(docked_sdf)
     reference = Ligand(reference_sdf)
     rmsd_calc = spyrmsdRMSD(target=ligand, reference=reference)
-    values = rmsd_calc.calculate()
-    assert isinstance(values, list)
-    assert len(values) == 1
-    assert all(isinstance(v, float) for v in values)
-    assert np.isclose(values[0], 0.58534, atol=1e-4)
+    values_api = rmsd_calc.calculate(backend="api")
+    values_cli = rmsd_calc.calculate(backend="cli")
+    values_api_mcs = rmsd_calc.calculate(backend="api", mcs=True)
+    assert values_api == values_api_mcs
+    assert np.allclose(values_api, values_cli, atol=1e-4)
+    assert isinstance(values_api, list)
+    assert len(values_api) == 1
+    assert all(isinstance(v, float) for v in values_api)
+    assert np.isclose(values_api[0], 0.58534, atol=1e-4)
 
 
 def test_spyrmsd_no_symmetry(docked_sdf, reference_sdf):
@@ -174,9 +178,15 @@ def test_spyrmsd_no_symmetry(docked_sdf, reference_sdf):
     ligand = DockedLigand(docked_sdf)
     reference = Ligand(reference_sdf)
     rmsd_calc = spyrmsdRMSD(target=ligand, reference=reference)
-    values_sym = rmsd_calc.calculate(symmetry=True)
-    assert np.isclose(values_sym[0], 0.58534, atol=1e-4)
-    values_nosym = rmsd_calc.calculate(symmetry=False)
+    values_sym_api = rmsd_calc.calculate(symmetry=True, backend="api")
+    values_sym_cli = rmsd_calc.calculate(symmetry=True, backend="cli")
+    values_sym_api_mcs = rmsd_calc.calculate(symmetry=True, backend="api", mcs=True)
+    assert values_sym_api == values_sym_api_mcs
+    assert np.allclose(values_sym_api, values_sym_cli, atol=1e-4)
+    assert np.isclose(values_sym_api[0], 0.58534, atol=1e-4)
+    values_nosym = rmsd_calc.calculate(symmetry=False, backend="api")
+    values_nosym_cli = rmsd_calc.calculate(symmetry=False, backend="cli")
+    assert np.allclose(values_nosym, values_nosym_cli, atol=1e-4)
     assert np.isclose(values_nosym[0], 1.1236, atol=1e-4)
-    assert len(values_sym) == len(values_nosym)
-    assert values_nosym[0] > values_sym[0]
+    assert len(values_sym_api) == len(values_nosym)
+    assert values_nosym[0] > values_sym_api[0]

@@ -12,12 +12,15 @@ import pytest
 
 from lignova.analysis import (
     DOCKING_SCHEMA,
+    SCORE_DIRECTIONS,
     DockedPose,
     DockingDataset,
     GNINA_Results,
     as_poses,
+    to_delta_g,
+    to_kd,
+    to_pActivity,
 )
-from lignova.analysis.gnina_parser import _SCORE_DIRECTIONS
 
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
@@ -480,7 +483,7 @@ def test_get_best_per_ligand():
 
 
 def test_best_direction():
-    for score, direction in _SCORE_DIRECTIONS.items():
+    for score, direction in SCORE_DIRECTIONS.items():
         assert GNINA_Results.best_direction(score) == direction
     with pytest.raises(ValueError, match="Unknown score"):
         GNINA_Results.best_direction("not_a_score")
@@ -733,6 +736,31 @@ def test_dataset_batched_parquets(tmp_path):
         DockingDataset(ds).to_batched_parquets(str(tmp_path / "out"))
 
 
+def test_dataset_schema(tmp_path):
+    ds = str(tmp_path / "schema_ds")
+    dds = DockingDataset(ds)
+    dds.build_from_docking_tree(_tree)
+    t = dds.read_all()
+    result = DockingDataset.topn_per_pair(t, "CNNscore", n=2)
+    assert result.num_rows == 4 * 2
+    result_conf = DockingDataset.topn_per_pair(
+        t, "CNNscore", n=2, group_keys=["ligand_id", "UniqueID", "protein_id"]
+    )
+    assert result_conf.schema.names == DOCKING_SCHEMA.names + ["pair_rank"]
+    assert result_conf.num_rows == 10 * 2
+    assert result.schema.names == DOCKING_SCHEMA.names + ["pair_rank"]
+    df = result.to_pandas()
+    rank0 = df[df["pair_rank"] == 0]["CNNscore"].values
+    rank1 = df[df["pair_rank"] == 1]["CNNscore"].values
+    assert (rank0 >= rank1).all()
+    result_vina = DockingDataset.topn_per_pair(t, rank_by="Vina_affinity", n=2)
+    assert result_vina.num_rows == 4 * 2
+    dfv = result_vina.to_pandas()
+    rank0_vina = dfv[dfv["pair_rank"] == 0]["Vina_affinity"].values
+    rank1_vina = dfv[dfv["pair_rank"] == 1]["Vina_affinity"].values
+    assert (rank0_vina <= rank1_vina).all()
+
+
 # Test against real GNINA output sample
 _SAMPLE_SDF = "./files/sample_docked.sdf.gz"
 
@@ -910,3 +938,54 @@ def test_real_sdf_sample():
     assert len(poses) == 52
     assert poses[0].ligand_id == "VWW_10GS"
     assert poses[51].ligand_id == "SAS_13GS"
+
+
+def test_to_kd():
+    dr = GNINA_Results(_SAMPLE_SDF, num_modes=None, protein_id="10GS")
+    cnn_affinity = dr.table.column("CNNaffinity").to_numpy()
+    kd = to_kd(cnn_affinity, unit="uM")
+    single = to_kd(cnn_affinity[0], unit="uM")
+    assert isinstance(single, float)
+    assert kd.shape == cnn_affinity.shape
+    assert np.all(kd > 3.5)
+    assert np.isclose(kd[-3], 24.5, rtol=0.01)
+    revert_pk = -np.log10(kd * 1e-6)
+    assert all(np.isclose(revert_pk, cnn_affinity, rtol=1e-6))
+    assert np.isclose(kd[np.argmin(cnn_affinity)], kd.max(), rtol=1e-6)
+    assert np.isclose(kd[np.argmax(cnn_affinity)], kd.min(), rtol=1e-6)
+
+
+def test_to_delta():
+    dr = GNINA_Results(_SAMPLE_SDF, num_modes=None, protein_id="10GS")
+    cnn_affinity = dr.table.column("CNNaffinity").to_numpy()
+    delta = to_delta_g(cnn_affinity)
+    single = to_delta_g(cnn_affinity[0])
+    assert isinstance(single, float)
+    assert delta.shape == cnn_affinity.shape
+    assert np.all(delta < 0)
+    assert np.isclose(delta[-3], -6.328, rtol=0.01)
+
+
+def test_to_pActivity():
+    values = np.array([35.584, 5.1445, 42.46, 0.01, 100.0])
+
+    pAct = to_pActivity(values, unit="uM")
+    single = to_pActivity(values[0], unit="uM")
+
+    assert isinstance(single, float)
+    assert pAct.shape == values.shape
+    assert np.isclose(pAct[0], 4.4488, rtol=0.01)
+    assert np.isclose(pAct[np.argmin(values)], pAct.max(), rtol=1e-6)
+    assert np.isclose(pAct[np.argmax(values)], pAct.min(), rtol=1e-6)
+    reverted = np.power(10.0, -pAct) * 1e6
+    assert np.allclose(reverted, values, rtol=1e-6)
+    assert np.isclose(
+        to_pActivity(35.584, unit="uM"),
+        to_pActivity(35584.0, unit="nM"),
+        rtol=1e-6,
+    )
+    assert np.isclose(
+        to_pActivity(0.035584, unit="mM"),
+        to_pActivity(35.584, unit="uM"),
+        rtol=1e-6,
+    )

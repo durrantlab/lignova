@@ -47,7 +47,7 @@ _GNINA_FLOAT_PROPS = [
 ]
 
 # Defines the best direction for each score:
-_SCORE_DIRECTIONS: dict[str, str] = {
+SCORE_DIRECTIONS: dict[str, str] = {
     "CNNscore": "descending",
     "CNNaffinity": "descending",
     "CNN_VS": "descending",
@@ -513,12 +513,11 @@ class GNINA_Results:
         Returns:
             'ascending' or 'descending'.
         """
-        if score not in _SCORE_DIRECTIONS:
+        if score not in SCORE_DIRECTIONS:
             raise ValueError(
-                f"Unknown score {score!r}. "
-                f"Known scores: {sorted(_SCORE_DIRECTIONS)}"
+                f"Unknown score {score!r}. " f"Known scores: {sorted(SCORE_DIRECTIONS)}"
             )
-        return _SCORE_DIRECTIONS[score]
+        return SCORE_DIRECTIONS[score]
 
     def get_block_by_offsets(self, block_start: int, block_end: int) -> str:
         r"""Retrieve a block by byte offsets into the decompressed raw string or from disk if raw has been released.
@@ -707,7 +706,7 @@ class GNINA_Results:
         Args:
             by: Column name or list of column names to sort/rank by.
             ascending: Sort direction(s). Can be:
-                - None (default): auto-detect from _SCORE_DIRECTIONS based on the 'by' column.
+                - None (default): auto-detect from SCORE_DIRECTIONS based on the 'by' column.
                 - bool: applied to all columns in by.
                 - list[bool]: one per column in by.
             weights: Optional list of floats (one per column in `by`). When
@@ -882,7 +881,7 @@ class GNINA_Results:
                 - str: A file path to write the summary to.
         """
         t = self._table
-        score_cols = list(_SCORE_DIRECTIONS.keys())
+        score_cols = list(SCORE_DIRECTIONS.keys())
         lines = [
             f"File:           {os.path.basename(self._filepath)}",
             f"Protein:        {self._protein_id}",
@@ -1149,7 +1148,7 @@ class DockingDataset:
     def _parser_for(self, protein_id: str) -> ParquetParser:
         """Return a ParquetParser pointed at a protein's parquet file."""
         pq_path = os.path.join(self._parquet_dir, f"{protein_id}.parquet")
-        return ParquetParser(pq_path, DOCKING_SCHEMA)
+        return ParquetParser(pq_path)
 
     @staticmethod
     def _copy_sdf_decompressed(src_path: str, dest_dir: str) -> str:
@@ -1345,7 +1344,7 @@ class DockingDataset:
 
     def _as_dataset(self) -> pds.Dataset:
         r"""Open all per-protein parquets as a unified lazy dataset."""
-        return ParquetParser.open_dataset(self._parquet_dir, schema=DOCKING_SCHEMA)
+        return ParquetParser.open_dataset(self._parquet_dir)
 
     def read_protein(
         self,
@@ -1526,7 +1525,7 @@ class DockingDataset:
                 tables.append(self._parser_for(pid).read())
             combined = pa.concat_tables(tables)
 
-            batch_parser = ParquetParser(batch_path, DOCKING_SCHEMA)
+            batch_parser = ParquetParser(batch_path)
             batch_parser.write(combined, group_size=row_group_size)
 
             total_rows += combined.num_rows
@@ -1554,7 +1553,7 @@ class DockingDataset:
         Returns:
             A PyArrow Table containing the filtered results from all batch files.
         """
-        ds = ParquetParser.open_dataset(directory, schema=DOCKING_SCHEMA)
+        ds = ParquetParser.open_dataset(directory)
         expr = None
         for k, v in filters.items():
             e = pds.field(k) == v
@@ -1577,7 +1576,7 @@ class DockingDataset:
         Returns:
             An iterator of PyArrow RecordBatch objects matching the filters.
         """
-        ds = ParquetParser.open_dataset(path, schema=DOCKING_SCHEMA)
+        ds = ParquetParser.open_dataset(path)
         expr = None
         for k, v in filters.items():
             e = pds.field(k) == v
@@ -1591,3 +1590,65 @@ class DockingDataset:
             f"DockingDataset({self._root!r}, "
             f"proteins={s['n_proteins']}, poses={s['total_poses']:,})"
         )
+
+    @property
+    def schema(self) -> pa.Schema:
+        r"""Aggregated schema across all per-protein parquets in this dataset."""
+        return self._as_dataset().schema
+
+    @staticmethod
+    def topn_per_pair(
+        table: pa.Table,
+        rank_by: str = "CNNscore",
+        n: int = 5,
+        add_rank_col: bool = True,
+        group_keys: tuple[str, ...] = ("protein_id", "ligand_id"),
+        rank_col: str = "pair_rank",
+    ) -> pa.Table:
+        r"""Return the top-N rows per protein-lifand with a rank column added if requested.
+        Args:
+            table: PyArrow table.
+            rank_by: Score column used for ranking within each group.
+            n: Keep only top n rowa based on the score.
+            group_keys: Columns defining the group.
+            rank_col: Name of the 0-indexed rank column added to the output.
+        Returns:
+            A PyArrow Table, pre-sorted by (group_keys, rank_by), with rank column added if requested.
+        """
+        if add_rank_col and rank_col in table.column_names:
+            logger.error(f"Rank column {rank_col!r} already exists in the input table")
+            raise ValueError(
+                f"Column {rank_col!r} already exists in table pass a different rank_col or set add_rank_col=False."
+            )
+        if table.num_rows == 0:
+            if add_rank_col:
+                return table.append_column(rank_col, pa.array([], type=pa.int32()))
+            return table
+
+        direction = GNINA_Results.best_direction(rank_by)
+        sort_keys = [(k, "ascending") for k in group_keys]
+        sort_keys.append((rank_by, direction))
+        sorted_t = table.sort_by(sort_keys)
+
+        m = sorted_t.num_rows
+        group_start = np.zeros(m, dtype=bool)
+        group_start[0] = True
+        if m > 1:
+            changes = np.zeros(m - 1, dtype=bool)
+            for k in group_keys:
+                col = sorted_t.column(k).to_numpy(zero_copy_only=False)
+                changes |= col[1:] != col[:-1]
+            group_start[1:] = changes
+
+        start_positions = np.where(group_start)[0]
+        last_start = np.searchsorted(start_positions, np.arange(m), side="right") - 1
+        rank_in_group = (np.arange(m) - start_positions[last_start]).astype(np.int32)
+
+        keep = rank_in_group < n
+        out = sorted_t.filter(pa.array(keep, type=pa.bool_()))
+        if add_rank_col:
+            out = out.append_column(
+                rank_col,
+                pa.array(rank_in_group[keep], type=pa.int32()),
+            )
+        return out

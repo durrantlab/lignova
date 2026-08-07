@@ -665,7 +665,8 @@ def get_smiles(ligand_resname: str | TextIO) -> dict[str, str]:
     response = requests.get(url, timeout=20)
     data = response.json()
     # check if the data['rcsb_chem_comp_descriptor']['smiles'] is not found
-    if "smiles" not in data["rcsb_chem_comp_descriptor"]:
+    print(data["rcsb_chem_comp_descriptor"])
+    if "SMILES" not in data["rcsb_chem_comp_descriptor"]:
         logger.error(
             f"SMILES not found for {ligand_resname},Checking pdbx_chem_comp_descriptor"
         )
@@ -682,8 +683,8 @@ def get_smiles(ligand_resname: str | TextIO) -> dict[str, str]:
         logger.error("SMILES Canonical not found for the ligand")
         return {"smiles": "", "stereo_smiles": ""}
 
-    smiles = data["rcsb_chem_comp_descriptor"]["smiles"]
-    stereo_smiles = data["rcsb_chem_comp_descriptor"]["smilesstereo"]
+    smiles = data["rcsb_chem_comp_descriptor"]["SMILES"]
+    stereo_smiles = data["rcsb_chem_comp_descriptor"]["SMILES_stereo"]
     # logger.debug(f"SMILES: {smiles}")
     # logger.debug(f"Stereo SMILES: {stereo_smiles}")
     return {"smiles": smiles, "stereo_smiles": stereo_smiles}
@@ -721,7 +722,7 @@ def map_genid_to_pdb(gene_ids: list[str]) -> list[dict]:
     response = requests.get(url, timeout=5)
     while response.status_code != 200:
         logger.error(f"Job ID {job_id} is not ready. Retrying in 5 seconds.")
-        time.sleep(5)
+        time.sleep(10)
         response = requests.get(url, timeout=5)
 
     logger.debug(f"Job ID {job_id} is ready.")
@@ -736,6 +737,7 @@ def map_genid_to_pdb(gene_ids: list[str]) -> list[dict]:
         uniprot_result = {
             "Gene ID": data["from"],
             "UniprotID": data["to"]["primaryAccession"],
+            "Reviewed": data["to"]["entryType"] == "UniProtKB reviewed (Swiss-Prot)",
             "Organism": data["to"]["organism"]["scientificName"],
             "Protein Name": (
                 data["to"]["proteinDescription"]["recommendedName"]["fullName"]["value"]
@@ -748,6 +750,9 @@ def map_genid_to_pdb(gene_ids: list[str]) -> list[dict]:
                 data["to"]["genes"][0]["geneName"]["value"]
                 if "genes" in data["to"] and "geneName" in data["to"]["genes"][0]
                 else ""
+            ),
+            "Sequence": (
+                data["to"]["sequence"]["value"] if "sequence" in data["to"] else ""
             ),
             "PDB IDs": [
                 ref["id"]

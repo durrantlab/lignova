@@ -20,6 +20,9 @@ class PubChemAPI(BaseAPI):
     """
 
     _BASE_URL = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
+    _MAX_RETRIES: int = 5
+    _ATTEMPTS_WAIT: float = 10.0
+    _RETRYABLE_STATUS_CODES: set[int] = {503, 429, 500}
 
     def get_cids(self, aid: int, active: bool = True) -> list[str]:
         r"""Get compound IDs from PubChem API.
@@ -81,7 +84,7 @@ class PubChemAPI(BaseAPI):
 
     def get_binding_affinity(
         self, aid: int, cid: list[str]
-    ) -> tuple[dict[int, None | float], str]:
+    ) -> tuple[dict[int, tuple[float | None, str]], None] | tuple[dict, None]:
         r"""Get binding affinity information from PubChem API.
 
         Args:
@@ -89,16 +92,24 @@ class PubChemAPI(BaseAPI):
             cid : list of PubChem Compound IDs.
 
         Returns:
-            A dictionary with the Binding affinity information.
-            str: The type of binding affinity (e.g., IC50, Ki).
+            A dict mapping CID to (activity_value, activity_name).
+            activity_value is a float in uM, or None if unparseable.
+            activity_name is the per-row type (e.g. "IC50", "Ki", "EC50").
         """
         url = f"{self.base_url}/assay/aid/{str(aid)}/concise/{self.response_format}"
         data = self._get_json(url)
+
         if data is None:
             logger.warning(
                 f"Failed to retrieve binding affinity information for CID {cid}."
             )
-            return {}, None
+            return {}
+
+        if "Fault" in data:
+            fault_msg = data["Fault"].get("Message", "Unknown fault")
+            logger.info(f"AID {aid} not available on PubChem: {fault_msg}")
+            return {}
+
         if "Table" in data and "Row" in data["Table"]:
             columns = data["Table"]["Columns"]["Column"]
             # from columns get the index of "CID" and "Activity Value [uM]"
@@ -108,22 +119,48 @@ class PubChemAPI(BaseAPI):
                 or "Activity Name" not in columns
             ):
                 logger.warning(f"No CID or Activity column found for AID {aid}.")
-                return {}, None
+                return {}
+
             cid_index = columns.index("CID")
             activity_index = columns.index("Activity Value [uM]")
             activity_name_index = columns.index("Activity Name")
-            # Extract columns and rows with "Activity" in the column name
-            activity_data = {}
+            outcome_index = (
+                columns.index("Activity Outcome")
+                if "Activity Outcome" in columns
+                else None
+            )
+            activity_data: dict[int, tuple[float | None, str]] = {}
             for row in data["Table"]["Row"]:
+                if (
+                    outcome_index is not None
+                    and row["Cell"][outcome_index].strip().lower() == "unspecified"
+                ):
+                    continue
                 cid_value = row["Cell"][cid_index]
                 activity = row["Cell"][activity_index]
                 activity_name = row["Cell"][activity_name_index]
-                if cid_value in cid:
-                    try:
-                        activity_data[int(cid_value)] = float(activity)
-                    except ValueError:
-                        activity_data[int(cid_value)] = None
-            return activity_data, activity_name
+
+                if not cid_value.strip():
+                    continue
+                if cid_value not in cid:
+                    continue
+                if not activity.strip():
+                    continue
+
+                key = int(cid_value)
+                if key in activity_data and activity_data[key][0] is not None:
+                    continue
+
+                try:
+                    value = float(activity)
+                except ValueError:
+                    value = None
+
+                activity_data[key] = (value, activity_name)
+
+            return activity_data
+
+        return {}
 
     def get_pubmed_id(self, aid: int) -> int | None:
         r"""Get binding affinity information from PubChem API.

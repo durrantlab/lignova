@@ -5,12 +5,17 @@
 #SBATCH --account=jdurrant
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=48
+#SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
 #SBATCH --time=2-22:00:00
-#SBATCH --array=101-200
+#SBATCH --array=130,141,239,253,266-269,271,275,283,291,298,310,338-343,403-404%20
 #SBATCH --output=../logs/dock/%x_%A_%a.out
 #SBATCH --error=../logs/dock/%x_%A_%a.err
+
+
+#to mitigate the 500 job array limit, Added an offset to the task ID 
+ARRAY_OFFSET="${ARRAY_OFFSET:-4500}"
+TASK_ID=$(( SLURM_ARRAY_TASK_ID + ARRAY_OFFSET ))
 
 set -euo pipefail
 module purge
@@ -19,8 +24,13 @@ mkdir -p ../logs/dock
 # Configuration
 PREPARED_DIR="../prepared_prot"
 
+# Affinity filtering
+REQUIRE_AFFINITY="${REQUIRE_AFFINITY:-1}"
+AFFINITY_PATH="../../lignova_parquets/data_w_rotatable_bonds.parquet"
+CLUSTERED_PATH="../../lignova_parquets/protein_clustered_data.parquet"
+
 # Parallelism settings
-PER_RUN_CPUS=12
+PER_RUN_CPUS=8
 MAX_CONCURRENT=$(( SLURM_CPUS_PER_TASK / PER_RUN_CPUS ))
 (( MAX_CONCURRENT < 1 )) && MAX_CONCURRENT=1
 
@@ -30,14 +40,8 @@ export MKL_NUM_THREADS="${PER_RUN_CPUS}"
 export OPENBLAS_NUM_THREADS="${PER_RUN_CPUS}"
 export NUMEXPR_NUM_THREADS="${PER_RUN_CPUS}"
 
-# Load GNINA module
 module purge
-module load gnina
 
-#to mitigate the 500 job array limit, Added an offset to the task ID 
-#so we can run multiple arrays without overlap
-ARRAY_OFFSET=500
-TASK_ID=$(( SLURM_ARRAY_TASK_ID + ARRAY_OFFSET ))
 
 #Rename log files to include the offset-adjusted task ID
 ORIG_OUT="../logs/dock/${SLURM_JOB_NAME}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.out"
@@ -93,14 +97,46 @@ if (( ${#LIGAND_FILES[@]} == 0 )); then
     exit 1
 fi
 
+ORIGINAL_LIGAND_COUNT=${#LIGAND_FILES[@]}
 echo "Receptor: ${receptor}"
 echo "Box ligand: ${box_ligand}"
-echo "Ligands found: ${#LIGAND_FILES[@]}"
+echo "Ligands found: ${ORIGINAL_LIGAND_COUNT}"
 echo "Max concurrent jobs: ${MAX_CONCURRENT}"
 echo "CPUs per job: ${PER_RUN_CPUS}"
 
 # Track failed dockings
 failed_file="${pdb_dir}/failed_docking_${SLURM_JOB_ID}_${TASK_ID}.txt"
+
+# filter SDFs to only compounds with usable affinity
+if [[ "${REQUIRE_AFFINITY}" == "1" ]]; then
+    if [[ -z "${AFFINITY_PATH:-}" || -z "${CLUSTERED_PATH:-}" ]]; then
+        echo "ERROR: REQUIRE_AFFINITY=1 but AFFINITY_PATH/CLUSTERED_PATH not set"
+        exit 1
+    fi
+    echo "Filtering SDFs by affinity availability."
+    if ! pixi run -e dev python3 -m run_scripts.affinity_filter \
+        -d "${pdb_dir}" \
+        -a "${AFFINITY_PATH}" \
+        -c "${CLUSTERED_PATH}"; then
+        echo "ERROR: Filter step failed — aborting (REQUIRE_AFFINITY=1)" >&2
+        exit 1
+    fi
+    NEW_LIGANDS=()
+    for lig in "${LIGAND_FILES[@]}"; do
+        filtered="${lig%.sdf}_filtered.sdf"
+        if [[ -f "${filtered}" ]]; then
+            NEW_LIGANDS+=("${filtered}")
+        else
+            echo "Skipping ${lig}: no filtered SDF (either excluded or filter skipped)"
+        fi
+    done
+    LIGAND_FILES=("${NEW_LIGANDS[@]}")
+    if (( ${#LIGAND_FILES[@]} == 0 )); then
+        echo "No ligands remain after affinity filtering.Skipping."
+        exit 0
+    fi
+    echo "After filtering: ${#LIGAND_FILES[@]} SDFs remain (from ${ORIGINAL_LIGAND_COUNT} originally)"
+fi
 
 # Function to dock one ligand
 dock_one() {
@@ -120,7 +156,7 @@ dock_one() {
     
     echo "Docking ${ligand_name}..."
     
-    # Create unique config file for this ligand (avoids race conditions)
+    # Create unique config file for this ligand
     local config_file="${out_dir}/${ligand_name}_gnina_config.yaml"
     local cmd_file="${out_dir}/${ligand_name}_cmd.txt"
     
@@ -147,7 +183,7 @@ dock_one() {
     
     echo "Running: ${gnina_cmd}"
     
-    if ! eval "${gnina_cmd}"; then
+    if ! eval "pixi run -e gnina ${gnina_cmd}"; then
         echo "Warning: GNINA failed for ${ligand_name}" >&2
         echo "${ligand}" >> "${failed_file}"
         return 0
@@ -167,7 +203,6 @@ for ligand in "${LIGAND_FILES[@]}"; do
         if ! wait -n; then
             echo "Warning: One of the docking processes failed." >&2
         fi
-        # Remove finished PIDs
         alive=()
         for pid in "${pids[@]}"; do
             kill -0 "$pid" 2>/dev/null && alive+=("$pid")
@@ -176,7 +211,6 @@ for ligand in "${LIGAND_FILES[@]}"; do
     done
 done
 
-# Wait for remaining jobs
 wait
 
 echo "Completed ${pdb_name} at $(date)"
