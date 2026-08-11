@@ -32,11 +32,16 @@ _BATCH = 150  # CIDs per PubChem property request
 DEFAULT_CACHE_NAME = "properties.parquet"
 DEFAULT_OUT_TEMPLATE = "enriched_{filter}.parquet"
 
-#Values in possible to be extracted as string properties from pubchem API
+# Values in possible to be extracted as string properties from pubchem API
 _STRING_PROPERTIES = frozenset(
     {
-        "SMILES", "ConnectivitySMILES", "InChI", "InChIKey",
-        "IUPACName", "MolecularFormula", "Title",
+        "SMILES",
+        "ConnectivitySMILES",
+        "InChI",
+        "InChIKey",
+        "IUPACName",
+        "MolecularFormula",
+        "Title",
     }
 )
 
@@ -565,7 +570,7 @@ async def main() -> int:
                 return 0
             else:
                 assays = []
-                wanted= set()
+                wanted = set()
                 for aid in args.aids:
                     a = _filter_by_outcome(bulk.load_assay(aid, parquet_path), outcome)
                     if a.records:
@@ -602,7 +607,9 @@ async def main() -> int:
                 df = pd.DataFrame(rows)
 
     if df.empty:
-        logger.warning("No rows produced for the given assays and outcome thus nothing written.")
+        logger.warning(
+            "No rows produced for the given assays and outcome thus nothing written."
+        )
         return 1
     parent = os.path.dirname(out_path)
     if parent:
