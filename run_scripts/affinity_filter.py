@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 University of Pittsburgh — Of the Commonwealth System of Higher Education
+# Source: https://github.com/durrantlab/lignova
+
 """
 Filter Gypsum-DL output SDFs to keep only compounds with usable affinity
 data AND a rotatable-bond count at or below the configured threshold.
