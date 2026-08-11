@@ -1,16 +1,26 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "lignova"
 version = "0.0.0"
-description = "TODO"
+description = "LIGNOVA: An automated pipeline to generate high-quality docked protein–ligand complexes at scale"
 authors = [
+    {name = "Mayar Ahmed", email = "mma121@pitt.edu"},
+    {name = "Alex M. Maldonado", email = "alex.maldonado@pitt.edu"},
+    {name = "Jacob D. Durrant", email = "durrantj@pitt.edu"},
+]
+maintainers = [
     {name = "Durrant Lab", email = "durrantj@pitt.edu"},
 ]
 requires-python = ">=3.11,<3.13"
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE", "THIRD_PARTY_LICENSES", "AUTHORS"]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Topic :: Scientific/Engineering",
 ]
@@ -26,9 +36,6 @@ dependencies = [
     "gemmi>=0.7.5,<0.8",
     "fasteners>=0.19,<0.20",
 ]
-
-[build-system]
-requires = ["setuptools"]
 
 [tool.setuptools.packages.find]
 where = ["lignova"]
