@@ -107,6 +107,9 @@ tests = { cmd = [
 coverage = { cmd = ["coverage", "report"] }
 cleanup-build = { cmd = ["rm", "-rf", "./build"] }
 build = { cmd = ["python3", "-m", "build"], depends-on = ["cleanup-build"]}
+
+[feature.dev.pypi-dependencies]
+third-party-license-file-generator = ">=2025.12.31.post2, <2026"
 [feature.docs.dependencies]
 mkdocs = ">=1.6.1,<2"
 mkdocs-material = ">=9.5.44,<10"

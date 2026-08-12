@@ -1,7 +1,16 @@
 version: 7
 platforms:
 - name: linux-64
+  virtual-packages:
+  - __unix=0=0
+  - __linux=4.18
+  - __glibc=2.28
+  - __archspec=0=x86_64
 - name: osx-64
+  virtual-packages:
+  - __unix=0=0
+  - __osx=13.0
+  - __archspec=0=x86_64
 environments:
   default:
     channels:
@@ -727,12 +736,16 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/08/dc/d948e83b97f2c420cb6c7e2143ae349560d3b5b061945f1b2a4eefb0231c/MolVS-0.1.1.tar.gz
       - pypi: https://files.pythonhosted.org/packages/0e/61/66938bbb5fc52dbdf84594873d5b51fb1f7c7794e9c0f5bd885f30bc507b/idna-3.11-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/1e/db/4254e3eabe8020b458f1a747140d32277ec7a271daf1d235b70dc0b4e6e3/requests-2.32.5-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/43/cb/20465053f0f4854c261c038afce2703d71cc71d58035a53404128b1abfe7/dom_toml-2.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/4c/5e/6003a0d1f37725ec2ebd4046b657abb9372202655f96e76795dca8c0063c/docutils-0.17.1-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/55/fb/6c702588f9c6de3ca17adb35952dfdd662856f913e4844032a7a01e2a7db/pdb2pqr-3.7.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/5b/11/208f72084084d3f6a2ed5ebfdfc846692c3f7ad6dce65e400194924f7eed/domdf_python_tools-3.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/71/0e/5f70ba04fd85495afb0808654a09abfbede4414dd33e3b711c9023e2a993/propka-3.5.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/90/38/93b99e99706829558b0ac1ad2c75a50521c712b8a2b27c12811521dc7ee1/gypsum_dl-1.3.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/c8/c2/785766cb86b5d00316e9fba1e5a588a21b441d7a3bbb0b28947e5b242598/third_party_license_file_generator-2025.12.31.post2.tar.gz
       - pypi: https://files.pythonhosted.org/packages/d5/f9/d721ee039c5d070efbf67696b01aaa84b431b82c7a7e57504f2c1f46ced2/dimorphite_dl-2.0.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ee/15/b908d1d23a4bd2bd7b2e98de5df23b26e43145119fe294728bf89211b935/mpi4py-4.1.1-cp312-cp312-manylinux1_x86_64.manylinux_2_5_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/ef/82/7a9d0550484a62c6da82858ee9419f3dd1ccc9aa1c26a1e43da3ecd20b0d/natsort-8.4.0-py3-none-any.whl
       osx-64:
       - conda: https://conda.anaconda.org/bioconda/osx-64/mmseqs2-18.8cc5c-h8b377d6_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
@@ -987,11 +1000,15 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/08/dc/d948e83b97f2c420cb6c7e2143ae349560d3b5b061945f1b2a4eefb0231c/MolVS-0.1.1.tar.gz
       - pypi: https://files.pythonhosted.org/packages/0e/61/66938bbb5fc52dbdf84594873d5b51fb1f7c7794e9c0f5bd885f30bc507b/idna-3.11-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/1e/db/4254e3eabe8020b458f1a747140d32277ec7a271daf1d235b70dc0b4e6e3/requests-2.32.5-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/43/cb/20465053f0f4854c261c038afce2703d71cc71d58035a53404128b1abfe7/dom_toml-2.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/4c/5e/6003a0d1f37725ec2ebd4046b657abb9372202655f96e76795dca8c0063c/docutils-0.17.1-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/55/fb/6c702588f9c6de3ca17adb35952dfdd662856f913e4844032a7a01e2a7db/pdb2pqr-3.7.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/5b/11/208f72084084d3f6a2ed5ebfdfc846692c3f7ad6dce65e400194924f7eed/domdf_python_tools-3.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/71/0e/5f70ba04fd85495afb0808654a09abfbede4414dd33e3b711c9023e2a993/propka-3.5.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/90/38/93b99e99706829558b0ac1ad2c75a50521c712b8a2b27c12811521dc7ee1/gypsum_dl-1.3.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/c8/c2/785766cb86b5d00316e9fba1e5a588a21b441d7a3bbb0b28947e5b242598/third_party_license_file_generator-2025.12.31.post2.tar.gz
       - pypi: https://files.pythonhosted.org/packages/d5/f9/d721ee039c5d070efbf67696b01aaa84b431b82c7a7e57504f2c1f46ced2/dimorphite_dl-2.0.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/ef/82/7a9d0550484a62c6da82858ee9419f3dd1ccc9aa1c26a1e43da3ecd20b0d/natsort-8.4.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ff/2c/e201cd4828555f10306a5439875cbd0ecfba766ace01ff5c6df43f795650/mpi4py-4.1.1-cp312-cp312-macosx_10_13_x86_64.whl
   docs:
     channels:
@@ -12578,6 +12595,20 @@ packages:
   requires_dist:
   - mkdocs-material>=7.3.0
   requires_python: '>=3.8'
+- pypi: https://files.pythonhosted.org/packages/43/cb/20465053f0f4854c261c038afce2703d71cc71d58035a53404128b1abfe7/dom_toml-2.3.0-py3-none-any.whl
+  name: dom-toml
+  version: 2.3.0
+  sha256: bc2f985db6964de47b113783a6b18f1688693b2a47dec3c7451d3531ccab7029
+  requires_dist:
+  - domdf-python-tools>=2.8.0
+  - tomli>=1.2.3 ; python_full_version < '3.11'
+  - attrs>=23.1.0 ; extra == 'all'
+  - tomli-w>=1.0.0 ; extra == 'all'
+  - typing-extensions>=4.7.1 ; extra == 'all'
+  - attrs>=23.1.0 ; extra == 'config'
+  - tomli-w>=1.0.0 ; extra == 'config'
+  - typing-extensions>=4.7.1 ; extra == 'config'
+  requires_python: '>=3.7'
 - pypi: https://files.pythonhosted.org/packages/48/9d/797d595dc57bbcb6284584ca7e228ac54b421aa1e864cec15d0f78e02f4b/material_plausible_plugin-0.2.0-py3-none-any.whl
   name: material-plausible-plugin
   version: 0.2.0
@@ -12620,6 +12651,18 @@ packages:
   - email-validator>=2.0.0 ; extra == 'email'
   - tzdata ; python_full_version >= '3.9' and sys_platform == 'win32' and extra == 'timezone'
   requires_python: '>=3.9'
+- pypi: https://files.pythonhosted.org/packages/5b/11/208f72084084d3f6a2ed5ebfdfc846692c3f7ad6dce65e400194924f7eed/domdf_python_tools-3.10.0-py3-none-any.whl
+  name: domdf-python-tools
+  version: 3.10.0
+  sha256: 5e71c1be71bbcc1f881d690c8984b60e64298ec256903b3147f068bc33090c36
+  requires_dist:
+  - importlib-metadata>=3.6.0 ; python_full_version < '3.9'
+  - importlib-resources>=3.0.0 ; python_full_version < '3.9'
+  - natsort>=7.0.1
+  - typing-extensions>=3.7.4.1
+  - pytz>=2019.1 ; extra == 'all'
+  - pytz>=2019.1 ; extra == 'dates'
+  requires_python: '>=3.6'
 - pypi: https://files.pythonhosted.org/packages/5f/5d/5f6c63eebb5afee93bcaae4ce9a898f3373ca23df3ccaef086d0233a35a7/pydantic_core-2.41.5-cp312-cp312-macosx_10_12_x86_64.whl
   name: pydantic-core
   version: 2.41.5
@@ -12656,6 +12699,17 @@ packages:
   name: bracex
   version: '2.6'
   sha256: 0b0049264e7340b3ec782b5cb99beb325f36c3782a32e36e876452fd49a09952
+  requires_python: '>=3.9'
+- pypi: https://files.pythonhosted.org/packages/c8/c2/785766cb86b5d00316e9fba1e5a588a21b441d7a3bbb0b28947e5b242598/third_party_license_file_generator-2025.12.31.post2.tar.gz
+  name: third-party-license-file-generator
+  version: 2025.12.31.post2
+  sha256: 92e41f7f9216b868faca44826876984b3ae4a55ed4a12ba208a1afdf83ec01ff
+  requires_dist:
+  - dom-toml>=2.1.0 ; python_full_version >= '3'
+  - pyyaml<5.4 ; python_full_version < '3'
+  - pyyaml>=5.4 ; python_full_version >= '3'
+  - requests>=2.25 ; python_full_version < '3'
+  - requests>=2.25 ; python_full_version >= '3'
   requires_python: '>=3.9'
 - pypi: https://files.pythonhosted.org/packages/d5/f9/d721ee039c5d070efbf67696b01aaa84b431b82c7a7e57504f2c1f46ced2/dimorphite_dl-2.0.2-py3-none-any.whl
   name: dimorphite-dl
