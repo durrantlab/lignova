@@ -1,31 +1,24 @@
 #!/usr/bin/env bash
 #
-# Build THIRD_PARTY_NOTICE.txt from an installed pixi environment.
+# Build THIRD_PARTY_LICENSES.md from an installed pixi environment.
 #
 # License text is only ever COPIED FROM DISK -- never downloaded, never
-# generated. If a package ships no license text, it is reported as a gap
-# rather than papered over.
+# generated.
 #
 # Layout:
-#   licenses/manual/<pkg>/...      hand-written text. TRACKED IN GIT. Never wiped.
-#   licenses/generated/<pkg>/...   extracted from the env. Wiped every run.
-#   licenses/PREAMBLE.txt          optional hand-written header. TRACKED.
+#   licenses/manual/<pkg>/...      hand-written text.
+#   licenses/generated/<pkg>/...   extracted from the env and regenerated each time.
+#   licenses/PREAMBLE.md          project's own license and any notes about copyleft components.
 #   licenses/INVENTORY.txt         package/version/license table.
 #   licenses/MISSING.txt           packages with no license text anywhere.
-#   THIRD_PARTY_NOTICE.txt         the deliverable.
-#
-# Usage:
-#   bash tools/gen_notice.sh                     # env "default"
-#   bash tools/gen_notice.sh --environment dev
-#   bash tools/gen_notice.sh --prefix /path/to/env
-#   bash tools/gen_notice.sh --check             # fail if notice is out of date
+#   THIRD_PARTY_LICENSES.md        the final notice. 
 
 set -euo pipefail
 
 ENVIRONMENT=default
 PREFIX=""
 CHECK=0
-OUT=THIRD_PARTY_LICENSES
+OUT=THIRD_PARTY_LICENSES.md
 LICDIR=licenses
 GEN="$LICDIR/generated"
 MANUAL="$LICDIR/manual"
@@ -191,55 +184,61 @@ fi
 
 NEW=$(mktemp)
 
-if [ -f "$LICDIR/PREAMBLE.txt" ]; then
-  cat "$LICDIR/PREAMBLE.txt" >> "$NEW"
+if [ -f "$LICDIR/PREAMBLE.md" ]; then
+  cat "$LICDIR/PREAMBLE.md" >> "$NEW"
   printf '\n' >> "$NEW"
 else
   cat >> "$NEW" <<'HDR'
-THIRD PARTY NOTICE
-==================
+# Third Party Notice
 
 This file lists the licenses of third-party software distributed with this
 project. License text is copied verbatim from the installed packages and is
 never generated or rewritten.
 
-Create licenses/PREAMBLE.txt to replace this header with your own -- name your
-project's own license there, and call out the copyleft components you bundle.
+Create `licenses/PREAMBLE.md` to replace this header with your own -- name
+your project's own license there, and call out the copyleft components you
+bundle. Markdown is allowed in that file.
 
 HDR
 fi
 
+# write the packages' license text verbatim, each in a fenced code block.
 emit_section() {
   srcroot="$1"; label="$2"
   [ -d "$srcroot" ] || return 0
   any=0
   for pkgdir in "$srcroot"/*/; do [ -d "$pkgdir" ] && any=1 && break; done
   [ "$any" = 1 ] || return 0
-  printf '========================================\n%s\n========================================\n\n' "$label" >> "$NEW"
+  printf '## %s\n\n' "$label" >> "$NEW"
   for pkgdir in "$srcroot"/*/; do
     [ -d "$pkgdir" ] || continue
     pkg=$(basename "$pkgdir")
-    printf -- '----------------------------------------\nPackage: %s\n' "$pkg" >> "$NEW"
+    printf '### %s\n\n' "$pkg" >> "$NEW"
     meta=$(grep -i "$TAB$pkg$TAB" "$LICDIR/INVENTORY.txt" 2>/dev/null | head -1 || true)
     if [ -n "$meta" ]; then
       kind=$(printf '%s' "$meta" | cut -f1)
       ver=$(printf '%s' "$meta" | cut -f3)
       lic=$(printf '%s' "$meta" | cut -f4)
-      [ -n "$ver" ] && printf 'Version: %s\n' "$ver" >> "$NEW"
-      [ "$lic" != "-" ] && [ -n "$lic" ] && printf 'License: %s\n' "$lic" >> "$NEW"
-      printf 'Source: %s\n' "$kind" >> "$NEW"
+      [ -n "$ver" ] && printf -- '- **Version:** %s\n' "$ver" >> "$NEW"
+      [ "$lic" != "-" ] && [ -n "$lic" ] && printf -- '- **License:** %s\n' "$lic" >> "$NEW"
+      printf -- '- **Source:** %s\n' "$kind" >> "$NEW"
     fi
     printf '\n' >> "$NEW"
     find "$pkgdir" -type f | sort | while IFS= read -r f; do
-      printf -- '--- %s ---\n\n' "${f#"$pkgdir"}" >> "$NEW"
+      rel="${f#"$pkgdir"}"
+      printf '#### `%s`\n\n' "$rel" >> "$NEW"
+      # widen the fence past any backtick run present in the file
+      fence='```'
+      while grep -qF "$fence" "$f" 2>/dev/null; do fence="$fence"'`'; done
+      printf '%s text\n' "$fence" >> "$NEW"
       cat "$f" >> "$NEW"
-      printf '\n\n' >> "$NEW"
+      printf '\n%s\n\n' "$fence" >> "$NEW"
     done
   done
 }
 
-emit_section "$GEN"    "PACKAGES FROM THE INSTALLED ENVIRONMENT"
-emit_section "$MANUAL" "PACKAGES DOCUMENTED MANUALLY"
+emit_section "$GEN"    "Packages from the installed environment"
+emit_section "$MANUAL" "Packages documented manually"
 
 gen_count=$(find "$GEN" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
 man_count=$(find "$MANUAL" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
