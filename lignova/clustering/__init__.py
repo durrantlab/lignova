@@ -2,9 +2,25 @@
 # Copyright 2026 University of Pittsburgh — Of the Commonwealth System of Higher Education
 # Source: https://github.com/durrantlab/lignova
 
-r"""Initialize clustering module."""
+r"""Initialize clustering modules."""
 
 from .mmseq import mmseqs_cluster, mmseqs_parser
-from .tanimoto import TanimotoClustering
+from .base import ClusterMethod, ClusterParams, ClusterResult, Clusterer
+from .butina import ButinaClustering, ButinaParams
+from .featurize import FeaturizeResult, MorganFeaturizer
+from .tanimoto import TanimotoSimilarities, compute_pairwise
 
-__all__ = ["mmseqs_cluster", "mmseqs_parser", "TanimotoClustering"]
+__all__ = [
+    "Clusterer",
+    "ClusterParams",
+    "ClusterResult",
+    "ClusterMethod",
+    "MorganFeaturizer",
+    "FeaturizeResult",
+    "compute_pairwise",
+    "TanimotoSimilarities",
+    "ButinaClustering",
+    "ButinaParams",
+
+]
+
