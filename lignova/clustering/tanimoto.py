@@ -20,7 +20,7 @@ class TanimotoSimilarities:
     edges: list[tuple[str, str, float]]
     """List of tuples containing the compound ids and their Tanimoto similarity for every pair with Tm >= floor."""
 
-    floor: float
+    min_sim: float
     """The threshold applied to produce `edges`. Only pairs with Tm >= floor are included in `edges`."""
 
     def __post_init__(self) -> None:
@@ -30,7 +30,7 @@ class TanimotoSimilarities:
                 f"does not match expected {self.n * (self.n - 1) // 2} for n={self.n}"
             )
 
-        check_floor(self.floor)
+        check_floor(self.min_sim)
 
     @property
     def n(self) -> int:
@@ -38,29 +38,29 @@ class TanimotoSimilarities:
         return len(self.ids)
 
 
-def check_floor(floor: float) -> None:
+def check_floor(min_sim: float) -> None:
     """Check that the floor value is valid.
 
     Args:
-        floor: The floor value to check.
+        min_sim: The floor value to check.
     """
-    if not 0.0 <= floor <= 1.0:
-        raise ValueError(f"floor must be in [0, 1], got {floor}")
+    if not 0.0 <= min_sim <= 1.0:
+        raise ValueError(f"floor must be in [0, 1], got {min_sim}")
 
 
 def compute_pairwise(
-    items: dict[str, ExplicitBitVect], floor: float
+    items: dict[str, ExplicitBitVect], min_sim: float
 ) -> TanimotoSimilarities:
-    """One pass: build the condensed distance array AND the >= floor edge list.
+    """One pass: build the condensed distance array AND the >= min_sim edge list.
 
     Args:
         items: a dictionary with the  compound ids as the keys and their fingerprints as the values.
-        floor: Minimum Tanimoto similarity for an edge to be kept
+        min_sim: Minimum Tanimoto similarity for an edge to be kept
 
     Returns:
         A `TanimotoSimilarities` object containing the condensed distance array and the edge list.
     """
-    check_floor(floor)
+    check_floor(min_sim)
 
     ids = list(items)
     fps = [items[i] for i in ids]
@@ -72,15 +72,15 @@ def compute_pairwise(
         sims = DataStructs.BulkTanimotoSimilarity(fps[i], fps[:i])
         for j, s in enumerate(sims):
             condensed.append(1.0 - s)
-            if s >= floor:
+            if s >= min_sim:
                 edges.append((ids[i], ids[j], s))
     logger.info(
-        "Computed pairwise similarities for {n} compounds producing {condensed} distances and {edges} edges at floor {floor}",
+        "Computed pairwise similarities for {n} compounds producing {condensed} distances and {edges} edges at min similarity of {floor}",
         n=n,
         condensed=len(condensed),
         edges=len(edges),
-        floor=floor,
+        floor=min_sim,
     )
     return TanimotoSimilarities(
-        ids=tuple(ids), condensed_distances=condensed, edges=edges, floor=floor
+        ids=tuple(ids), condensed_distances=condensed, edges=edges, min_sim=min_sim
     )

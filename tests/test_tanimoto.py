@@ -58,14 +58,14 @@ def test_featurize():
 
 def test_pairwise_similarity_values():
     items = _fingerprints({"A": smiles1, "B": smiles2, "C": ACETIC})
-    sims = compute_pairwise(items, floor=0.0)
+    sims = compute_pairwise(items, min_sim=0.0)
     assert isinstance(sims, TanimotoSimilarities)
     assert len(sims.condensed_distances) == 3
     lut = _sim_lookup(sims)
     assert np.isclose(lut[frozenset(("A", "B"))], 0.17647058823529413)
     assert np.isclose(lut[frozenset(("A", "C"))], 0.09433962264150944)
     items_same = _fingerprints({"x": smiles1, "y": smiles1})
-    sims_1 = compute_pairwise(items_same, floor=0.0)
+    sims_1 = compute_pairwise(items_same, min_sim=0.0)
     ((_, _, s),) = sims_1.edges
     assert s == 1.0
     assert sims_1.condensed_distances[0] == 0.0
@@ -73,15 +73,15 @@ def test_pairwise_similarity_values():
 
 def test_condensed_distancesmiles1re_one_minus_similarity():
     items = _fingerprints({"A": smiles1, "B": smiles2, "C": ACETIC})
-    sims = compute_pairwise(items, floor=0.0)
+    sims = compute_pairwise(items, min_sim=0.0)
     lut = _sim_lookup(sims)
     assert np.isclose(1 - lut[frozenset(("A", "B"))], 0.8235294117647058)
     assert np.isclose(1 - lut[frozenset(("A", "C"))], 0.9056603773584906)
 
 
-def test_floor_filters_edgesmiles2ut_not_condensed():
+def test_min_sim_filters_edgesmiles2ut_not_condensed():
     items = _fingerprints({"A": smiles1, "B": smiles2, "C": ACETIC})
-    sims = compute_pairwise(items, floor=0.15)
+    sims = compute_pairwise(items, min_sim=0.15)
     lut = _sim_lookup(sims)
     assert frozenset(("A", "B")) in lut
     assert frozenset(("A", "C")) not in lut
@@ -90,7 +90,7 @@ def test_floor_filters_edgesmiles2ut_not_condensed():
 
 def test_butina_clustering():
     items = _fingerprints(CLUSTER_SMILES)
-    sims = compute_pairwise(items, floor=0.0)
+    sims = compute_pairwise(items, min_sim=0.0)
     result = ButinaClustering(ButinaParams(similarity_cutoff=0.5)).cluster(sims)
 
     assert result.n_clusters == 2
@@ -111,10 +111,11 @@ def test_butina_params_validation():
 
 
 def test_empty_and_single_compound():
-    empty = ButinaClustering(ButinaParams()).cluster(compute_pairwise({}, floor=0.5))
+    empty = ButinaClustering(ButinaParams()).cluster(compute_pairwise({}, min_sim=0.5))
     assert empty.n_clusters == 0
 
     one = _fingerprints({"only": BENZENE})
-    single = ButinaClustering(ButinaParams()).cluster(compute_pairwise(one, floor=0.5))
+    single = ButinaClustering(ButinaParams()).cluster(
+        compute_pairwise(one, min_sim=0.5)
+    )
     assert single.clusters() == {0: ["only"]}
-
