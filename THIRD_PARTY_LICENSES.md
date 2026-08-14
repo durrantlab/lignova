@@ -1,6 +1,6 @@
 # Third Party Notice for lignova
 
-lignova is licensed under the Apache License, Version 2.0. See [LICENSE.md](./LICENSE.md).
+lignova is licensed under the Apache License, Version 2.0. See [LICENSE.md](../LICENSE.md).
 Copyright 2026 University of Pittsburgh â€” Of the Commonwealth System of Higher
 Education. Developed at the Durrant Lab, University of Pittsburgh.
 
@@ -13277,45 +13277,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ```
 
-#### `LICENSE.txt.2`
-
-``` text
-Copyright Notice and Statement for LZF filter
-
-Copyright (c) 2008-2009 Andrew Collette
-http://h5py.org
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-a. Redistributions of source code must retain the above copyright
-   notice, this list of conditions and the following disclaimer.
-
-b. Redistributions in binary form must reproduce the above copyright
-   notice, this list of conditions and the following disclaimer in the
-   documentation and/or other materials provided with the
-   distribution.
-
-c. Neither the name of the author nor the names of contributors may
-   be used to endorse or promote products derived from this software
-   without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-```
-
 #### `license.txt`
 
 ``` text
@@ -13353,6 +13314,45 @@ Copyright Notice and Statement for the h5py Project
     THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
     (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+```
+
+#### `LICENSE.txt.2`
+
+``` text
+Copyright Notice and Statement for LZF filter
+
+Copyright (c) 2008-2009 Andrew Collette
+http://h5py.org
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+a. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+
+b. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the
+   distribution.
+
+c. Neither the name of the author nor the names of contributors may
+   be used to endorse or promote products derived from this software
+   without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ```
 
@@ -29057,10 +29057,9 @@ file under either the BSD or the GPL.
 ### libevent
 
 - **Version:** 2.1.12
-- **License:** DECLARED
+- **License:** BSD-3-Clause
 - **Source:** conda
 - **Environment:** default
-- **License note:** libevent's own terms are BSD-3-Clause; the BSD-2-Clause and MIT texts cover files it imports from elsewhere
 
 #### `LICENSE`
 
@@ -41065,10 +41064,9 @@ Agreement.
 ### matplotlib-base
 
 - **Version:** 3.10.8
-- **License:** DECLARED
+- **License:** PSF-2.0
 - **Source:** conda
 - **Environment:** default
-- **License note:** matplotlib's own terms are PSF-2.0; the MIT and OFL-1.1 texts cover the fonts and other components it bundles
 
 #### `LICENSE`
 
@@ -44446,8 +44444,8 @@ END OF TERMS AND CONDITIONS
 PYTHON IMAGING LIBRARY (PIL) LICENSE AGREEMENT
 -------------------------------------------------------------------------------
 The Python Imaging Library (PIL) is
-    Copyright ï¿½ 1997-2004 by Secret Labs AB
-    Copyright ï¿½ 1995-2004 by Fredrik Lundh
+    Copyright © 1997-2004 by Secret Labs AB
+    Copyright © 1995-2004 by Fredrik Lundh
 
 By obtaining, using, and/or copying this software and/or its associated 
 documentation, you agree that you have read, understood, and will comply with 
@@ -44509,7 +44507,7 @@ Boston, MA 02111-1307 USA
 This software is released under a BSD license, adapted from
 <http://opensource.org/licenses/bsd-license.php>
 
-Copyright ï¿½ 2008 Brian M. Clapper
+Copyright © 2008 Brian M. Clapper
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

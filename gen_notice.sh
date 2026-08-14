@@ -7,7 +7,7 @@
 # Layout:
 #   licenses/manual/<pkg>/...      hand-written text.
 #   licenses/generated/<pkg>/...   extracted from the env and regenerated each time.
-#   licenses/PREAMBLE.md          project's own license and any notes about copyleft components.
+#   docs/licensing-preamble.md         project's own license and any notes about copyleft components.
 #   licenses/INVENTORY.txt         package/version/license table.
 #   licenses/MISSING.txt           packages with no license text anywhere.
 #   THIRD_PARTY_LICENSES.md        the final notice.
@@ -791,8 +791,8 @@ fi
 
 NEW=$(mktemp)
 
-if [ -f "$LICDIR/PREAMBLE.md" ]; then
-  cat "$LICDIR/PREAMBLE.md" >> "$NEW"
+if [ -f "docs/licensing-preamble.md" ]; then
+  cat "docs/licensing-preamble.md" >> "$NEW"
   printf '\n' >> "$NEW"
 else
   cat >> "$NEW" <<'HDR'
@@ -802,7 +802,7 @@ This file lists the licenses of third-party software used by this project.
 License text is copied verbatim from the installed packages and is never
 generated or rewritten.
 
-Create `licenses/PREAMBLE.md` to replace this header with your own -- name
+Create `docs/licensing-preamble.md` to replace this header with your own -- name
 your project's own license there, say whether these packages are distributed
 with the project or installed from upstream channels, and call out the
 copyleft ones. Markdown is allowed in that file.
