@@ -8,7 +8,7 @@ import pytest
 import yaml
 
 from lignova.preparation.pdb2pqr import PDB2PQR
-from lignova.yaml.protonation_contig import ProtonationConfig
+from lignova.yaml.protonation_config import ProtonationConfig
 
 # Ensures we execute from file directory (for relative paths).
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
