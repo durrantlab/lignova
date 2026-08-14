@@ -38,6 +38,7 @@ containing them takes on the corresponding obligations; this project does not.
 | --- | --- |
 | MDAnalysis | LGPL-3.0-or-later (contributions LGPL-2.1-or-later) |
 | GridDataFormats | LGPL-3.0-or-later |
+| Meeko | LGPL-2.1-only |
 | propka | LGPL-2.1 |
 | pyedr | LGPL-2.1-or-later |
 | pycairo | LGPL-2.1-only OR MPL-1.1 |
