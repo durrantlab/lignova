@@ -1,5 +1,6 @@
 r"""testing for yaml class to write configuration files."""
 
+import copy
 import os
 import re
 from typing import Any
@@ -117,10 +118,9 @@ def test_update_config(yaml_file, sample_dict):
             "new_key": "added",
         }
     )
-    expected = {
-        "pdb2pqr": {"general_options": {"keep-chain": False}},
-        "new_key": "added",
-    }
+    expected = copy.deepcopy(sample_dict)
+    expected["pdb2pqr"]["general_options"]["keep-chain"] = False
+    expected["new_key"] = "added"
     assert cfg.read_config() == expected
 
 
@@ -130,7 +130,6 @@ def test_update_config_nested(yaml_file, sample_dict):
     cfg.write_config(sample_dict)  # reset
     cfg.update_config(
         updates={"keep-chain": False},
-        nested=True,
         parent_key="pdb2pqr",
     )
     expected_nested = sample_dict.copy()

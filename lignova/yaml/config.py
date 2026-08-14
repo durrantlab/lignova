@@ -41,28 +41,43 @@ class YamlConfig:
             yaml.dump(config, file)
         self.data_dict = config
 
+    def validate(self) -> None:
+        r"""Validate the YAML configuration file. This method can be overridden in subclasses to implement specific validation logic."""
+        return
+
+    def _deep_update(self, target: dict[str, Any], updates: dict[str, Any]) -> None:
+        r"""Recursively merge updates into target without replacing whole sections.
+        Args:
+            target : Dictionary to update in place.
+            updates: Dictionary of updates to merge.
+        """
+        for key, value in updates.items():
+            if isinstance(value, dict) and isinstance(target.get(key), dict):
+                self._deep_update(target[key], value)
+            else:
+                target[key] = value
+
     def update_config(
         self,
         updates: dict[str, Any],
-        nested: bool = False,
-        parent_key: str | None = None,
+        parent_key: str | tuple[str, ...] | None = None,
     ) -> None:
-        r"""Update the YAML configuration file with the given dictionary
+        r"""Update the YAML configuration file with the given dictionary.
             Allow both surface and deep updates.
         Args:
-            updates (dict): Dictionary containing updates to apply.
-            nested (bool): Whether to update a nested dictionary. Default is False.
-            parent_key (str): The key of the parent dictionary to update if nested is True. Default is None.
+            updates : Dictionary containing updates to apply.
+            parent_key : Key or key path to descend into. None updates at the top level.
         """
         config = self.data_dict
-        if nested and parent_key is not None:
-            if parent_key in config and isinstance(config[parent_key], dict):
-                config[parent_key].update(updates)
-            else:
-                config[parent_key] = updates
-        else:
-            config.update(updates)
-        self.write_config(config)
+        if parent_key is not None:
+            keys = (parent_key,) if isinstance(parent_key, str) else parent_key
+            for key in keys:
+                if not isinstance(config.get(key), dict):
+                    config[key] = {}
+                config = config[key]
+        self._deep_update(config, updates)
+        self.write_config(self.data_dict)
+        self.validate()
 
     def delete_key(self, key: str) -> None:
         r"""Delete a key from the YAML configuration file.
