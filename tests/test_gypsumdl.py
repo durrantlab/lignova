@@ -299,7 +299,7 @@ def test_gypsum(tmp_path: str):
 
 # test the gypsum with multiprocessing job manager
 def test_gypsum_multi(tmp_path: str):
-    r"""Test the Gypsum class initialization and run method with multiprocessing."""
+    """Test the Gypsum class initialization and run method with multiprocessing."""
     # Create a dummy .smi file
     smiles_file = os.path.join(tmp_path, "test_multi.smi")
     with open(smiles_file, "w", encoding="utf-8") as f:

@@ -450,7 +450,7 @@ class GNINA(Docking):
             output_cfg["out"] = os.path.join(ligand_dir, f"{ligand_name}_docked.sdf.gz")
 
         # Persist changes
-        context.write_config(context.data_dict)
+        context.validate()
 
     def _build_command(self, context: GninaConfig) -> str:
         """Build the GNINA command string from the config.

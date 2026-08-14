@@ -9,7 +9,7 @@ import subprocess
 
 from loguru import logger
 
-from lignova.yaml.protonation_contig import ProtonationConfig
+from lignova.yaml.protonation_config import ProtonationConfig
 
 
 class PDB2PQR:

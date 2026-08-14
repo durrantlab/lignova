@@ -85,14 +85,14 @@ def _sample_data() -> list[dict]:
 
 
 def test_create():
-    r"""Test the creation of HDF5 files."""
+    """Test the creation of HDF5 files."""
     parser = HDF5Parser(file_path)
     parser.create()
     assert os.path.exists(file_path)
 
 
 def test_write():
-    r"""Test writing data to HDF5 files."""
+    """Test writing data to HDF5 files."""
     parser = HDF5Parser(file_path)
     data = np.array([1, 2, 3])
     parser.write(data, "dataset")
@@ -101,7 +101,7 @@ def test_write():
 
 
 def test_read():
-    r"""Test reading data from HDF5 files."""
+    """Test reading data from HDF5 files."""
     parser = HDF5Parser(file_path)
     data = np.array([1, 2, 3])
     result = parser.read("dataset")
@@ -109,7 +109,7 @@ def test_read():
 
 
 def test_write_attributes():
-    r"""Test writing attributes to HDF5 files."""
+    """Test writing attributes to HDF5 files."""
     parser = HDF5Parser(file_path)
     attributes = {"attr7": "value1", "attr8": "value2"}
     parser.write_attributes("dataset_2", attributes)
@@ -118,7 +118,7 @@ def test_write_attributes():
 
 
 def test_read_attributes():
-    r"""Test reading attributes from HDF5 files."""
+    """Test reading attributes from HDF5 files."""
     parser = HDF5Parser(file_path)
     attributes = {"attr1": "value1", "attr2": "value2"}
     parser.write_attributes("dataset_1", attributes)
@@ -127,7 +127,7 @@ def test_read_attributes():
 
 
 def test_find_file_stats():
-    r"""Test finding file stats."""
+    """Test finding file stats."""
     parser = HDF5Parser(file_path)
     parser.find_file_stats()
     statfile = file_path.replace(".hdf5", "_stats.txt")
@@ -139,14 +139,14 @@ def test_find_file_stats():
 
 
 def test_parquet_create():
-    r"""Test the creation of Parquet files."""
+    """Test the creation of Parquet files."""
     parser = ParquetParser(parquet_file_path, pa.schema([]))
     parser.create()
     assert os.path.exists(parquet_file_path)
 
 
 def test_parquet_write():
-    r"""Test writing data to Parquet files."""
+    """Test writing data to Parquet files."""
     schema = _parquet_schema()
     data = _sample_data()
     parser = ParquetParser(parquet_file_path, schema)
@@ -158,7 +158,7 @@ def test_parquet_write():
 
 
 def test_parquet_read_schema():
-    r"""Test reading data from Parquet files."""
+    """Test reading data from Parquet files."""
     schema = _parquet_schema()
     parser = ParquetParser(parquet_file_path, schema)
     result = parser.find_schema()
@@ -166,7 +166,7 @@ def test_parquet_read_schema():
 
 
 def test_parquet_read():
-    r"""Test reading data from Parquet files."""
+    """Test reading data from Parquet files."""
     schema = _parquet_schema()
     data = _sample_data()
     parser = ParquetParser(parquet_file_path, schema)
@@ -176,7 +176,7 @@ def test_parquet_read():
 
 
 def test_filter_data():
-    r"""Test filtering data from Parquet files."""
+    """Test filtering data from Parquet files."""
     schema = _parquet_schema()
     data = _sample_data() + [
         {
@@ -199,7 +199,7 @@ def test_filter_data():
 
 
 def test_parquet_read_metadata():
-    r"""Test reading metadata from Parquet files."""
+    """Test reading metadata from Parquet files."""
     schema = _parquet_schema()
     data = _sample_data()
     parser = ParquetParser(parquet_file_path, schema)
@@ -230,7 +230,7 @@ def test_parquet_read_metadata():
 
 
 def test_parquet_open_writer():
-    r"""Test streaming writes using open_writer."""
+    """Test streaming writes using open_writer."""
     schema = _parquet_schema()
     writer_path = os.path.join(context_hdf5_parser["write_dir"], "test_writer.parquet")
     parser = ParquetParser(writer_path, schema)
@@ -272,7 +272,7 @@ def test_parquet_open_writer():
 
 
 def test_parquet_to_csv():
-    r"""Test exporting Parquet data to a CSV file."""
+    """Test exporting Parquet data to a CSV file."""
     schema = _parquet_schema()
     data = _sample_data()
     parser = ParquetParser(parquet_file_path, schema)
@@ -283,7 +283,7 @@ def test_parquet_to_csv():
 
 
 def test_parquet_read_lazy():
-    r"""Test lazy reading from Parquet files returns a Scanner."""
+    """Test lazy reading from Parquet files returns a Scanner."""
     schema = _parquet_schema()
     data = _sample_data()
     parser = ParquetParser(parquet_file_path, schema)
@@ -296,7 +296,7 @@ def test_parquet_read_lazy():
 
 
 def test_parquet_convert_to_table():
-    r"""Test converting Parquet data to a PyArrow Table."""
+    """Test converting Parquet data to a PyArrow Table."""
     schema = _parquet_schema()
     data = _sample_data()
     parser = ParquetParser(parquet_file_path, schema)
@@ -308,7 +308,7 @@ def test_parquet_convert_to_table():
 
 
 def test_parquet_open_dataset():
-    r"""Test opening a Parquet file as a dataset."""
+    """Test opening a Parquet file as a dataset."""
     schema = _parquet_schema()
     data = _sample_data()
     parser = ParquetParser(parquet_file_path, schema)

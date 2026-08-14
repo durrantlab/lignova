@@ -31,7 +31,7 @@ context_protein_6Oav = {
 
 
 def prep_dirs():
-    r"""Prepare directories for writing files."""
+    """Prepare directories for writing files."""
     os.makedirs(context_protein_6Oav["write_dir"])
 
 
@@ -108,7 +108,7 @@ def reference_sdf(reference_pdb):
 
 
 def test_obabel_convert():
-    r"""Test the conversion of file formats using Open Babel."""
+    """Test the conversion of file formats using Open Babel."""
     output_filename = os.path.join(context_protein_6Oav["write_dir"], "6oav.sdf")
     obabel_convert(context_protein_6Oav["file_path"], output_filename)
     assert os.path.exists(output_filename)
@@ -137,7 +137,7 @@ def test_mae_convert_protein_output(docked_pdb_with_protein):
 
 
 def test_rmsd_mda(docked_pdb, reference_pdb):
-    r"""Test the RMSD calculation using MDAnalysis."""
+    """Test the RMSD calculation using MDAnalysis."""
     ligand = DockedLigand(docked_pdb)
     reference = Ligand(reference_pdb)
     rmsd_calc = mdaRMSD(
@@ -151,7 +151,7 @@ def test_rmsd_mda(docked_pdb, reference_pdb):
 
 
 def test_rmsd_obabel(docked_sdf, reference_sdf):
-    r"""Test the RMSD calculation using Open Babel."""
+    """Test the RMSD calculation using Open Babel."""
     ligand = DockedLigand(docked_sdf)
     reference = Ligand(reference_sdf)
     rmsd_calc = obabelRMSD(target=ligand, reference=reference)
@@ -162,7 +162,7 @@ def test_rmsd_obabel(docked_sdf, reference_sdf):
 
 
 def test_spyrmsd_calculation(docked_sdf, reference_sdf):
-    r"""Test the RMSD calculation using spyrmsd."""
+    """Test the RMSD calculation using spyrmsd."""
     ligand = DockedLigand(docked_sdf)
     reference = Ligand(reference_sdf)
     rmsd_calc = spyrmsdRMSD(target=ligand, reference=reference)
@@ -178,7 +178,7 @@ def test_spyrmsd_calculation(docked_sdf, reference_sdf):
 
 
 def test_spyrmsd_no_symmetry(docked_sdf, reference_sdf):
-    r"""Test spyrmsd without symmetry correction."""
+    """Test spyrmsd without symmetry correction."""
     ligand = DockedLigand(docked_sdf)
     reference = Ligand(reference_sdf)
     rmsd_calc = spyrmsdRMSD(target=ligand, reference=reference)

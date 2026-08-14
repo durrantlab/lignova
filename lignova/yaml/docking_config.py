@@ -473,6 +473,7 @@ class GninaConfig(YamlConfig):
         flat: dict[str, Any] = {}
         for section_name in (
             "flexibility",
+            "input",
             "docking_region",
             "covalent",
             "scoring",
@@ -664,7 +665,7 @@ class GninaConfig(YamlConfig):
         has_all_center = all(region.get(k) is not None for k in center_keys)
         has_all_size = all(region.get(k) is not None for k in size_keys)
 
-        autobox_lig = region.get("autobox_ligand")
+        autobox_lig = config.get("input", {}).get("autobox_ligand")
         using_autobox = autobox_lig is not None
 
         if using_autobox and (has_any_center or has_any_size):
@@ -685,7 +686,7 @@ class GninaConfig(YamlConfig):
         no_lig = bool(region.get("no_lig"))
         if no_lig:
             # no ligand present => autobox by ligand doesn't make sense
-            if region.get("autobox_ligand") is not None:
+            if autobox_lig is not None:
                 raise ValueError(
                     "no_lig=True is incompatible with autobox_ligand (requires a ligand)."
                 )

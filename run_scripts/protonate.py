@@ -14,7 +14,7 @@ import sys
 from loguru import logger
 
 from lignova.preparation.pdb2pqr import PDB2PQR
-from lignova.yaml.protonation_contig import ProtonationConfig
+from lignova.yaml.protonation_config import ProtonationConfig
 
 
 def protonate(

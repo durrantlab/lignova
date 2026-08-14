@@ -37,7 +37,7 @@ context_filepaths = {
 
 
 def prep_dirs():
-    r"""Prepare directories for writing files."""
+    """Prepare directories for writing files."""
     for d in context_filepaths.values():
         os.makedirs(d, exist_ok=True)
 

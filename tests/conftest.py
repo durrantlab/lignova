@@ -9,7 +9,7 @@ import shutil
 
 
 def pytest_sessionstart(session):  # pytest_configure(config)
-    r"""Called after the Session object has been created and
+    """Called after the Session object has been created and
     before performing collection and entering the run test loop.
     """
     # Creates a tmp directory for writing files.
