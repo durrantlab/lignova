@@ -141,7 +141,7 @@ def test_file_path_input_must_exist(tmp_path: str):
     cfg_path: LiteralString = os.path.join(tmp_path, "gnina.yaml")
     d = make_cfg_dict()
 
-    d["gnina"]["docking_region"]["autobox_ligand"] = os.path.join(tmp_path, "nope.sdf")
+    d["gnina"]["input"]["autobox_ligand"] = os.path.join(tmp_path, "nope.sdf")
     with pytest.raises(FileNotFoundError, match="does not exist"):
         _ = GninaConfig(str(cfg_path), data_dict=d)
 
@@ -282,7 +282,7 @@ def test_autobox_conflicts_with_explicit_box(tmp_path: str):
     with open(lig, "w", encoding="utf-8") as f:
         f.write("$$$$\n")
 
-    d["gnina"]["docking_region"]["autobox_ligand"] = lig
+    d["gnina"]["input"]["autobox_ligand"] = lig
     d["gnina"]["docking_region"]["center_x"] = 0.0
 
     with pytest.raises(
@@ -318,7 +318,7 @@ def test_no_lig_incompatible_with_autobox_ligand(tmp_path: str):
         f.write("$$$$\n")
 
     d["gnina"]["docking_region"]["no_lig"] = True
-    d["gnina"]["docking_region"]["autobox_ligand"] = lig
+    d["gnina"]["input"]["autobox_ligand"] = lig
 
     with pytest.raises(
         ValueError, match="no_lig=True is incompatible with autobox_ligand"
