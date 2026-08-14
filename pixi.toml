@@ -62,8 +62,8 @@ pdb2pqr = ">=3.7.1, <4"
 
 [tasks]
 setup-gnina = { cmd = ["bash", "./run_scripts/setup_gnina.sh"] }
-licenses = "bash gen_notice.sh"
-licenses-check = "bash gen_notice.sh --check"
+licenses = "bash gen_notice.sh --environment default --environment mgltools"
+licenses-check = "bash gen_notice.sh --environment default --environment mgltools --check"
 
 [dependencies]
 python = ">=3.12.13,<3.15"

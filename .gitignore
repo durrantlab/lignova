@@ -654,5 +654,8 @@ plots/
 /*cache/
 
 licenses/generated/
-licenses/conda-inventory.tsv
+licenses/*.tsv
 licenses/MISSING.txt
+licenses/CONFLICTS.txt
+licenses/PLACEHOLDERS.txt
+licenses/LICENSE-AUDIT.txt

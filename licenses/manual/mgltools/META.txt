@@ -1,0 +1,7 @@
+Name: MGLTools
+Source: external program (not distributed with lignova)
+Homepage: https://ccsb.scripps.edu/mgltools/
+# License: confirm against the license text in the MGLTools distribution before
+# adding it here. If this key is absent, gen_notice.sh takes the license from
+# the text pasted below when it recognizes it.
+# Version: pin this to the version lignova is tested against
