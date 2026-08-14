@@ -1,4 +1,4 @@
-r"""testing for yaml class to write configuration files."""
+"""testing for yaml class to write configuration files."""
 
 import copy
 import os
@@ -70,7 +70,7 @@ def test_init(yaml_file, sample_dict):
 
 
 def test_init_missing_param(tmp_path, sample_dict):
-    r"""Test initialization creates missing file from provided dictionary."""
+    """Test initialization creates missing file from provided dictionary."""
     target = tmp_path / "new_config.yaml"
     assert not target.exists()
     cfg = YamlConfig(file_path=target, data_dict=sample_dict)
@@ -80,7 +80,7 @@ def test_init_missing_param(tmp_path, sample_dict):
 
 
 def test_init_no_inputs(tmp_path):
-    r"""Test initialization raises error when no inputs provided."""
+    """Test initialization raises error when no inputs provided."""
     target = tmp_path / "missing.yaml"
     with pytest.raises(
         ValueError, match="Either file_path or dictionary must be provided"
@@ -89,7 +89,7 @@ def test_init_no_inputs(tmp_path):
 
 
 def test_read_config_returns_dict(yaml_file, sample_dict):
-    r"""Test reading configuration returns correct dictionary."""
+    """Test reading configuration returns correct dictionary."""
     cfg = YamlConfig(str(yaml_file))
     data = cfg.read_config()
     assert isinstance(data, dict)
@@ -97,7 +97,7 @@ def test_read_config_returns_dict(yaml_file, sample_dict):
 
 
 def test_write_config_overwrites_file(yaml_file, sample_dict):
-    r"""Test writing configuration overwrites existing file."""
+    """Test writing configuration overwrites existing file."""
     cfg = YamlConfig(str(yaml_file))
 
     cfg.write_config(sample_dict)

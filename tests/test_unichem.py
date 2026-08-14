@@ -1,4 +1,4 @@
-r"""Test unichem API."""
+"""Test unichem API."""
 
 import json
 import os

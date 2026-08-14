@@ -1,4 +1,4 @@
-r"""Test the YAML configuration handler for GNINA & proper file handling."""
+"""Test the YAML configuration handler for GNINA & proper file handling."""
 
 import os
 import shutil

@@ -1,4 +1,4 @@
-r"""Test PubChem API."""
+"""Test PubChem API."""
 
 import os
 
@@ -21,7 +21,7 @@ if not os.path.exists(context_pubchem["write_dir"]):
 
 
 def test_get_cids():
-    r"""Retrieve CIDs from PubChem"""
+    """Retrieve CIDs from PubChem"""
     pubchem = PubChemAPI()
     cids_active = pubchem.get_cids("1000", True)
     assert len(cids_active) == 36
@@ -34,7 +34,7 @@ def test_get_cids():
 
 
 def test_get_cids_info():
-    r"""Retrieve SMILES from PubChem"""
+    """Retrieve SMILES from PubChem"""
     pubchem = PubChemAPI()
     smiles_test = pubchem.get_cids_info(2244, ["SMILES", "ExactMass"])
     smiles_ref = "CC(=O)OC1=CC=CC=C1C(=O)O"
@@ -44,7 +44,7 @@ def test_get_cids_info():
 
 
 def test_get_binding_affinity():
-    r"""Retrieve binding affinity from PubChem"""
+    """Retrieve binding affinity from PubChem"""
     pubchem = PubChemAPI()
     binding_affinity_test = pubchem.get_binding_affinity(
         1057958,
@@ -63,7 +63,7 @@ def test_get_binding_affinity():
 
 
 def test_get_pubmed_id():
-    r"""Retrieve PubMed ID from PubChem"""
+    """Retrieve PubMed ID from PubChem"""
     pubchem = PubChemAPI()
     empty = pubchem.get_pubmed_id(2244)
     pubmed_id = pubchem.get_pubmed_id(1057924)

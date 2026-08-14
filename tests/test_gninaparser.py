@@ -1,4 +1,4 @@
-r"""Test the GNINA_Results SDF parser, DockedPose container, and DockingDataset."""
+"""Test the GNINA_Results SDF parser, DockedPose container, and DockingDataset."""
 
 import glob
 import gzip
@@ -33,7 +33,7 @@ context_filepaths = {
 
 
 def prep_dirs():
-    r"""Prepare directories for writing files."""
+    """Prepare directories for writing files."""
     for d in context_filepaths.values():
         os.makedirs(d, exist_ok=True)
 

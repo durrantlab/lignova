@@ -1,4 +1,4 @@
-r"""Test the preparation module for protein-ligand systems pre-docking."""
+"""Test the preparation module for protein-ligand systems pre-docking."""
 
 import os
 import re

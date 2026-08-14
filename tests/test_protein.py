@@ -1,4 +1,4 @@
-r"""Tests for protein structure class and relevant functions."""
+"""Tests for protein structure class and relevant functions."""
 
 import os
 
@@ -36,7 +36,7 @@ context_protein_6Oav = {
 
 
 def prep_dirs():
-    r"""Prepare directories."""
+    """Prepare directories."""
     os.makedirs(context_protein_6Oav["write_dir"])
 
 
@@ -45,7 +45,7 @@ if not os.path.exists(context_protein_6Oav["write_dir"]):
 
 
 def test_select_water():
-    r"""test Select water atoms."""
+    """test Select water atoms."""
     protein = Protein()
     protein.load(
         pdb_id="1GYY",
@@ -68,7 +68,7 @@ def test_select_water():
 
 
 def test_get_pdb_6oav():
-    r"""Retrieve PDB from RCSB"""
+    """Retrieve PDB from RCSB"""
     pdb_test = Protein.get_pdb_from_rcsb("6OAV")
     with open(context_protein_6Oav["file_path"], encoding="utf-8") as f:
         pdb_ref = f.read()
@@ -76,7 +76,7 @@ def test_get_pdb_6oav():
 
 
 def testload_6oav():
-    r"""Load PDB from RCSB"""
+    """Load PDB from RCSB"""
     protein = Protein()
     # protein.load("6OAV",write=True,write_path=context_protein_6Oav["write_dir"]+'/6oav.pdb')
     protein.load(pdb_id="6OAV")
@@ -87,7 +87,7 @@ def testload_6oav():
 
 
 def test_get_mda_universe():
-    r"""Test get MDAnalysis universe"""
+    """Test get MDAnalysis universe"""
     protein = Protein()
     protein.load(
         pdb_id="6OAV",
@@ -99,7 +99,7 @@ def test_get_mda_universe():
 
 
 def test_select_chains():
-    r"""Test select chains"""
+    """Test select chains"""
     protein = Protein()
     protein.load(
         pdb_id="6OAV",
@@ -112,7 +112,7 @@ def test_select_chains():
 
 
 def test_is_xray_structure():
-    r"""Test if structure is X-ray"""
+    """Test if structure is X-ray"""
     protein = Protein()
     protein.load(
         pdb_id="6OAV",
@@ -123,7 +123,7 @@ def test_is_xray_structure():
 
 
 def test_separate_protein_ligand():
-    r"""Test separate protein and ligand"""
+    """Test separate protein and ligand"""
     protein = Protein()
     protein.load(
         pdb_id="6OAV",
@@ -144,7 +144,7 @@ def test_separate_protein_ligand():
 
 
 def test_select_residues():
-    r"""Test select residues"""
+    """Test select residues"""
     protein = Protein()
     protein.load(
         pdb_id="6OAV",
@@ -157,43 +157,43 @@ def test_select_residues():
 
 
 def test_get_rcsb_data():
-    r"""Test get RCSB data"""
+    """Test get RCSB data"""
     data = get_rcsb_data(context_protein_6Oav["id"])
     assert data["exptl"][0]["method"] == "X-RAY DIFFRACTION"
 
 
 def test_find_resolution():
-    r"""Test find resolution"""
+    """Test find resolution"""
     data = get_rcsb_data(context_protein_6Oav["id"])
     assert find_resolution(context_protein_6Oav["id"], data) == 1.939
 
 
 def test_has_covalent_bond():
-    r"""Test if structure has covalent bonds"""
+    """Test if structure has covalent bonds"""
     assert not has_covalent_bonds(context_protein_6Oav["id"])
 
 
 def test_has_ligands():
-    r"""Test if structure has ligands"""
+    """Test if structure has ligands"""
     assert has_ligands(context_protein_6Oav["id"])
 
 
 def test_get_entity_ids():
-    r"""Test get entity ids"""
+    """Test get entity ids"""
     entity = get_entity_ids(context_protein_6Oav["id"])
     assert entity["polymer"][0] == "1"
     assert entity["nonpolymer"][0] == "2"
 
 
 def test_pdb_has_mutation():
-    r"""Test if PDB has mutation"""
+    """Test if PDB has mutation"""
     assert pdb_has_mutation(context_protein_6Oav["id"])
     assert pdb_has_mutation("3c5e")
     assert not pdb_has_mutation("4uxl")
 
 
 def test_validate_pdb():
-    r"""Test validate PDB"""
+    """Test validate PDB"""
     assert not validate_pdb(context_protein_6Oav["id"])
     assert not validate_pdb("3c5e")
     assert validate_pdb("7dbk")
@@ -201,7 +201,7 @@ def test_validate_pdb():
 
 
 def test_validate_ligands():
-    r"""Test validate ligands"""
+    """Test validate ligands"""
     assert validate_ligands(context_protein_6Oav["id"])
     assert validate_ligands("4uxl")
     assert not validate_ligands("7dbk")
@@ -209,7 +209,7 @@ def test_validate_ligands():
 
 
 def test_get_ligand_names():
-    r"""Test get ligand names"""
+    """Test get ligand names"""
     protein = Protein()
     protein.load(
         pdb_id="6OAV",
@@ -221,7 +221,7 @@ def test_get_ligand_names():
 
 
 def test_get_smiles():
-    r"""Test get SMILES"""
+    """Test get SMILES"""
     protein = Protein()
     protein.load(
         pdb_id="6OAV",
@@ -236,7 +236,7 @@ def test_get_smiles():
 
 
 def test_read_cif():
-    r"""Test read CIF"""
+    """Test read CIF"""
     protein = Protein(context_protein_6Oav["cif_file"])
     protein.load()
     data = read_cif(protein.file_path)
@@ -247,7 +247,7 @@ def test_read_cif():
 
 
 def test_convert_cif2pdb():
-    r"""Test convert CIF to PDB"""
+    """Test convert CIF to PDB"""
     protein = Protein(context_protein_6Oav["cif_file"])
     protein.load()
     convert_cif2pdb(
@@ -257,7 +257,7 @@ def test_convert_cif2pdb():
 
 
 def test_separate_protein_ligand_water():
-    r"""Test separate protein ligand with different water selection"""
+    """Test separate protein ligand with different water selection"""
     protein = Protein()
     protein.load(
         pdb_id="1GYY",

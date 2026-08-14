@@ -1,4 +1,4 @@
-r"""Test protein clustering module."""
+"""Test protein clustering module."""
 
 import os
 
@@ -15,7 +15,7 @@ context_filepaths = {
 
 
 def prep_dirs():
-    r"""Prepare directories for writing files."""
+    """Prepare directories for writing files."""
     os.makedirs(context_filepaths["write_dir"])
 
 
@@ -57,7 +57,7 @@ def test_mmseqs_clustering():
 
 
 def test_mmseqs_parser():
-    r"""Test mmseqs parser."""
+    """Test mmseqs parser."""
     mmseqs_cluster(
         context_filepaths["query_filepath"],
         context_filepaths["reference_filepath"],
