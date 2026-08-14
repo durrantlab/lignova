@@ -652,3 +652,10 @@ bridg_water/
 plots/
 *_vast.sh
 /*cache/
+
+licenses/generated/
+licenses/*.tsv
+licenses/MISSING.txt
+licenses/CONFLICTS.txt
+licenses/PLACEHOLDERS.txt
+licenses/LICENSE-AUDIT.txt

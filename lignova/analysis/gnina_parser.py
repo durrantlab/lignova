@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 University of Pittsburgh — Of the Commonwealth System of Higher Education
+# Source: https://github.com/durrantlab/lignova
+
 r"""Parser for GNINA docked SDF files and dataset builder."""
 
 # NOTE: this is for SDF files output ONLY
