@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 University of Pittsburgh — Of the Commonwealth System of Higher Education
+# Source: https://github.com/durrantlab/lignova
+
 r"""Initialization of analysis classes."""
 
 from .gnina_parser import DockedPose, GNINA_Results,DockingDataset,as_poses,DOCKING_SCHEMA,TruncatedSDFError,SCORE_DIRECTIONS

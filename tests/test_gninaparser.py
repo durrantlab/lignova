@@ -1,4 +1,8 @@
-"""Test the GNINA_Results SDF parser, DockedPose container, and DockingDataset."""
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 University of Pittsburgh — Of the Commonwealth System of Higher Education
+# Source: https://github.com/durrantlab/lignova
+
+r"""Test the GNINA_Results SDF parser, DockedPose container, and DockingDataset."""
 
 import glob
 import gzip

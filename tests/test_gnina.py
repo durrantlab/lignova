@@ -1,4 +1,8 @@
-"""Test the YAML configuration handler for GNINA & proper file handling."""
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 University of Pittsburgh — Of the Commonwealth System of Higher Education
+# Source: https://github.com/durrantlab/lignova
+
+r"""Test the YAML configuration handler for GNINA & proper file handling."""
 
 import os
 import shutil
