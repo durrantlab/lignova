@@ -661,7 +661,7 @@ class GninaConfig(YamlConfig):
         has_all_center = all(region.get(k) is not None for k in center_keys)
         has_all_size = all(region.get(k) is not None for k in size_keys)
 
-        autobox_lig = autobox_lig = config.get("input", {}).get("autobox_ligand")
+        autobox_lig = config.get("input", {}).get("autobox_ligand")
         using_autobox = autobox_lig is not None
 
         if using_autobox and (has_any_center or has_any_size):
