@@ -23,7 +23,7 @@ LIGNOVA is an open-source, automated pipeline that pairs bioactive compounds fro
 Clone the [repository](https://github.com/durrantlab/lignova):
 
 ```bash
-git clone git@github.com:durrantlab/lignova.git
+git clone https://github.com/durrantlab/lignova.git
 ```
 
 Install `lignova` using `pip` after moving into the directory.

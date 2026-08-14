@@ -2,8 +2,8 @@
 # with # are ignored. Recognized keys: Name, Version, License, Source, Homepage,
 # Note. Anything else is ignored.
 Name: GNINA
-License: Apache-2.0
-Version 1.3.3
+License: GPL-2.0
+Version: 1.3.3
 Source: external program (not installed by pixi, not distributed with lignova)
 Homepage: https://github.com/gnina/gnina
 # Version: pin this to the version lignova is tested against
