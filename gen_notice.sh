@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 University of Pittsburgh — Of the Commonwealth System of Higher Education
+# Source: https://github.com/durrantlab/lignova
 #
 # Build THIRD_PARTY_LICENSES.md from installed pixi environments.
 # License text is only ever COPIED FROM DISK -- never downloaded, never

@@ -38,4 +38,5 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["lignova"]
+where = ["."]
+include = ["lignova*"]
