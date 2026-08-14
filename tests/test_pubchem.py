@@ -37,6 +37,7 @@ async def test_get_cids_info():
     assert info["SMILES"] == "CC(=O)OC1=CC=CC=C1C(=O)O"
     assert np.isclose(float(info["ExactMass"]), 180.04225873, rtol=0.01)
 
+
 @pytest.mark.asyncio
 async def test_binding_affinity():
     r"""Binding affinity for two CIDs in AID 1057958 ."""

@@ -9,8 +9,8 @@ from typing import Any
 import httpx
 from aiolimiter import AsyncLimiter
 from loguru import logger
-from wqm.api import APIResponseType, BaseAPI, ClientConfig
-from wqm.api.errors import PermanentAPIError
+from reqadence.api import APIResponseType, BaseAPI, ClientConfig
+from reqadence.api.errors import PermanentAPIError
 
 from .model import DEFAULT_PROPERTIES, AssayInfo, CompoundProperties
 

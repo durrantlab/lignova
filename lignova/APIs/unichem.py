@@ -7,8 +7,8 @@ from typing import Any
 
 import pandas as pd
 from loguru import logger
-from wqm.api import BaseAPI, ClientConfig
-from wqm.api.errors import PermanentAPIError, TransientAPIError
+from reqadence.api import BaseAPI, ClientConfig
+from reqadence.api.errors import PermanentAPIError, TransientAPIError
 
 
 class UniChemAPI(BaseAPI):
