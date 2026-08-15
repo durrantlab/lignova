@@ -9,7 +9,7 @@
     <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Black style">
   </a>
   <a href="https://github.com/durrantlab/lignova/releases" target="_blank">
-    <img src="https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--versions-e10079.svg" alt="License">
+    <img src="https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--versions-e10079.svg" alt="Semantic versions">
   </a>
   <a href="https://github.com/durrantlab/lignova/blob/main/LICENSE.md" target="_blank">
     <img src="https://img.shields.io/github/license/durrantlab/lignova" alt="License">
@@ -34,6 +34,8 @@ pip install .
 
 This will install all dependencies and `lignova` into your current Python environment.
 
+GNINA is called as a separate executable rather than installed as a Python package, so a `pip` install alone will not provide it. See the [documentation](https://durrantlab.github.io/lignova) for how to build it, or use the pixi workflow below, which handles it through `pixi run setup-gnina`.
+
 ## Development
 
 We use [pixi](https://pixi.sh/latest/) to manage Python environments and simplify the developer workflow.
@@ -49,11 +51,20 @@ Now you can activate the new virtual environment using
 pixi shell
 ```
 
+Our `pixi.lock` uses lock-file format v7, which older versions of pixi cannot read. If `pixi install` fails with an error that does not seem to point at the cause, run `pixi self-update` and try again.
+
+## Contributing
+
+We are not accepting outside contributions while the project is under active development at the University of Pittsburgh.
+
 ## License
 
 Code contained in this project is released under the Apache-2.0 License as specified in [`LICENSE.md`][license].
 This license grants you the freedom to use, modify, and distribute it as long as you include the original copyright notice contained in [`LICENSE.md`][license] and the following disclaimer.
 
-> Portions of this code were incorporated and adapted with permission from [lignova](https://github.com/durrantlab/lignova) by durrantlab licensed under the [Apache-2.0 License](https://github.com/durrantlab/lignova/blob/main/LICENSE.md).
+LIGNOVA does not bundle, vendor, or redistribute its dependencies; pixi resolves them on your machine from conda-forge and PyPI. [`NOTICE`][notice] and [`THIRD_PARTY_LICENSES.md`][third-party] record the license of every package in the environment, and [`docs/licensing-preamble.md`][preamble] explains how those licenses relate to this one.
 
 [license]: https://github.com/durrantlab/lignova/blob/main/LICENSE.md
+[notice]: https://github.com/durrantlab/lignova/blob/main/NOTICE
+[third-party]: https://github.com/durrantlab/lignova/blob/main/THIRD_PARTY_LICENSES.md
+[preamble]: https://github.com/durrantlab/lignova/blob/main/docs/licensing-preamble.md
