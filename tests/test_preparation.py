@@ -43,7 +43,7 @@ def test_valid_init(tmp_path):
     """Test that defaults are created when no file or data_dict is given."""
     cfg_path = tmp_path / "protonation.yaml"
     # No file and no data_dict -> class should create defaults and validate
-    pc = ProtonationConfig(str(cfg_path))
+    _pc = ProtonationConfig(str(cfg_path))
     assert cfg_path.exists(), "Expected defaults to be written to disk"
     on_disk = read_yaml(cfg_path)
     assert on_disk["pdb2pqr"]["general"]["ff"] == "PARSE"
@@ -56,7 +56,7 @@ def test__valid_data_population(tmp_path):
     base["pdb2pqr"].pop("propka")
     base["pdb2pqr"]["general"].pop("include-header")
 
-    pc = ProtonationConfig(str(cfg_path), data_dict=base)
+    _pc = ProtonationConfig(str(cfg_path), data_dict=base)
     merged = read_yaml(cfg_path)
     assert "propka" in merged["pdb2pqr"]
     assert "include-header" in merged["pdb2pqr"]["general"]

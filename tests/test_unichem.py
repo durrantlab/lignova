@@ -4,7 +4,6 @@
 
 r"""Test unichem API."""
 
-import json
 import os
 
 import pytest
