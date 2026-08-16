@@ -111,6 +111,7 @@ tests = { cmd = [
 coverage = { cmd = ["coverage", "report"] }
 cleanup-build = { cmd = ["rm", "-rf", "./build"] }
 build = { cmd = ["python3", "-m", "build"], depends-on = ["cleanup-build"]}
+check-codestyle = { cmd = ["ruff", "check", "--config", ".ruff.toml", "./", "&&", "ruff", "format", "--check", "--config", ".ruff.toml", "./"] }
 
 [feature.docs.dependencies]
 mkdocs = ">=1.6.1,<2"
