@@ -83,7 +83,6 @@ class UniChemAPI(BaseAPI):
 
     def _update_sources(self) -> dict[str, int]:
         """Fetch the latest _SOURCES from the API and update the _SOURCES dictionary. if the FTP fetch fails, fallback to the default _SOURCES.
-
         Returns:
             dict: Updated _SOURCES dictionary with source names as keys and their corresponding IDs as values.
         """

@@ -125,11 +125,16 @@ class CompoundProperties(BaseModel):
         """To ensure  empty strings are treated as None for numeric fields."""
         return _blank_to_none(v)
 
+    @field_validator("smiles", "inchikey", mode="before")
+    @classmethod
+    def _str_none_to_blank(cls, v: Any) -> Any:
+        return "" if v is None else v
+
 
 class _AssayRecord(BaseModel):
     """A single row from a PubChem concise assay table.
 
-    Each row has a CID/SID, an activity outcome, and an activity value (in uM)"""
+    Each row has a CID, an activity outcome, and an activity value (in uM)"""
 
     model_config: ClassVar[ConfigDict] = ConfigDict(populate_by_name=True)
 
@@ -154,10 +159,19 @@ class _AssayRecord(BaseModel):
     target_geneid: int | None = Field(default=None, alias="Target GeneID")
     """NCBI Gene ID of the assay target, or None if not reported."""
 
+    pubmed_id: int | None = Field(default=None, alias="PMID")
+    """PubMed ID associated with the CID , or None if not reported."""
+
+    activity_qualifier: str = Field(default="", alias="Activity Qualifier")
+    """Relation for the activity value (e.g. '<', '=', '>') for Bulk dump only."""
+
+    activity_unit: str = Field(default="", alias="Activity Unit")
+    """Unit of the activity value (e.g. 'uM', 'nM') for Bulk dump only. REST API defaults to uM """
+
     properties: CompoundProperties | None = None
     """Compound properties for this row's CID, filled by enrich_properties."""
 
-    @field_validator("cid", "target_geneid", mode="before")
+    @field_validator("cid", "target_geneid", "pubmed_id", mode="before")
     @classmethod
     def _id_blank_to_none(cls, v: Any) -> Any:
         return _blank_to_none(v)
@@ -168,6 +182,8 @@ class _AssayRecord(BaseModel):
         "assay_type",
         "activity_name",
         "target_accession",
+        "activity_qualifier",
+        "activity_unit",
         mode="before",
     )
     @classmethod
@@ -198,8 +214,12 @@ class AssayInfo(BaseModel):
     records: list[_AssayRecord] = Field(default_factory=list)
     """One record per row of the concise table."""
 
-    pubmed_id: int | None = None
-    """PubMed ID associated with the assay, or None if not reported."""
+    @computed_field
+    @property
+    def pubmed_id(self) -> int | None:
+        """Return the PMID shared by all records, or None if they disagree or none is set. Per-row PMIDs live on record.pubmed_id."""
+        seen = {r.pubmed_id for r in self.records if r.pubmed_id is not None}
+        return next(iter(seen)) if len(seen) == 1 else None
 
     @classmethod
     def from_concise(cls, aid: int, data: dict[str, Any]) -> "AssayInfo":
@@ -222,20 +242,19 @@ class AssayInfo(BaseModel):
         pm_index = columns.index("PubMed ID") if "PubMed ID" in columns else None
 
         records: list[_AssayRecord] = []
-        pubmed_id: int | None = None
         for row in rows:
             cells = row.get("Cell", [])
             row_map = {col: cells[i] for i, col in enumerate(columns) if i < len(cells)}
+            if "PubMed ID" in row_map:
+                row_map["PMID"] = row_map["PubMed ID"]
             records.append(_AssayRecord.model_validate(row_map))
-            if pubmed_id is None and pm_index is not None and pm_index < len(cells):
-                raw = cells[pm_index]
-                if isinstance(raw, str) and raw.strip():
-                    pubmed_id = int(raw)
+
+        return cls(aid=aid, records=records)
 
         return cls(aid=aid, records=records, pubmed_id=pubmed_id)
 
     def _cids_where(self, outcome: str) -> list[int]:
-        """Deduplicated CIDs whose outcome matches (case-insensitive)."""
+        """Deduplicated CIDs whose outcome matches in a case-insensitive manner."""
         seen: set[int] = set()
         result: list[int] = []
         target = outcome.strip().lower()
@@ -329,7 +348,9 @@ class AssayInfo(BaseModel):
                 "assay_type": r.assay_type,
                 "target_accession": r.target_accession,
                 "target_geneid": r.target_geneid,
-                "pubmed_id": self.pubmed_id,
+                "pubmed_id": r.pubmed_id,
+                "activity_qualifier": r.activity_qualifier,
+                "activity_unit": r.activity_unit,
             }
             if r.properties is not None:
                 row.update(r.properties.model_dump(by_alias=True))
