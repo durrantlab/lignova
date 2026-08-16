@@ -7,8 +7,6 @@ r"""Implementation of RMSD using OpenBabel."""
 import os
 from typing import override
 
-from loguru import logger
-
 from .base import RMSDBase
 
 

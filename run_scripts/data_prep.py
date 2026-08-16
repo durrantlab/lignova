@@ -363,7 +363,7 @@ def make_mangable_files(file_list: list[str], split: int = 250) -> list[str]:
         base_name = os.path.splitext(file)[0]
         for i in range(0, len(lines), split):
             chunk = lines[i : i + split]
-            chunk_file = f"{base_name}_part{i//split + 1}.smi"
+            chunk_file = f"{base_name}_part{i // split + 1}.smi"
             with open(chunk_file, "w", encoding="utf-8") as chunk_f:
                 chunk_f.writelines(chunk)
             logger.info(f"Created chunk file: {chunk_file}")

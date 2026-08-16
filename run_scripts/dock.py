@@ -14,7 +14,6 @@ import sys
 from loguru import logger
 
 from lignova.docking.gnina import GNINA
-from lignova.yaml.docking_config import GninaConfig
 
 
 def clean_sdf(input_path: str, output_path: str | None = None) -> str:

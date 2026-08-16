@@ -4,8 +4,9 @@
 
 r"""Test unichem API."""
 
-import json
 import os
+
+import pytest
 
 from lignova.APIs import UniChemAPI
 
@@ -61,10 +62,11 @@ def test_mapping_url():
     assert "src1src1" in url
 
 
-def test_get_remote_etag():
+@pytest.mark.asyncio
+async def test_get_remote_etag():
     api = UniChemAPI(task="mapping")
     url = UniChemAPI._mapping_url(1, 2)
-    etag = api._get_remote_etag(url)
+    etag = await api._get_remote_etag(url)
     assert isinstance(etag, str)
-    etag = api._get_remote_etag("https://ftp.ebi.ac.uk/this/does/not/exist.gz")
+    etag = await api._get_remote_etag("https://ftp.ebi.ac.uk/this/does/not/exist.gz")
     assert etag == ""
