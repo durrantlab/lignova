@@ -1,40 +1,34 @@
-
-name: Codecov workflow
-
+name: Codecov
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
-  # Allows you to run this workflow manually from the Actions tab
+    branches: ["main"]
   workflow_dispatch:
-
 jobs:
   run:
     name: codecov
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Install miniconda
-        uses: conda-incubator/setup-miniconda@v3
         with:
-          miniconda-version: "latest"
-          auto-update-conda: true
-          # Set to the same as `PYTHON_VERSION` in `Makefile`
-          python-version: "3.11"
-
-      - name: Create environment
-        run: make environment
-
-      - name: Run tests and coverage
-        run: make test
-
+          lfs: true
+      - name: Install pixi
+        uses: prefix-dev/setup-pixi@v0.8.8
+        with:
+          locked: false
+          frozen: false
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+      - name: Setup environment
+        run: pixi install -e dev
+      - name: Get test coverage
+        run: pixi run tests
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           env_vars: OS,PYTHON
-          fail_ci_if_error: true
+          fail_ci_if_error: false
           verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}

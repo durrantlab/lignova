@@ -1,32 +1,25 @@
-
 name: Lint Code Base
-
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
-  # Allows you to run this workflow manually from the Actions tab
+    branches: ["main"]
   workflow_dispatch:
-
 jobs:
-    build:
-      name: lint
-      runs-on: ubuntu-latest
-
-      steps:
-        - name: Checkout repo
-          uses: actions/checkout@v4
-
-        - name: Install miniconda
-          uses: conda-incubator/setup-miniconda@v3
-          with:
-            miniconda-version: "latest"
-            auto-update-conda: true
-            python-version: "3.11"
-
-        - name: Create environment
-          run: make environment
-
-        - name: Style checks
-          run: make check-codestyle
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Install pixi
+        uses: prefix-dev/setup-pixi@v0.8.8
+        with:
+          locked: false
+          frozen: false
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+      - name: Setup environment
+        run: pixi install -e dev
+      - name: Style checks
+        run: pixi run check-codestyle
