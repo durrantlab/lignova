@@ -59,7 +59,7 @@ jsoncpp = { version = "*", channel = "conda-forge" }
 lignova = { path = ".", editable = true }
 gypsum-dl = ">=1.3.0, <2"
 pdb2pqr = ">=3.7.1, <4"
-reqadence = { git = "ssh://git@github.com/durrantlab/reqadence.git", branch = "api-base" }
+reqadence = { git = "https://github.com/durrantlab/reqadence.git" ,tag = "v0.1.0"}
 
 [tasks]
 setup-gnina = { cmd = ["bash", "./run_scripts/setup_gnina.sh"] }
@@ -84,9 +84,6 @@ posebusters = ">=0.6.5,<0.7"
 typing-extensions = ">=4.15.0,<5"
 pyyaml = ">=6.0.3,<7"
 openbabel = ">=3.1.1,<4"
-httpx = ">=0.28.1,<0.29"
-aiolimiter = ">=1.2.1,<2"
-hishel = ">=1.3.0,<2"
 pydantic = ">=2.13.4,<3"
 
 [feature.dev.dependencies]
