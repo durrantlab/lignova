@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 University of Pittsburgh — Of the Commonwealth System of Higher Education
+# Source: https://github.com/durrantlab/lignova
+
 r"""Bulk-download PubChem bioactivities, then enrich compound properties for
 every CID of a chosen outcome across the WHOLE parquet (all actives or all
 inactives), writing one combined Parquet and caching per-CID properties.

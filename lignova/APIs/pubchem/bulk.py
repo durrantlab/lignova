@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 University of Pittsburgh — Of the Commonwealth System of Higher Education
+# Source: https://github.com/durrantlab/lignova
+
 """Bulk download + Parquet ingest for PubChem BioAssay activity data."""
 
 import gzip
@@ -9,8 +13,8 @@ import pyarrow as pa
 import pyarrow.csv as pcsv
 import pyarrow.dataset as ds
 from loguru import logger
-from wqm.api import BaseAPI
-from wqm.api.errors import PermanentAPIError, TransientAPIError
+from reqadence.api import BaseAPI
+from reqadence.api.errors import PermanentAPIError, TransientAPIError
 
 from lignova.hdf5 import ParquetParser
 
