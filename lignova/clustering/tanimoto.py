@@ -2,107 +2,89 @@
 # Copyright 2026 University of Pittsburgh — Of the Commonwealth System of Higher Education
 # Source: https://github.com/durrantlab/lignova
 
-r"Implementation of the tanimoto clustering algorithm."
+"""Compute pairwise Tanimoto similarities and distances for a set of fingerprints."""
 
-from collections.abc import Iterable
+from dataclasses import dataclass
 
 from loguru import logger
-from rdkit import Chem, DataStructs
-from rdkit.Chem import rdFingerprintGenerator
+from rdkit import DataStructs
 from rdkit.DataStructs.cDataStructs import ExplicitBitVect
-from rdkit.ML.Cluster import Butina
 
 
-class TanimotoClustering:
-    r"""Tanimoto clustering algorithm."""
+@dataclass(frozen=True, slots=True)
+class TanimotoSimilarities:
+    """Dataclass holding the results of one similarity pass over a set of fingerprints."""
 
-    def __init__(self):
-        r"""Initialize the Tanimoto clustering algorithm."""
+    ids: tuple[str, ...]
+    """Frozen id order for the compounds set in the similarity pass. Indices in `condensed_distances` refer to this."""
 
-    # pylint: disable=c-extension-no-member,no-member
-    def get_morgan_fingerprint(self, smiles: str, radius: int = 2) -> ExplicitBitVect:
-        r"""Get the fingerprint of the molecule.
+    condensed_distances: list[float]
+    """The lower-triangle of (1 - Tm) matrix where the compound at index i has distances to compounds at indices j in 0..i-1. Length is N(N-1)/2 where N is the number of compounds."""
 
-        Args:
-            smiles: Molecule.
-            radius: Radius of the mogan fingerprint. Default is 2.
+    edges: list[tuple[str, str, float]]
+    """List of tuples containing the compound ids and their Tanimoto similarity for every pair with Tm >= floor."""
 
-        Returns:
-            Morgan Fingerprint
-        """
-        morgan_fp = rdFingerprintGenerator.GetMorganGenerator(radius=radius)
-        mol = Chem.MolFromSmiles(smiles)
-        if mol is None:
-            logger.error(f"Invalid SMILES: {smiles}")
-            return None
+    min_sim: float
+    """The threshold applied to produce `edges`. Only pairs with Tm >= floor are included in `edges`."""
 
-        return morgan_fp.GetFingerprint(mol)
+    def __post_init__(self) -> None:
+        if len(self.condensed_distances) != self.n * (self.n - 1) // 2:
+            raise ValueError(
+                f"condensed_distances length {len(self.condensed_distances)} "
+                f"does not match expected {self.n * (self.n - 1) // 2} for n={self.n}"
+            )
 
-    def tanimoto_similarity(
-        self,
-        mol1: ExplicitBitVect | Iterable[ExplicitBitVect],
-        mol2: ExplicitBitVect,
-    ) -> float | Iterable[float]:
-        r"""Calculate the Tanimoto similarity between two fingerprints.
+        check_floor(self.min_sim)
 
-        Args:
-            mol1 : First molecule fingerprint or List of fingerprints.
-            mol2 : Second molecule fingerprint or None.
+    @property
+    def n(self) -> int:
+        """Number of compounds in the similarity pass."""
+        return len(self.ids)
 
-        Returns:
-            Tanimoto similarity.
-        """
-        if isinstance(mol1, Iterable):
-            return DataStructs.cDataStructs.BulkTanimotoSimilarity(mol2, mol1)
 
-        return DataStructs.cDataStructs.TanimotoSimilarity(mol1, mol2)
+def check_floor(min_sim: float) -> None:
+    """Check that the floor value is valid.
 
-    def cal_distance(
-        self, tanimoto_score: Iterable[list[float]] | Iterable[float]
-    ) -> list[float]:
-        r"""Calculate the distance between two fingerprints.
+    Args:
+        min_sim: The floor value to check.
+    """
+    if not 0.0 <= min_sim <= 1.0:
+        raise ValueError(f"floor must be in [0, 1], got {min_sim}")
 
-        Args:
-            tanimoto_score : List of Tanimoto similarity scores.
 
-        Returns:
-            Distance.
-        """
-        # knowing that the tanimoto_score is a List of List of similarity scores
-        # we will calculate the distance between the fingerprints using the formula 1 - score
-        distance = []
-        if isinstance(tanimoto_score[0], float):
-            distance = [1 - score for score in tanimoto_score]
-        else:
-            for item in tanimoto_score:
-                distance.extend([1 - score for score in item])
-        return distance
+def compute_pairwise(
+    items: dict[str, ExplicitBitVect], min_sim: float
+) -> TanimotoSimilarities:
+    """One pass: build the condensed distance array AND the >= min_sim edge list.
 
-    def cluster_tanimoto(
-        self,
-        tanimoto_score: Iterable[float],
-        smiles: Iterable[str],
-        similarity_threshold: float,
-    ) -> Iterable[list[str]]:
-        r"""Cluster the SMILES based on Tanimoto similarity using butina algorithm.
+    Args:
+        items: a dictionary with the  compound ids as the keys and their fingerprints as the values.
+        min_sim: Minimum Tanimoto similarity for an edge to be kept
 
-        Args:
-            tanimoto_score: Dictionary of SMILES or compound identifiers and
-                their Tanimoto similarity scores.
-            smiles: List of SMILES or compound identifiers.
-            similarity_threshold: Similarity threshold.
+    Returns:
+        A `TanimotoSimilarities` object containing the condensed distance array and the edge list.
+    """
+    check_floor(min_sim)
 
-        Returns:
-            List of clusters, where each cluster is a List of SMILES or
-                compoud identifiers depending on smiles input.
-        """
-        clusters = []
-        # calculate the distance between the fingerprints using cal_distance
-        distance = self.cal_distance(tanimoto_score)
-        clusters = Butina.ClusterData(
-            distance, len(smiles), 1 - similarity_threshold, isDistData=True
-        )
-        logger.info(f"Number of clusters: {len(clusters)}")
-        # convert the clusters to smiles
-        clusters = [[smiles[i] for i in cluster] for cluster in clusters]
-        return clusters
+    ids = list(items)
+    fps = [items[i] for i in ids]
+    n = len(ids)
+
+    condensed: list[float] = []
+    edges: list[tuple[str, str, float]] = []
+    for i in range(1, n):
+        sims = DataStructs.BulkTanimotoSimilarity(fps[i], fps[:i])
+        for j, s in enumerate(sims):
+            condensed.append(1.0 - s)
+            if s >= min_sim:
+                edges.append((ids[i], ids[j], s))
+    logger.info(
+        "Computed pairwise similarities for {n} compounds producing {condensed} distances and {edges} edges at min similarity of {floor}",
+        n=n,
+        condensed=len(condensed),
+        edges=len(edges),
+        floor=min_sim,
+    )
+    return TanimotoSimilarities(
+        ids=tuple(ids), condensed_distances=condensed, edges=edges, min_sim=min_sim
+    )
