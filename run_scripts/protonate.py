@@ -21,6 +21,7 @@ def protonate(
     pdb_file: str,
     output_filepath: str,
     config_path: str,
+    pdb_output_path: str | None = None,
 ) -> None:
     """
     Protonate the protein using PDB2PQR.
@@ -29,6 +30,7 @@ def protonate(
         pdb_file : The path to the pdb file
         output_filepath : The path to the output file
         config_path : The path to the protonation configuration file if not provided default config will be used
+        pdb_output_path: The path of the fully processed PDB with hydrogens and titration states
     """
     # check if the output directory exists if not create it
     output_dir = os.path.dirname(output_filepath)
@@ -36,6 +38,8 @@ def protonate(
         logger.warning(f"The directory {output_dir} does not exist.Creating it")
         os.makedirs(output_dir)
     protonation_config = ProtonationConfig(config_path, data_dict=None)
+    if pdb_output_path:
+        protonation_config.update_config({"pdb-output": pdb_output_path})
     pdb2pqr = PDB2PQR(
         pdb_file=pdb_file, outfile=output_filepath, config_obj=protonation_config
     )
@@ -57,13 +61,21 @@ def run_cli():
         "--output_filepath",
         type=str,
         required=True,
-        help="Path to the output protonated pdb file.",
+        help="Path to the output protonated pqr file.",
+    )
+    parser.add_argument(
+        "-pd",
+        "--pdb-output",
+        type=str,
+        required=False,
+        help="Path ot the fully processed PDB with hydrogen and titration states",
     )
     parser.add_argument(
         "-c",
         "--config_path",
         type=str,
         required=False,
+        default="protonation.yaml",
         help="Path to the protonation configuration file.",
     )
 
@@ -76,6 +88,7 @@ def run_cli():
         pdb_file=args.pdb_file,
         output_filepath=args.output_filepath,
         config_path=args.config_path,
+        pdb_output_path=args.pdb_output,
     )
 
 
