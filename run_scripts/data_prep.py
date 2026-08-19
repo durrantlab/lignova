@@ -32,7 +32,7 @@ pdb_ligand_parquet_source = "../../lignova_parquets/final_ligand_cluster_0.7_Tc.
 def get_pdb_ids_from_parquet(
     file_path: str, schema: pa.Schema | None = None
 ) -> list[str]:
-    r"""
+    """
     Get the pdb ids from the parquet file
 
     Args:
@@ -70,7 +70,7 @@ def get_pdb_ids_from_parquet(
 
 
 def get_pdb_coordinates(pdb_id: str, work_dir: str) -> None:
-    r"""
+    """
     Download/prepare PDB coordinates if they pass validation.
 
     Args:
@@ -109,7 +109,7 @@ def get_pdb_coordinates(pdb_id: str, work_dir: str) -> None:
 
 
 def extract_ligand_id(parquet_file: str, pdb_id: str) -> list[int]:
-    r"""
+    """
     Extract ligand information from the parquet file.
     Args:
         parquet_file : The path to the parquet file
@@ -134,7 +134,7 @@ def extract_ligand_id(parquet_file: str, pdb_id: str) -> list[int]:
 def make_smi_file_from_parquet(
     parquet: str, ligand_source: list[int], output_smi: str
 ) -> None:
-    r"""
+    """
     Create a smiles file from the ligand data in the parquet file.
     Args:
         parquet : The path to the parquet file containing the smiles for ligands
@@ -180,7 +180,7 @@ def make_smi_file_from_parquet(
 
 
 def add_pdb_ligand_to_smi(parquet_file: str, pdb_id: str, output_smi: str) -> None:
-    r"""
+    """
     Add ligands for a specific PDB ID from the parquet file to a smiles file.
     Args:
         parquet_file : The path to the parquet file containing ligand information
@@ -222,7 +222,7 @@ def prep_proteins(
     pdb_file: str,
     output_dir: str,
 ) -> str:
-    r"""
+    """
     Prepare the protein for PDB2PQR
     Args:
         pdb_file : The path to the pdb file
@@ -259,7 +259,7 @@ def run_cli_prot(
     output_dir: str,
     num_proteins: list[int] | None = None,
 ) -> list[str]:
-    r"""
+    """
     CLI to prepare proteins pre-PDB2PQR from a parquet file
     Args:
         input_dir : The input directory containing raw pdb files
@@ -341,7 +341,7 @@ def run_cli_prot(
 
 
 def make_mangable_files(file_list: list[str], split: int = 250) -> list[str]:
-    r"""Split a large .smi files into smaller manageable files.
+    """Split a large .smi files into smaller manageable files.
     Args:
         file_list : The list of .smi files to be split
         split : The number of lines per split file
@@ -380,7 +380,7 @@ def run_cli_ligand(
     add_pdb_ligand: bool = True,
     chunk_size: int | None = 250,
 ) -> list[str]:
-    r"""
+    """
     CLI to prepare ligands pre-gypsum from a parquet file
     Args:
         pdb_id_source : The path to the clustered parquet file containing PDB IDs OR name of a single pdb file
@@ -482,7 +482,7 @@ def run_cli_ligand(
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
-    r"""Build the argument parser for the CLI."""
+    """Build the argument parser for the CLI."""
     parser = argparse.ArgumentParser(
         description="Prepare proteins for running PBQ2PQR from a parquet file and prepare ligands using gypsum-dl."
     )

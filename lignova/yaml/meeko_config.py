@@ -1,4 +1,8 @@
-r"""Implementation for the yaml class to write configuration for Meeko."""
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 University of Pittsburgh — Of the Commonwealth System of Higher Education
+# Source: https://github.com/durrantlab/lignova
+
+"""Implementation for the yaml class to write configuration for Meeko."""
 
 import importlib.util
 import os
@@ -10,7 +14,7 @@ from .config import YamlConfig
 
 
 class MeekoConfig(YamlConfig):
-    r"""Class to handle YAML configuration files for Meeko receptor preparation."""
+    """Class to handle YAML configuration files for Meeko receptor preparation."""
 
     # Schema for mk_prepare_receptor.py configuration
     _CHARGE_MODEL_ALLOWED = {"gasteiger", "espaloma", "zero", "read"}
@@ -55,7 +59,7 @@ class MeekoConfig(YamlConfig):
 
     @override
     def __init__(self, file_path: str, data_dict: dict[str, Any] | None = None) -> None:
-        r"""Initialize with the path to the YAML file.
+        """Initialize with the path to the YAML file.
         Args:
             file_path : Path to the YAML configuration file.
             data_dict : Dictionary to create the YAML file if it doesn't exist.
@@ -69,7 +73,7 @@ class MeekoConfig(YamlConfig):
         self.validate()
 
     def declare_defaults(self) -> dict[str, dict[str, Any]]:
-        r"""Declare default settings for meeko config (grouped under meeko)."""
+        """Declare default settings for meeko config (grouped under meeko)."""
         default_config: dict[str, dict[str, Any]] = {
             "meeko": {
                 "input_output": {
@@ -122,7 +126,7 @@ class MeekoConfig(YamlConfig):
         return default_config
 
     def validate(self) -> None:
-        r"""Validate the current configuration against allowed values."""
+        """Validate the current configuration against allowed values."""
         default = self.declare_defaults()
         meeko_cfg = self.data_dict.setdefault("meeko", {})
         for section, params in default["meeko"].items():
