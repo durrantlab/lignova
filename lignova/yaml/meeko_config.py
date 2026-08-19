@@ -90,7 +90,7 @@ class MeekoConfig(YamlConfig):
                     "debug_fn": None,
                 },
                 "receptor_perception": {
-                    "charge_model": "read",  # gasteiger|espaloma|zero|read
+                    "charge_model": "gasteiger",  # gasteiger|espaloma|zero|read
                     "set_template": None,  # e.g., "A:5,7=CYX,B:17=HID"
                     "delete_residues": None,  # e.g., "A:350,B:15,16,17"
                     "blunt_ends": None,  # e.g., "A:123,200=2,A:1=0"

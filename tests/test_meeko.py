@@ -96,10 +96,12 @@ def test_charge_model(tmp_path, defaults, pdb_file, pqr_file):
         build(tmp_path, defaults, receptor_perception={"charge_model": "mulliken"})
 
     with pytest.raises(ValueError, match="requires 'read_pqr'"):
+        defaults["meeko"]["receptor_perception"]["charge_model"] = "read"
         build(tmp_path, defaults, input_output={"read_pdb": pdb_file})
 
+    defaults = MeekoConfig.declare_defaults(MeekoConfig)
     cfg = build(tmp_path, defaults, input_output={"read_pqr": pqr_file})
-    assert cfg.data_dict["meeko"]["receptor_perception"]["charge_model"] == "read"
+    assert cfg.data_dict["meeko"]["receptor_perception"]["charge_model"] == "gasteiger"
 
 
 def test_mk_config(tmp_path, defaults):
@@ -166,7 +168,7 @@ def test_to_cli(tmp_path, defaults, pqr_file):
     cli = " ".join(args)
     assert f"--read_pqr {pqr_file}" in cli
     assert "--output_basename rec" in cli
-    assert "--charge_model read" in cli
+    assert "--charge_model gasteiger" in cli
     assert "--write_pdbqt" in args
     assert "--box_size" in args
     assert args[args.index("--box_size") + 1 : args.index("--box_size") + 4] == [
