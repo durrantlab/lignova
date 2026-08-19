@@ -2,7 +2,7 @@
 # Copyright 2026 University of Pittsburgh — Of the Commonwealth System of Higher Education
 # Source: https://github.com/durrantlab/lignova
 
-r"""Implementation for yaml class to write configuration files."""
+"""Implementation for yaml class to write configuration files."""
 
 import os
 from collections.abc import Iterator
@@ -15,7 +15,7 @@ class YamlConfig:
     """Class to handle YAML configuration files."""
 
     def __init__(self, file_path: str, data_dict: dict[str, Any] | None = None) -> None:
-        r"""Initialize with the path to the YAML file.
+        """Initialize with the path to the YAML file.
         Args:
             file_path str: Path to the YAML configuration file.
             data_dict (dict | None) : Dictionary to create the YAML file if it doesn't exist.
@@ -31,13 +31,13 @@ class YamlConfig:
             self.data_dict = self.read_config()
 
     def read_config(self) -> dict[str, Any]:
-        r"""Read the YAML configuration file and return its contents as a dictionary."""
+        """Read the YAML configuration file and return its contents as a dictionary."""
         with open(self.file_path, "r") as file:
             config = yaml.safe_load(file) or {}
         return config
 
     def write_config(self, config: dict[str, Any]) -> None:
-        r"""Write the given dictionary to the YAML configuration file.
+        """Write the given dictionary to the YAML configuration file.
         Args:
             config (dict): Dictionary to write to the YAML file.
         """
@@ -46,11 +46,11 @@ class YamlConfig:
         self.data_dict = config
 
     def validate(self) -> None:
-        r"""Validate the YAML configuration file. This method can be overridden in subclasses to implement specific validation logic."""
+        """Validate the YAML configuration file. This method can be overridden in subclasses to implement specific validation logic."""
         return
 
     def _deep_update(self, target: dict[str, Any], updates: dict[str, Any]) -> None:
-        r"""Recursively merge updates into target without replacing whole sections.
+        """Recursively merge updates into target without replacing whole sections.
         Args:
             target : Dictionary to update in place.
             updates: Dictionary of updates to merge.
@@ -66,7 +66,7 @@ class YamlConfig:
         updates: dict[str, Any],
         parent_key: str | tuple[str, ...] | None = None,
     ) -> None:
-        r"""Update the YAML configuration file with the given dictionary.
+        """Update the YAML configuration file with the given dictionary.
             Allow both surface and deep updates.
         Args:
             updates : Dictionary containing updates to apply.
@@ -84,7 +84,7 @@ class YamlConfig:
         self.validate()
 
     def delete_key(self, key: str) -> None:
-        r"""Delete a key from the YAML configuration file.
+        """Delete a key from the YAML configuration file.
         Args:
             key (str): The key to delete from the configuration.
         """
@@ -94,7 +94,7 @@ class YamlConfig:
             self.write_config(config)
 
     def _leaf_items(self, data: dict[str, Any]) -> Iterator[tuple[str, Any]]:
-        r"""Yield (key, value) for all non-dict values in a nested dict.
+        """Yield (key, value) for all non-dict values in a nested dict.
         Args:
             data (Dict): The dictionary to traverse.
         """
@@ -109,7 +109,7 @@ class YamlConfig:
     def to_cli(
         self, data: dict[str, Any] | None = None, prefix: str = "--"
     ) -> list[str]:
-        r"""Convert the YAML configuration to a command-line argument string.
+        """Convert the YAML configuration to a command-line argument string.
         Args:
             data (Dict | None) : Dictionary to convert. If None, uses self.data_dict.
             prefix (str): Prefix for command-line arguments. Default is "--".
