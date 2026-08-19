@@ -380,9 +380,7 @@ def test_full_pqr_fixes(tmp_path, defaults, squashed_pqr):
 
 
 @pytest.mark.parametrize("passes", [1, 2])
-def test_backup_behavior(
-    tmp_path, defaults, squashed_pqr, passes
-):
+def test_backup_behavior(tmp_path, defaults, squashed_pqr, passes):
     """Test that the original PQR is backed up before any in-place edits, even if run() is called multiple times."""
     cfg = build(tmp_path, defaults)
     prep = MglTools(squashed_pqr, str(tmp_path / "rec"), cfg)
