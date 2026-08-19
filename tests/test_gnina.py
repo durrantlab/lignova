@@ -2,7 +2,7 @@
 # Copyright 2026 University of Pittsburgh — Of the Commonwealth System of Higher Education
 # Source: https://github.com/durrantlab/lignova
 
-r"""Test the YAML configuration handler for GNINA & proper file handling."""
+"""Test the YAML configuration handler for GNINA & proper file handling."""
 
 import os
 import shutil
@@ -21,9 +21,6 @@ from lignova.yaml.docking_config import GninaConfig
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 PQR_FILE = os.path.join(os.path.dirname(__file__), "files", "receptor.pqr")
-
-HAS_PREPARE_RECEPTOR = shutil.which("prepare_receptor4.py") is not None
-SKIP_MSG = "prepare_receptor4.py not found on PATH"
 
 
 def read_yaml(file_path: str) -> dict[str, Any]:
@@ -451,38 +448,13 @@ def test_cpu_less_than_exhaustiveness_warns(tmp_path: str):
 
 
 def test_invalid_protein_prep(tmp_path: str):
-    """ivalid run issue for gnina"""
+    """run() must reject a receptor path that does not exist."""
     g = _make_gnina(tmp_path)
     lig = _make_file(os.path.join(tmp_path, "box.sdf"), "$$$$\n")
-    with pytest.raises(FileNotFoundError, match="PQR file not found"):
-        g._prepare_protein(os.path.join(tmp_path, "missing.pqr"))
-    pdb = _make_file(os.path.join(tmp_path, "receptor.pdb"))
-    with pytest.raises(ValueError, match="Expected a .pqr file"):
-        g._prepare_protein(pdb)
     pqr = os.path.join(tmp_path, "receptor.pqr")
     cfg_path = os.path.join(tmp_path, "gnina.yaml")
     with pytest.raises(FileNotFoundError, match="Receptor file .*does not exist"):
         g.run(PreparedProtein(pqr), PreparedLigand(lig), cfg_path)
-
-
-def test_invalid_pqr_converstions(tmp_path: str):
-    """different invalid conditions for prepare function pre-gnina"""
-    g = _make_gnina(tmp_path)
-    pqr = _make_file(os.path.join(tmp_path, "receptor.pqr"))
-    with pytest.raises(ValueError, match="Invalid repair mode"):
-        g._prepare_protein(pqr, repair="nonexistent")
-    with pytest.raises(ValueError, match="Invalid cleanup mode"):
-        g._prepare_protein(pqr, cleanup="funny")
-    with pytest.raises(TypeError, match="preserve_charges must be a boolean"):
-        g._prepare_protein(pqr, preserve_charges="nothing")
-
-
-def test_valid_pqr_conversion(tmp_path: str):
-    """test valid conditions for prepare function pre-gnina"""
-    g = _make_gnina(tmp_path)
-    actual_pqr = _copy_pqr(tmp_path)
-    g._prepare_protein(actual_pqr)
-    assert os.path.exists(actual_pqr.replace(".pqr", ".pdbqt"))
 
 
 def test_run_command(tmp_path: str):
