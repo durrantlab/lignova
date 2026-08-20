@@ -465,7 +465,6 @@ class MglTools:
             config_obj : Configuration object for prepare_receptor4.py.
         """
         self.input_file = os.path.abspath(input_file)
-        basename = os.path.splitext(os.path.basename(self.input_file))[0]
         # check the input file exists
         if not os.path.exists(self.input_file):
             raise FileNotFoundError(f"Input file {input_file} does not exist.")
@@ -758,9 +757,7 @@ class MglTools:
         with open(pqr_path) as fh:
             lines = fh.read().splitlines()
 
-        fixed, removed_waters, removed_hetatm = self._rewrite_lines(
-            lines, cleanup, blank_chain=blank_chain
-        )
+        fixed, _, _ = self._rewrite_lines(lines, cleanup, blank_chain=blank_chain)
 
         with open(pqr_path, "w") as fh:
             fh.write("\n".join(fixed) + "\n")

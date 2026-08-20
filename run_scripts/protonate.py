@@ -242,6 +242,7 @@ def protonate(
     output_pdbqt_file = resolve_methods(
         has_caps_flag, defaults, m_config, output_basepath, keep_hetatms
     )
+    return output_pdbqt_file
 
 
 def run_cli():
