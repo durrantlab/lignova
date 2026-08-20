@@ -22,7 +22,21 @@ PARQUET="../../lignova_parquets/final_ligand_cluster_0.7_Tc.parquet"
 INPUT_DIR="../raw"              # raw_protein-ligand_structures
 OUTDIR="../prepared_prot"        # prepared_proteins, protonated_proteins
 CONFIG_YAML="../prepared_prot/pdb2pqr.yaml"    # have to give a path even if it doesn't exist yet
+PDBQT_PATH="../prepared_prot/pdbqt_conversion.yaml"  # have to give a path even if it doesn't exist yet
 BATCH_SIZE=50
+
+
+if [[ -f "${CONFIG_YAML}" ]]; then
+    echo "pdb2pqr config: USER (${CONFIG_YAML})"
+else
+    echo "pdb2pqr config: DEFAULTS (${CONFIG_YAML} not found)"
+fi
+if [[ -f "${PDBQT_PATH}" ]]; then
+    echo "pdbqt conversion config: USER (${PDBQT_PATH})"
+else
+    echo "pdbqt conversion config: DEFAULTS (${PDBQT_PATH} not found)"
+fi
+
 
 # compute range for this array task
 TASK_ID=${SLURM_ARRAY_TASK_ID}
@@ -35,6 +49,8 @@ echo "Array Task:   ${SLURM_ARRAY_TASK_ID:-N/A}"
 echo "Node:         $(hostname)"
 echo "Started at:   $(date)"
 echo "Working dir:  $(pwd)"
+echo "Using pdb2pqr config:  ${CONFIG_YAML}"
+echo "Using pdbqt conversion config: ${PDBQT_PATH}"
 
 #run data prep for this batch
 pixi run python3 -m run_scripts.data_prep \
@@ -70,7 +86,6 @@ for CLEANED in "${CLEANED_FILES[@]}"; do
     PDB_ID=$(echo "${BASE_NAME}" | tr '[:lower:]' '[:upper:]')
 
     OUT_DIR="${PROTONATED_BASE}/${PDB_ID}"
-    PDBQT_PATH="${PREPPED_BASE}/${PDB_ID}/${BASE_NAME}_conversion.yaml"
     mkdir -p "${OUT_DIR}"
     OUT_PATH="${OUT_DIR}/${BASE_NAME}_protonated.pqr"
 
@@ -88,4 +103,3 @@ done
 
 echo "All protonation done for array task ${TASK_ID}."
 echo "Finished at: $(date)"
-crc-job-stats || true
