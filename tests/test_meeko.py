@@ -176,5 +176,5 @@ def test_to_cli(tmp_path, defaults, pqr_file):
         "20.0",
         "20.0",
     ]
-    assert "--allow_bad_res" not in cli
+    assert "--allow_bad_res" in cli
     assert "--set_template" not in cli

@@ -97,7 +97,7 @@ class MeekoConfig(YamlConfig):
                     "add_templates": None,  # additional residue templates json file or resname:file.sdf
                     "cache_templates": False,  # True or a JSON cache path
                     "mk_config": None,
-                    "allow_bad_res": False,
+                    "allow_bad_res": True,  # True to allow non-standard residues, False to raise an error
                     "default_altloc": None,  # default alternative location, overridden by wanted_altloc
                     "wanted_altloc": None,  # e.g., ":5=B,B:17=A"
                     "flexres": None,  # e.g., ":42,B:23"

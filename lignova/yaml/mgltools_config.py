@@ -100,7 +100,6 @@ class MglToolsConfig(YamlConfig):
                         value=value,
                     )
                     section_cfg[key] = value
-        self.write_config(self.data_dict)
 
         config = self.data_dict.get("mgltools", {})
         sections = ["input_output", "receptor_perception"]
@@ -161,13 +160,14 @@ class MglToolsConfig(YamlConfig):
                     "computed instead.",
                     receptor=receptor,
                 )
+                perception["preserve_charges"] = False
 
         if input_output.get("outfile") is None:
             logger.warning(
                 "No output file set. 'outfile' must be provided before running "
                 "prepare_receptor4.py."
             )
-
+        self.write_config(self.data_dict)
         logger.info("Configuration validation passed.")
 
     @override
