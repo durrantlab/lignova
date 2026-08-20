@@ -37,7 +37,7 @@ echo "Started at:   $(date)"
 echo "Working dir:  $(pwd)"
 
 #run data prep for this batch
-pixi run -e dev python3 -m run_scripts.data_prep \
+pixi run python3 -m run_scripts.data_prep \
         -m protein \
         -i ${INPUT_DIR} \
         -p ${PARQUET} \
@@ -70,14 +70,17 @@ for CLEANED in "${CLEANED_FILES[@]}"; do
     PDB_ID=$(echo "${BASE_NAME}" | tr '[:lower:]' '[:upper:]')
 
     OUT_DIR="${PROTONATED_BASE}/${PDB_ID}"
+    PDBQT_PATH="${PREPPED_BASE}/${PDB_ID}/${BASE_NAME}_conversion.yaml"
     mkdir -p "${OUT_DIR}"
     OUT_PATH="${OUT_DIR}/${BASE_NAME}_protonated.pqr"
 
     # Attempt protonation and skip to the next file if it fails
-    if ! pixi run -e dev python3 -m run_scripts.protonate \
+    if ! pixi run python3 -m run_scripts.protonate \
         -p "${CLEANED}" \
         -c "${CONFIG_YAML}" \
-        -o "${OUT_PATH}"; then
+        -o "${OUT_PATH}" \
+        -m mgltools \
+        -pq "${PDBQT_PATH}"; then
         echo "WARNING: Protonation failed for ${CLEANED}. Skipping to the next file." >&2
         continue
     fi
