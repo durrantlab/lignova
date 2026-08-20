@@ -22,13 +22,13 @@ class Meeko:
     """Allowed input file extensions for Meeko receptor preparation."""
 
     def __init__(
-        self, input_file: str, output_basename: str, config_obj: MeekoConfig
+        self, input_file: str, output_basename: str | None, config_obj: MeekoConfig
     ) -> None:
         """Initialize Meeko with a given configuration object.
 
         Args:
             input_file : Path to the input receptor file (PQR from PDB2PQR).
-            output_basename : Basename used for the generated receptor files.
+            output_basename : Basename used for the generated receptor files. if None, defaults to same as input file without extension.
             config_obj : Configuration object for mk_prepare_receptor.
 
         """
@@ -42,7 +42,14 @@ class Meeko:
                 f"Input file {input_file} must be one of {sorted(self._ALLOWED_INPUT_EXTENSIONS)}."
             )
         self.config = config_obj
-        self.output_basename = os.path.abspath(output_basename)
+        if output_basename is None:
+            self.output_basename = os.path.splitext(self.input_file)[0]
+        else:
+            self.output_basename = (
+                os.path.splitext(output_basename)[0]
+                if output_basename.endswith(".pdbqt")
+                else output_basename
+            )
         self._write_paths()
 
     def _write_paths(self) -> None:
