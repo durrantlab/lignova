@@ -2,7 +2,7 @@
 # Copyright 2026 University of Pittsburgh — Of the Commonwealth System of Higher Education
 # Source: https://github.com/durrantlab/lignova
 
-r"""Test protein clustering module."""
+"""Test protein clustering module."""
 
 import os
 

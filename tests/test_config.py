@@ -2,7 +2,7 @@
 # Copyright 2026 University of Pittsburgh — Of the Commonwealth System of Higher Education
 # Source: https://github.com/durrantlab/lignova
 
-r"""testing for yaml class to write configuration files."""
+"""testing for yaml class to write configuration files."""
 
 import copy
 import os
@@ -17,7 +17,6 @@ from lignova.yaml.config import YamlConfig
 # Ensures we execute from file directory (for relative paths).
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
-# ---------- Fixtures & helpers ----------
 
 
 @pytest.fixture
@@ -65,7 +64,6 @@ def read_yaml(file_path: str) -> str:
         return yaml.safe_load(f)
 
 
-# ---------- Tests ----------
 def test_init(yaml_file, sample_dict):
     """Test initialization of YamlConfig with existing file."""
     cfg = YamlConfig(str(yaml_file))
