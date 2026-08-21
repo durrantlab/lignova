@@ -2,7 +2,7 @@
 # Copyright 2026 University of Pittsburgh — Of the Commonwealth System of Higher Education
 # Source: https://github.com/durrantlab/lignova
 
-r"""Implementation for the yaml class to write configuration for GNINA."""
+"""Implementation for the yaml class to write configuration for GNINA."""
 
 import os
 from collections.abc import Sequence
@@ -14,7 +14,7 @@ from .config import YamlConfig
 
 
 class GninaConfig(YamlConfig):
-    r"""Class to handle YAML configuration files for GNINA."""
+    """Class to handle YAML configuration files for GNINA."""
 
     # ---- Allowed values / constraints ----
     _SCORING_ALLOWED = {
@@ -330,7 +330,7 @@ class GninaConfig(YamlConfig):
             )
 
     def declare_defaults(self) -> dict[str, dict[str, Any]]:
-        r"""Default GNINA config grouped by CLI sections (annotated)."""
+        """Default GNINA config grouped by CLI sections (annotated)."""
         return {
             "gnina": {
                 "input": {

@@ -96,26 +96,12 @@ def decompress(input_file: str):
             os.unlink(tmp.name)
 
 
-def _get_mgltools_prefix() -> str:
-    """Find or install the isolated mgltools pixi environment."""
+def _find_project_root() -> str:
+    """Walk up to the directory containing pixi.toml."""
     current = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     for _ in range(10):
         if os.path.exists(os.path.join(current, "pixi.toml")):
-            mgltools_env = os.path.join(current, ".pixi", "envs", "mgltools")
-            if not os.path.isdir(mgltools_env):
-                logger.info("mgltools environment not found. Installing it.")
-                result = subprocess.run(
-                    ["pixi", "install", "-e", "mgltools"],
-                    cwd=current,
-                    capture_output=True,
-                    text=True,
-                )
-                if result.returncode != 0:
-                    raise RuntimeError(
-                        f"Failed to install mgltools environment:\n{result.stderr}"
-                    )
-                logger.info("mgltools environment installed successfully.")
-            return mgltools_env
+            return current
         parent = os.path.dirname(current)
         if parent == current:
             break
@@ -125,21 +111,61 @@ def _get_mgltools_prefix() -> str:
     )
 
 
+def mgltools_env_exists() -> bool:
+    """Whether the mgltools pixi environment is installed. Never installs."""
+    try:
+        root = _find_project_root()
+    except RuntimeError:
+        return False
+    return os.path.isdir(os.path.join(root, ".pixi", "envs", "mgltools"))
+
+
+def _get_mgltools_prefix(auto_install: bool = False) -> str:
+    """Find the isolated mgltools pixi environment, optionally installing it.
+
+    Args:
+        auto_install: Install the environment if missing. When False (default),
+            a missing environment raises instead of triggering a long install.
+    """
+    current = _find_project_root()
+    mgltools_env = os.path.join(current, ".pixi", "envs", "mgltools")
+    if os.path.isdir(mgltools_env):
+        return mgltools_env
+
+    if not auto_install:
+        raise RuntimeError(
+            f"mgltools environment not found at '{mgltools_env}'. Install it with "
+            "`pixi install -e mgltools`, or pass auto_install=True."
+        )
+
+    logger.info("mgltools environment not found. Installing it.")
+    result = subprocess.run(
+        ["pixi", "install", "-e", "mgltools"],
+        cwd=current,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"Failed to install mgltools environment:\n{result.stderr}")
+    logger.info("mgltools environment installed successfully.")
+    return mgltools_env
+
+
 def run_mgltools_command(
-    cmd: list[str], **subprocess_kwargs
+    cmd: list[str], auto_install: bool = False, **subprocess_kwargs
 ) -> subprocess.CompletedProcess:
     """Run a command inside the isolated mgltools pixi environment.
 
-    Automatically installs the environment if it doesn't exist.
-
     Args:
         cmd: Command and arguments to run
+        auto_install: Install the environment if missing. Defaults is False
         **subprocess_kwargs: Additional kwargs passed to subprocess.run
+
 
     Returns:
         The CompletedProcess result.
     """
-    mgltools_prefix = _get_mgltools_prefix()
+    mgltools_prefix = _get_mgltools_prefix(auto_install=auto_install)
     mgltools_bin = os.path.join(mgltools_prefix, "bin")
 
     # Resolve command names to full paths within the mgltools env

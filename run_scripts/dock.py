@@ -17,7 +17,7 @@ from lignova.docking.gnina import GNINA
 
 
 def clean_sdf(input_path: str, output_path: str | None = None) -> str:
-    r"""Remove the empty molecule that Gypsum-dl adds
+    """Remove the empty molecule that Gypsum-dl adds
         at the start of SDF files. Additionally it  removes any
         molecules with 0 atoms.
     Args:

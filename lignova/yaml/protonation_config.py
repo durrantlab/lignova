@@ -2,7 +2,7 @@
 # Copyright 2026 University of Pittsburgh — Of the Commonwealth System of Higher Education
 # Source: https://github.com/durrantlab/lignova
 
-r"""Implementation for the yaml class to write configuration for PDB2QR."""
+"""Implementation for the yaml class to write configuration for PDB2QR."""
 
 import os
 from typing import Any, override
@@ -13,7 +13,7 @@ from .config import YamlConfig
 
 
 class ProtonationConfig(YamlConfig):
-    r"""Class to handle YAML configuration files for protonation contigs."""
+    """Class to handle YAML configuration files for protonation contigs."""
 
     # ---- Schema/constraints ----
     _FF_ALLOWED = {"AMBER", "CHARMM", "PARSE", "TYL06", "PEOEPB", "SWANSON"}
@@ -43,7 +43,7 @@ class ProtonationConfig(YamlConfig):
 
     @override
     def __init__(self, file_path: str, data_dict: dict[str, Any] | None = None) -> None:
-        r"""Initialize with the path to the YAML file.
+        """Initialize with the path to the YAML file.
         Args:
             file_path (str): Path to the YAML configuration file.
             data_dict (dict| None) : Dictionary to create the YAML file if it doesn't exist.
@@ -57,7 +57,7 @@ class ProtonationConfig(YamlConfig):
         self.validate()
 
     def declare_defaults(self) -> dict[str, dict[str, Any]]:
-        r"""Declare default settings for protonation config (grouped under pdb2pqr)."""
+        """Declare default settings for protonation config (grouped under pdb2pqr)."""
         default_config: dict[str, dict[str, Any]] = {
             "pdb2pqr": {
                 "general": {
@@ -110,7 +110,7 @@ class ProtonationConfig(YamlConfig):
         return default_config
 
     def validate(self) -> None:
-        r"""Validate the current configuration against allowed values."""
+        """Validate the current configuration against allowed values."""
         # compare values in data_dict to default allowed values if any keys are missing log a warning and use default
         default = self.declare_defaults()
         pdb2pqr_cfg = self.data_dict.setdefault("pdb2pqr", {})

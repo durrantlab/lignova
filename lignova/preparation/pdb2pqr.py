@@ -2,7 +2,7 @@
 # Copyright 2026 University of Pittsburgh — Of the Commonwealth System of Higher Education
 # Source: https://github.com/durrantlab/lignova
 
-r"""Implementation for protein preparation using PDB2PQR pre-docking."""
+"""Implementation for protein preparation using PDB2PQR pre-docking."""
 
 import os
 import subprocess
@@ -21,9 +21,9 @@ class PDB2PQR:
         """Initialize PDB2PQR with a given configuration file.
 
         Args:
-            pdb_file (str): Path to the input PDB file.
-            outfile (str): Path to the output PDB file.
-            config_obj (ProtonationConfig): Configuration object for PDB2PQR.
+            pdb_file : Path to the input PDB file.
+            outfile : Path to the output file for the prepared protein.
+            config_obj : Configuration object for PDB2PQR.
         """
         self.pdb_file = pdb_file
         # check the input file exists
