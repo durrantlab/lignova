@@ -89,13 +89,23 @@ for CLEANED in "${CLEANED_FILES[@]}"; do
     mkdir -p "${OUT_DIR}"
     OUT_PATH="${OUT_DIR}/${BASE_NAME}_protonated.pqr"
 
+    PROT_PDBQT_PATH="${OUT_DIR}/${BASE_NAME}_conversion_${SLURM_JOB_ID:-local}.yaml"
+    PROT_CONFIG_YAML="${OUT_DIR}/${BASE_NAME}_pdb2pqr_${SLURM_JOB_ID:-local}.yaml"
+
+    if [[ -f "${PDBQT_PATH}" ]]; then
+        cp "${PDBQT_PATH}" "${PROT_PDBQT_PATH}"
+    fi
+    if [[ -f "${CONFIG_YAML}" ]]; then
+        cp "${CONFIG_YAML}" "${PROT_CONFIG_YAML}"
+    fi
+
     # Attempt protonation and skip to the next file if it fails
     if ! pixi run python3 -m run_scripts.protonate \
         -p "${CLEANED}" \
-        -c "${CONFIG_YAML}" \
+        -c "${PROT_CONFIG_YAML}" \
         -o "${OUT_PATH}" \
         -m mgltools \
-        -pq "${PDBQT_PATH}"; then
+        -pq "${PROT_PDBQT_PATH}"; then
         echo "WARNING: Protonation failed for ${CLEANED}. Skipping to the next file." >&2
         continue
     fi

@@ -214,8 +214,12 @@ def protonate(
         logger.warning(f"The directory {output_dir} does not exist.Creating it")
         os.makedirs(output_dir)
     protonation_config = ProtonationConfig(config_path, data_dict=None)
-    protonation_config.update_config({"pdb-output": pdb_output_path})
-    protonation_config.update_config({"whitespace": method == PDBQT_Strategy.MEEKO})
+    protonation_config.update_config(
+        {"pdb2pqr": {"general": {"pdb-output": pdb_output_path}}}
+    )
+    protonation_config.update_config(
+        {"pdb2pqr": {"general": {"whitespace": method == PDBQT_Strategy.MEEKO}}}
+    )
     pdb2pqr = PDB2PQR(
         pdb_file=pdb_file, outfile=output_filepath, config_obj=protonation_config
     )
