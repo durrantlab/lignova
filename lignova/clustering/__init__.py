@@ -4,7 +4,7 @@
 
 r"""Initialize clustering modules."""
 
-from .mmseq import mmseqs_cluster, mmseqs_parser
+from .mmseq import MMseqsClustering, MMseqsParams
 from .base import ClusterMethod, ClusterParams, ClusterResult, Clusterer
 from .butina import ButinaClustering, ButinaParams
 from .featurize import FeaturizeResult, MorganFeaturizer
@@ -21,6 +21,8 @@ __all__ = [
     "TanimotoSimilarities",
     "ButinaClustering",
     "ButinaParams",
-
+    "find_activity_cliffs",
+    "MMseqsClustering",
+    "MMseqsParams",
 ]
 

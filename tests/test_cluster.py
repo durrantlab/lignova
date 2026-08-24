@@ -6,78 +6,100 @@
 
 import os
 
-from lignova.clustering import mmseqs_cluster, mmseqs_parser
+import pytest
 
-# Ensures we execute from file directory (for relative paths).
+from lignova.clustering import MMseqsClustering, MMseqsParams
+
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
-context_filepaths = {
-    "reference_filepath": "./files/reference.fasta",
-    "query_filepath": "./files/query.fasta",
-    "write_dir": "./tmp/clustering",
-}
+QUERY_FASTA = "./files/query.fasta"
+REFERENCE_FASTA = "./files/reference.fasta"
+WRITE_DIR = "./tmp/clustering"
 
 
-def prep_dirs():
-    """Prepare directories for writing files."""
-    os.makedirs(context_filepaths["write_dir"])
+EXPECTED_REPRESENTATIVES = {"2PAM_1|Chains", "4Q0Q_1|Chain"}
 
 
-if not os.path.exists(context_filepaths["write_dir"]):
-    prep_dirs()
+if not os.path.exists(WRITE_DIR):
+    os.makedirs(WRITE_DIR)
 
 
-def test_mmseqs_clustering():
-    """Test mmseqs clustering."""
-    mmseqs_cluster(
-        context_filepaths["query_filepath"],
-        context_filepaths["reference_filepath"],
-        outfile_name_suffix=os.path.join(context_filepaths["write_dir"], "clusters"),
-        tmp_dir=os.path.join(context_filepaths["write_dir"], "tmp"),
-        sort=True,
-        coverage_mode=0,
+def _read_fasta(path: str) -> dict[str, str]:
+    """Read a FASTA file into a dictionary of sequence IDs and sequences."""
+    seqs: dict[str, str] = {}
+    current: str | None = None
+    chunks: list[str] = []
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            line = line.rstrip("\n")
+            if not line:
+                continue
+            if line.startswith(">"):
+                if current is not None:
+                    seqs[current] = "".join(chunks)
+                current = line[1:].split(None, 1)[0]
+                chunks = []
+            else:
+                chunks.append(line)
+    if current is not None:
+        seqs[current] = "".join(chunks)
+    return seqs
+
+
+@pytest.fixture(scope="module")
+def params() -> MMseqsParams:
+    """Return a set of parameters for MMseqs2 clustering that will produce two clusters with the expected representatives, writing outputs to WRITE_DIR so the TSV persists."""
+    return MMseqsParams(
+        min_seq_id=0.9,
         sensitivity=7.0,
+        coverage_mode=0,
         cluster_mode=0,
         self_match=True,
-    )
-    assert os.path.exists(
-        os.path.join(context_filepaths["write_dir"], "clusters_rep_seq.fasta")
-    )
-    with open(
-        os.path.join(context_filepaths["write_dir"], "clusters_rep_seq.fasta"),
-        encoding="utf-8",
-    ) as f:
-        lines = f.readlines()
-    assert os.path.exists(
-        os.path.join(context_filepaths["write_dir"], "clusters_all_seqs.fasta")
-    )
-    assert os.path.exists(
-        os.path.join(context_filepaths["write_dir"], "clusters_cluster.tsv")
-    )
-    assert len([line for line in lines if line.startswith(">")]) == 2
-    assert [
-        line.strip(">").split("|")[0] for line in lines if line.startswith(">")
-    ] == ["2PAM_1", "4Q0Q_1"]
-
-
-def test_mmseqs_parser():
-    """Test mmseqs parser."""
-    mmseqs_cluster(
-        context_filepaths["query_filepath"],
-        context_filepaths["reference_filepath"],
-        outfile_name_suffix=os.path.join(context_filepaths["write_dir"], "clusters"),
-        tmp_dir=os.path.join(context_filepaths["write_dir"], "tmp"),
-        sort=True,
-        coverage_mode=0,
-        sensitivity=7.0,
-        cluster_mode=0,
-        self_match=True,
-    )
-    clusters = mmseqs_parser(
-        os.path.join(context_filepaths["write_dir"], "clusters_cluster.tsv"), save=True
+        sort_results=True,
+        output_dir=WRITE_DIR,
     )
 
-    assert len(clusters) == 2
-    assert os.path.exists(
-        os.path.join(context_filepaths["write_dir"], "clusters_cluster_parsed.csv")
-    )
+
+def test_cluster_fasta(params: MMseqsParams) -> None:
+    """Test that the FASTA file path path produces the expected partition."""
+    result = MMseqsClustering(params).cluster_fasta(QUERY_FASTA, REFERENCE_FASTA)
+
+    assert result.n_clusters == 2
+    reps = {rep for rep in result.representatives.values()}
+    assert reps == EXPECTED_REPRESENTATIVES
+    assert set(result.labels.values()) == set(result.representatives)
+
+
+def test_cluster_dict(params: MMseqsParams) -> None:
+    """Test that the in-memory dict path produces the same partition as the file path."""
+    sequences = {**_read_fasta(QUERY_FASTA), **_read_fasta(REFERENCE_FASTA)}
+    result = MMseqsClustering(params).cluster(sequences)
+
+    assert result.n_clusters == 2
+    reps = {rep for rep in result.representatives.values()}
+    assert reps == EXPECTED_REPRESENTATIVES
+
+
+def test_output_dir_persists_tsv(params: MMseqsParams) -> None:
+    """Test that setting output_dir leaves MMseqs2's outputs on disk under WRITE_DIR."""
+    MMseqsClustering(params).cluster_fasta(QUERY_FASTA, REFERENCE_FASTA)
+
+    assert os.path.exists(os.path.join(WRITE_DIR, "result_cluster.tsv"))
+    assert os.path.exists(os.path.join(WRITE_DIR, "result_rep_seq.fasta"))
+    assert os.path.exists(os.path.join(WRITE_DIR, "result_all_seqs.fasta"))
+
+
+def test_from_cluster_tsv(params: MMseqsParams) -> None:
+    """Test that populating the ClusterResult from the tsv file remain consistent"""
+    run_result = MMseqsClustering(params).cluster_fasta(QUERY_FASTA, REFERENCE_FASTA)
+
+    tsv_path = os.path.join(WRITE_DIR, "result_cluster.tsv")
+    assert os.path.exists(tsv_path)
+
+    parsed_result = MMseqsClustering.from_cluster_tsv(tsv_path, params)
+
+    assert parsed_result.n_clusters == run_result.n_clusters == 2
+    assert parsed_result.labels == run_result.labels
+    assert parsed_result.representatives == run_result.representatives
+    reps = {rep for rep in parsed_result.representatives.values()}
+    assert reps == EXPECTED_REPRESENTATIVES
