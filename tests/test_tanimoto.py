@@ -11,10 +11,13 @@ from rdkit.DataStructs.cDataStructs import ExplicitBitVect
 from lignova.clustering import (
     ButinaClustering,
     ButinaParams,
+    CompoundActivity,
     FeaturizeResult,
     MorganFeaturizer,
     TanimotoSimilarities,
     compute_pairwise,
+    find_activity_cliffs,
+    high_confidence_cliffs,
 )
 
 BENZENE = "C1=CC=CC=C1"
@@ -44,6 +47,7 @@ def _sim_lookup(sims: TanimotoSimilarities) -> dict[frozenset, float]:
 
 
 def test_featurize():
+    """Test that the Morgan featurizer produces fingerprints of the expected length and type."""
     res = FEATURIZER.featurize({"benzene": BENZENE})
     assert isinstance(res, FeaturizeResult)
     fp = res.items["benzene"]
@@ -57,6 +61,7 @@ def test_featurize():
 
 
 def test_pairwise_similarity_values():
+    """Test that the pairwise similarity calculations."""
     items = _fingerprints({"A": smiles1, "B": smiles2, "C": ACETIC})
     sims = compute_pairwise(items, min_sim=0.0)
     assert isinstance(sims, TanimotoSimilarities)
@@ -72,6 +77,7 @@ def test_pairwise_similarity_values():
 
 
 def test_condensed_distancesmiles1re_one_minus_similarity():
+    """Test that the distances calculations"""
     items = _fingerprints({"A": smiles1, "B": smiles2, "C": ACETIC})
     sims = compute_pairwise(items, min_sim=0.0)
     lut = _sim_lookup(sims)
@@ -80,6 +86,7 @@ def test_condensed_distancesmiles1re_one_minus_similarity():
 
 
 def test_min_sim_filters_edgesmiles2ut_not_condensed():
+    """Test that the min_sim parameter filters edges but does not affect the distance matrix."""
     items = _fingerprints({"A": smiles1, "B": smiles2, "C": ACETIC})
     sims = compute_pairwise(items, min_sim=0.15)
     lut = _sim_lookup(sims)
@@ -89,6 +96,7 @@ def test_min_sim_filters_edgesmiles2ut_not_condensed():
 
 
 def test_butina_clustering():
+    """Test Butina clustering produces the expected partition and representatives."""
     items = _fingerprints(CLUSTER_SMILES)
     sims = compute_pairwise(items, min_sim=0.0)
     result = ButinaClustering(ButinaParams(similarity_cutoff=0.5)).cluster(sims)
@@ -106,11 +114,13 @@ def test_butina_clustering():
 
 
 def test_butina_params_validation():
+    """Test that ButinaParams raises a ValueError for invalid similarity_cutoff values."""
     with pytest.raises(ValueError):
         ButinaParams(similarity_cutoff=1.5)
 
 
 def test_empty_and_single_compound():
+    """Test that Butina clustering handles empty and single-compound cases."""
     empty = ButinaClustering(ButinaParams()).cluster(compute_pairwise({}, min_sim=0.5))
     assert empty.n_clusters == 0
 
@@ -119,3 +129,39 @@ def test_empty_and_single_compound():
         compute_pairwise(one, min_sim=0.5)
     )
     assert single.clusters() == {0: ["only"]}
+
+
+def test_cliffs_read_edges_not_clusters():
+    """Test that find_activity_cliffs reads the edges of the similarity graph"""
+    items = _fingerprints({"A": smiles1, "B": smiles2, "C": ACETIC})
+    sims = compute_pairwise(items, min_sim=0.15)
+    activity = {
+        "A": CompoundActivity(pActivity=9.0, winning_type="Ki"),
+        "B": CompoundActivity(pActivity=5.0, winning_type="Ki"),
+        "C": CompoundActivity(pActivity=6.0, winning_type="Ki"),
+    }
+    cliffs = find_activity_cliffs(sims, activity, min_delta=2.0)
+    pairs = {frozenset((c.id_a, c.id_b)) for c in cliffs}
+    assert frozenset(("A", "B")) in pairs
+
+
+def test_cliff_flag_behavior():
+    """Test that find_activity_cliffs flags low-quality and cross-type cliffs."""
+    items = _fingerprints({"A": smiles1, "B": smiles2})
+    sims = compute_pairwise(items, min_sim=0.15)
+    activity = {
+        "A": CompoundActivity(pActivity=9.0, winning_type="Ki"),
+        "B": CompoundActivity(
+            pActivity=5.0, winning_type="Ki", passes_quality_gate=False
+        ),
+    }
+    cliffs = find_activity_cliffs(sims, activity, min_delta=2.0)
+
+    pair = {frozenset((c.id_a, c.id_b)) for c in cliffs}
+    assert frozenset(("A", "B")) in pair
+    ab = next(c for c in cliffs if {c.id_a, c.id_b} == {"A", "B"})
+    assert ab.is_low_quality is True
+
+    clean = high_confidence_cliffs(cliffs)
+    assert all(not c.is_low_quality for c in clean)
+    assert not any({c.id_a, c.id_b} == {"A", "B"} for c in clean)
