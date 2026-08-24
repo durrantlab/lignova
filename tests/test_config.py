@@ -18,7 +18,6 @@ from lignova.yaml.config import YamlConfig
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 
-
 @pytest.fixture
 def sample_dict() -> dict[str, Any]:
     """Provide a sample dictionary for testing."""
