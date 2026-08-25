@@ -245,8 +245,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2025c-hc9c84f9_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/urllib3-2.5.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.48.0-pyhd8ed1ab_0.conda
-      - pypi: ./
-      - pypi: git+https://github.com/durrantlab/reqadence.git?tag=v0.1.0#74db831d02649334282ebb45af31679846162946
+      - pypi: .
+      - pypi: git+https://github.com/durrantlab/reqadence?tag=v0.1.0#74db831d02649334282ebb45af31679846162946
       - pypi: https://files.pythonhosted.org/packages/03/8e/ff50191d2210faac7df6b2e66cf39e021bd7051bd9389b341b1d560cae49/mmcif_pdbx-2.0.1-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/08/dc/d948e83b97f2c420cb6c7e2143ae349560d3b5b061945f1b2a4eefb0231c/MolVS-0.1.1.tar.gz
@@ -482,8 +482,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zlib-ng-2.3.3-h8bce59a_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstandard-0.25.0-py312h01f6755_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h3eecb57_6.conda
-      - pypi: ./
-      - pypi: git+https://github.com/durrantlab/reqadence.git?tag=v0.1.0#74db831d02649334282ebb45af31679846162946
+      - pypi: .
+      - pypi: git+https://github.com/durrantlab/reqadence?tag=v0.1.0#74db831d02649334282ebb45af31679846162946
       - pypi: https://files.pythonhosted.org/packages/03/8e/ff50191d2210faac7df6b2e66cf39e021bd7051bd9389b341b1d560cae49/mmcif_pdbx-2.0.1-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/08/dc/d948e83b97f2c420cb6c7e2143ae349560d3b5b061945f1b2a4eefb0231c/MolVS-0.1.1.tar.gz
@@ -773,7 +773,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcmatch-10.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.6.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.46.3-pyhd8ed1ab_0.conda
-      - pypi: ./
+      - pypi: .
       - pypi: git+https://github.com/durrantlab/reqadence?tag=v0.1.0#74db831d02649334282ebb45af31679846162946
       - pypi: https://files.pythonhosted.org/packages/03/8e/ff50191d2210faac7df6b2e66cf39e021bd7051bd9389b341b1d560cae49/mmcif_pdbx-2.0.1-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl
@@ -1043,7 +1043,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zlib-ng-2.3.3-h8bce59a_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstandard-0.25.0-py312h01f6755_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h3eecb57_6.conda
-      - pypi: ./
+      - pypi: .
       - pypi: git+https://github.com/durrantlab/reqadence?tag=v0.1.0#74db831d02649334282ebb45af31679846162946
       - pypi: https://files.pythonhosted.org/packages/03/8e/ff50191d2210faac7df6b2e66cf39e021bd7051bd9389b341b1d560cae49/mmcif_pdbx-2.0.1-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl
@@ -1396,8 +1396,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/webencodings-0.5.1-pyhd8ed1ab_3.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.48.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-3.23.0-pyhcf101f3_1.conda
-      - pypi: ./
-      - pypi: git+https://github.com/durrantlab/reqadence.git?tag=v0.1.0#74db831d02649334282ebb45af31679846162946
+      - pypi: .
+      - pypi: git+https://github.com/durrantlab/reqadence?tag=v0.1.0#74db831d02649334282ebb45af31679846162946
       - pypi: https://files.pythonhosted.org/packages/03/8e/ff50191d2210faac7df6b2e66cf39e021bd7051bd9389b341b1d560cae49/mmcif_pdbx-2.0.1-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/08/dc/d948e83b97f2c420cb6c7e2143ae349560d3b5b061945f1b2a4eefb0231c/MolVS-0.1.1.tar.gz
@@ -1735,8 +1735,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zlib-ng-2.3.3-h8bce59a_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstandard-0.25.0-py312h01f6755_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h3eecb57_6.conda
-      - pypi: ./
-      - pypi: git+https://github.com/durrantlab/reqadence.git?tag=v0.1.0#74db831d02649334282ebb45af31679846162946
+      - pypi: .
+      - pypi: git+https://github.com/durrantlab/reqadence?tag=v0.1.0#74db831d02649334282ebb45af31679846162946
       - pypi: https://files.pythonhosted.org/packages/03/8e/ff50191d2210faac7df6b2e66cf39e021bd7051bd9389b341b1d560cae49/mmcif_pdbx-2.0.1-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/08/dc/d948e83b97f2c420cb6c7e2143ae349560d3b5b061945f1b2a4eefb0231c/MolVS-0.1.1.tar.gz
@@ -12901,7 +12901,7 @@ packages:
   purls: []
   size: 528148
   timestamp: 1764777156963
-- pypi: ./
+- pypi: .
   name: lignova
   requires_dist:
   - h5py>=3.15.1,<4
@@ -12914,16 +12914,7 @@ packages:
   - spyrmsd>=0.9.0,<0.10
   - gemmi>=0.7.5,<0.8
   - fasteners>=0.19,<0.20
-  requires_python: '>=3.11,<3.13'
-- pypi: git+https://github.com/durrantlab/reqadence.git?tag=v0.1.0#74db831d02649334282ebb45af31679846162946
-  name: reqadence
-  version: 0.1.0
-  requires_dist:
-  - httpx>=0.28,<1.0
-  - aiolimiter>=1.2,<2.0
-  - hishel>=1.3,<2.0
-  - loguru>=0.7.3,<1.0.0
-  requires_python: '>=3.12'
+  requires_python: '>=3.12,<3.15'
 - pypi: git+https://github.com/durrantlab/reqadence?tag=v0.1.0#74db831d02649334282ebb45af31679846162946
   name: reqadence
   version: 0.1.0
