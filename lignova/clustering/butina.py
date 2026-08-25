@@ -32,7 +32,7 @@ class ButinaParams(ClusterParams):
             )
 
 
-class ButinaClustering(Clusterer):
+class ButinaClustering(Clusterer[ButinaParams]):
     """Butina clustering algorithm."""
 
     def __init__(self, params: ButinaParams):

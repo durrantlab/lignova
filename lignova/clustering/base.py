@@ -64,27 +64,19 @@ class ClusterResult:
         return out
 
 
-class Clusterer(ABC):
+class Clusterer[P: ClusterParams](ABC):
     """Abstract base class for all clustering algorithms.
 
     Args:
         params: The ClusterParams object containing the configuration for the clustering algorithm.
     """
 
-    def __init__(self, params: ClusterParams) -> None:
+    params: P
+
+    def __init__(self, params: P) -> None:
         self.params = params
 
     @property
     def method(self) -> ClusterMethod:
         """The algorithm this clustering method implements."""
         return self.params.method
-
-    @abstractmethod
-    def cluster(self, items: dict[str, object]) -> ClusterResult:
-        """
-        Abstract cluster method that must be implemented by subclasses.
-
-        Args:
-            items: A dictionary where the keys are stable identifiers (e.g., cids) and the values are the items to be clustered.
-        """
-        raise NotImplementedError

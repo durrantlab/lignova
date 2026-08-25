@@ -83,7 +83,7 @@ class MMseqsParams(ClusterParams):
             )
 
 
-class MMseqsClustering(Clusterer):
+class MMseqsClustering(Clusterer[MMseqsParams]):
     """MMseqs2 `easy-cluster` sequence-identity clustering."""
 
     # `easy-cluster` forwards createdb options; dbtype 1 = amino-acid sequences.
