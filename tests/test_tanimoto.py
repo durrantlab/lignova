@@ -8,10 +8,11 @@ import numpy as np
 import pytest
 from rdkit.DataStructs.cDataStructs import ExplicitBitVect
 
+from lignova.activity.models import CompoundActivity
 from lignova.clustering import (
     ButinaClustering,
     ButinaParams,
-    CompoundActivity,
+    CliffParams,
     FeaturizeResult,
     MorganFeaturizer,
     TanimotoSimilarities,
@@ -140,8 +141,8 @@ def test_cliffs_read_edges_not_clusters():
         "B": CompoundActivity(pActivity=5.0, winning_type="Ki"),
         "C": CompoundActivity(pActivity=6.0, winning_type="Ki"),
     }
-    cliffs = find_activity_cliffs(sims, activity, min_delta=2.0)
-    pairs = {frozenset((c.id_a, c.id_b)) for c in cliffs}
+    result = find_activity_cliffs(sims, activity, CliffParams(min_delta=2.0))
+    pairs = {frozenset((c.id_a, c.id_b)) for c in result.cliffs}
     assert frozenset(("A", "B")) in pairs
 
 
@@ -155,13 +156,13 @@ def test_cliff_flag_behavior():
             pActivity=5.0, winning_type="Ki", passes_quality_gate=False
         ),
     }
-    cliffs = find_activity_cliffs(sims, activity, min_delta=2.0)
+    result = find_activity_cliffs(sims, activity, CliffParams(min_delta=2.0))
 
-    pair = {frozenset((c.id_a, c.id_b)) for c in cliffs}
+    pair = {frozenset((c.id_a, c.id_b)) for c in result.cliffs}
     assert frozenset(("A", "B")) in pair
-    ab = next(c for c in cliffs if {c.id_a, c.id_b} == {"A", "B"})
+    ab = next(c for c in result.cliffs if {c.id_a, c.id_b} == {"A", "B"})
     assert ab.is_low_quality is True
 
-    clean = high_confidence_cliffs(cliffs)
+    clean = high_confidence_cliffs(result.cliffs)
     assert all(not c.is_low_quality for c in clean)
     assert not any({c.id_a, c.id_b} == {"A", "B"} for c in clean)

@@ -9,7 +9,20 @@ from .base import ClusterMethod, ClusterParams, ClusterResult, Clusterer
 from .butina import ButinaClustering, ButinaParams
 from .featurize import FeaturizeResult, MorganFeaturizer
 from .tanimoto import TanimotoSimilarities, compute_pairwise
-from .cliff import ActivityCliffs, find_activity_cliffs, CompoundActivity, high_confidence_cliffs
+from .cliff import (
+    ActivityCliffs,
+    CliffParams,
+    CliffResult,
+    CliffSeverity,
+    SaliUndefined,
+    SeverityMetric,
+    find_activity_cliffs,
+    high_confidence,
+    high_confidence_cliffs,
+    label_cliff_severity,
+    same_assay,
+    same_assay_cliffs,
+)
 
 __all__ = [
     "Clusterer",
@@ -25,9 +38,16 @@ __all__ = [
     "MMseqsClustering",
     "MMseqsParams",
     "ActivityCliffs",
-    "find_activity_cliffs",
+    "CliffParams",
+    "CliffResult",
+    "CliffSeverity",
+    "SeverityMetric",
+    "SaliUndefined",
     "CompoundActivity",
+    "find_activity_cliffs",
+    "label_cliff_severity",
     "high_confidence_cliffs",
-
+    "same_assay_cliffs",
+    "same_assay",
+    "high_confidence",
 ]
-
