@@ -6,6 +6,7 @@
 
 from dataclasses import dataclass
 
+import numpy as np
 from loguru import logger
 from rdkit import DataStructs
 from rdkit.DataStructs.cDataStructs import ExplicitBitVect
@@ -18,7 +19,7 @@ class TanimotoSimilarities:
     ids: tuple[str, ...]
     """Frozen id order for the compounds set in the similarity pass. Indices in `condensed_distances` refer to this."""
 
-    condensed_distances: list[float]
+    condensed_distances: list[float] | np.ndarray
     """The lower-triangle of (1 - Tm) matrix where the compound at index i has distances to compounds at indices j in 0..i-1. Length is N(N-1)/2 where N is the number of compounds."""
 
     edges: list[tuple[str, str, float]]
@@ -70,14 +71,18 @@ def compute_pairwise(
     fps = [items[i] for i in ids]
     n = len(ids)
 
-    condensed: list[float] = []
-    edges: list[tuple[str, str, float]] = []
+    n_pairs = n * (n - 1) // 2
+    condensed = np.empty(n_pairs, dtype=np.float64)
+    edges = []
+    pos = 0
     for i in range(1, n):
         sims = DataStructs.BulkTanimotoSimilarity(fps[i], fps[:i])
-        for j, s in enumerate(sims):
-            condensed.append(1.0 - s)
-            if s >= min_sim:
-                edges.append((ids[i], ids[j], s))
+        arr = np.asarray(sims, dtype=np.float64)
+        condensed[pos : pos + i] = 1.0 - arr
+        pos += i
+        # edges only for the kept pairs
+        for j in np.nonzero(arr >= min_sim)[0]:
+            edges.append((ids[i], ids[int(j)], float(arr[j])))
     logger.info(
         "Computed pairwise similarities for {n} compounds producing {condensed} distances and {edges} edges at min similarity of {floor}",
         n=n,
