@@ -87,8 +87,9 @@ def compute_pairwise(
         sims = DataStructs.BulkTanimotoSimilarity(fps[i], fps[:i])
         arr = np.asarray(sims, dtype=np.float64)
         if dense:
-            condensed[pos : pos + i] = 1.0 - arr
-            pos += i
+            if condensed is not None:
+                condensed[pos : pos + i] = 1.0 - arr
+                pos += i
         # edges only for the kept pairs
         for j in np.nonzero(arr >= min_sim)[0]:
             edges.append((ids[i], ids[int(j)], float(arr[j])))

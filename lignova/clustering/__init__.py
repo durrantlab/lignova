@@ -43,7 +43,6 @@ __all__ = [
     "CliffSeverity",
     "SeverityMetric",
     "SaliUndefined",
-    "CompoundActivity",
     "find_activity_cliffs",
     "label_cliff_severity",
     "high_confidence_cliffs",
