@@ -4,12 +4,6 @@
 
 """Butina Clustering and activity-cliff detection over a chosen set of targets from the `data_extraction.py` parquets.
 
-Reads one enriched parquet (gene, cid, InChIKey, SMILES, and measurement columns), selects which
-targets to process (all of them, a file-order range, or a stratified test sample), then for each
-target and each requested fingerprint size runs the full pass: aggregate activity -> featurize ->
-pairwise Tanimoto -> Butina clustering + activity-cliff detection + severity labelling. It writes
-three parquet tables: per-cliff rows, per-compound cluster assignments, and a per-(target,
-fingerprint) metrics summary. #TODO:KEEP OR TH
 """
 
 import argparse
