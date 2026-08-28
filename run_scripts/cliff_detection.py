@@ -2,9 +2,7 @@
 # Copyright 2026 University of Pittsburgh — Of the Commonwealth System of Higher Education
 # Source: https://github.com/durrantlab/lignova
 
-"""Butina Clustering and activity-cliff detection over a chosen set of targets from the `data_extraction.py` parquets.
-
-"""
+"""Butina Clustering and activity-cliff detection over a chosen set of targets from the `data_extraction.py` parquets."""
 
 import argparse
 import math
