@@ -98,6 +98,9 @@ TABLES = ("cliffs", "clusters", "metrics")
 _ACTIVE_AID_CACHE: dict[str, frozenset[str]] = {}
 """Dictionary mapping the parquet path to the frozenset of assay IDs that report at least one Active row (used for gating inactives.)"""
 
+SPARSE_ABOVE = 30000
+""" The threshold above which the Butina clustering will use a sparse representation. """
+
 
 def _fp_key(radius: int, fp_size: int) -> str:
     """Generate a fingerprint label to identify the featurization config in every output row.
@@ -481,10 +484,11 @@ def run_target(
         fp_key = _fp_key(radius, fp_size)
         t0 = time.perf_counter()
         feats = MorganFeaturizer(radius=radius, fp_size=fp_size).featurize(smiles)
-        sims = compute_pairwise(feats.items, min_sim=floor)
-        clusters = ButinaClustering(ButinaParams(similarity_cutoff=cutoff)).cluster(
-            sims
-        )
+        dense = len(feats.items) <= SPARSE_ABOVE
+        sims = compute_pairwise(feats.items, min_sim=floor, dense=dense)
+        clusters = ButinaClustering(
+            ButinaParams(similarity_cutoff=cutoff, sparse_above=SPARSE_ABOVE)
+        ).cluster(sims)
         result = label_cliff_severity(find_activity_cliffs(sims, activity, params))
 
         cliff_rows.extend(_cliff_rows(gene, fp_key, result, xref))
