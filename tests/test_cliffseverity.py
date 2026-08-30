@@ -95,7 +95,7 @@ def test_sali_value():
         sims, activity, CliffParams(min_delta=2.0, metric=SeverityMetric.SALI)
     )
     (c,) = result.cliffs
-    assert np.isclose(c.landscape_index, 6.0) 
+    assert np.isclose(c.landscape_index, 6.0)
 
 
 def test_severity_label():
@@ -111,7 +111,7 @@ def test_severity_label():
     extreme = next(
         c for c in result.cliffs if c.severity_label is CliffSeverity.EXTREME
     )
-    assert {extreme.id_a, extreme.id_b} == {"A99", "B99"}  
+    assert {extreme.id_a, extreme.id_b} == {"A99", "B99"}
 
 
 def test_restrictions():
@@ -128,7 +128,6 @@ def test_restrictions():
     labelled = [c for c in result.cliffs if c.severity_label is not None]
     assert len(labelled) == 1
     assert {labelled[0].id_a, labelled[0].id_b} == {"A", "B"}
-
 
 
 def test_sali_undefined_treatment():
@@ -180,4 +179,3 @@ def test_sali_undefined_treatment():
     )
     ae = next(c for c in result.cliffs if {c.id_a, c.id_b} == {"A", "E"})
     assert ae.severity_label is CliffSeverity.EXTREME
-
