@@ -5,6 +5,7 @@
 """Butina Clustering and activity-cliff detection over a chosen set of targets from the `data_extraction.py` parquets."""
 
 import argparse
+import json
 import math
 import os
 import random
@@ -70,6 +71,8 @@ AID_COL = "aid"
 UNIT_COL = "activity_unit"
 """The column name for the measurement unit (e.g. nM, uM, etc.)."""
 
+_CONFIG_NAME = "run_config.json"
+"""The filename for the run configuration JSON file that is written to the output directory to identify the parameters used in the run."""
 
 READ_COLS = [
     GENE_COL,
@@ -94,6 +97,48 @@ _ACTIVE_AID_CACHE: dict[str, frozenset[str]] = {}
 
 SPARSE_ABOVE = 30000
 """ The threshold above which the Butina clustering will use a sparse representation. """
+
+
+def _write_config(out_dir: str, args: argparse.Namespace) -> None:
+    """Write the run configuration to a JSON file in the output directory.
+
+    Args:
+        out_dir: The output directory of the run.
+        args: The parsed CLI arguments.
+    """
+    data = {
+        "floor": args.floor,
+        "cutoff": args.cutoff,
+        "min_delta": args.min_delta,
+        "radius": args.radius,
+        "fp_sizes": sorted(args.fp_sizes),
+        "spread_gate": args.spread_gate,
+        "metric": args.metric,
+        "undefined_sali": args.undefined_sali,
+        "standardize": args.standardize,
+    }
+
+    final_path = os.path.join(out_dir, _CONFIG_NAME)
+    tmp_path = f"{final_path}.tmp.{os.getpid()}"
+    with open(tmp_path, "w", encoding="utf-8") as file:
+        json.dump(data, file, indent=2, sort_keys=True)
+    os.replace(tmp_path, final_path)
+
+
+def _read_config(out_dir: str) -> dict | None:
+    """Read the run configuration from the JSON file in the output directory.
+
+    Args:
+        out_dir: The output directory of the run.
+    Returns:
+        The run configuration dictionary with the parameters used in the run as keys and their values as values, or None if the config file does not exist.
+    """
+    path = os.path.join(out_dir, _CONFIG_NAME)
+    try:
+        with open(path, encoding="utf-8") as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return None
 
 
 def _fp_key(radius: int, fp_size: int) -> str:
@@ -250,8 +295,8 @@ def _mark_done(out_dir: str, gene: str) -> None:
     """
     done_dir = _done_dir(out_dir)
     os.makedirs(done_dir, exist_ok=True)
-    with open(_done_marker(out_dir, gene), "w", encoding="utf-8") as fh:
-        fh.write("")
+    with open(_done_marker(out_dir, gene), "w", encoding="utf-8") as file:
+        file.write("")
 
 
 def _merge_parquets(out_dir: str, table: str) -> None:
@@ -819,6 +864,37 @@ def main() -> int:
             _merge_parquets(out_dir, table)
         logger.info("merge-only complete.")
         return 0
+
+    if args.no_resume:
+        _write_config(out_dir, args)
+    else:
+        stored = _read_config(out_dir)
+        if stored is None:
+            _write_config(out_dir, args)
+        else:
+            current = {
+                "floor": args.floor,
+                "cutoff": args.cutoff,
+                "min_delta": args.min_delta,
+                "radius": args.radius,
+                "fp_sizes": sorted(args.fp_sizes),
+                "spread_gate": args.spread_gate,
+                "metric": args.metric,
+                "undefined_sali": args.undefined_sali,
+                "standardize": args.standardize,
+            }
+            if stored != current:
+                diffs = {
+                    k: {"stored": stored.get(k), "requested": current.get(k)}
+                    for k in sorted(set(stored) | set(current))
+                    if stored.get(k) != current.get(k)
+                }
+                ap.error(
+                    f"Output dir '{out_dir}' was run with a different config; "
+                    f"where the Differing fields (stored vs requested) are: {diffs}. "
+                    f"Please use --no-resume to reprocess with the new config, or point "
+                    f"--out at a fresh directory."
+                )
 
     selected = select_genes(args.parquet, args)
     if not selected:

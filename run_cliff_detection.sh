@@ -25,6 +25,7 @@ FLOOR=0.55
 CUTOFF=0.55
 MIN_DELTA=2.0
 CHUNK=250                 # genes per array task (range mode only)
+STANDARDIZE=true
 
 export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK}"
 export MKL_NUM_THREADS="${SLURM_CPUS_PER_TASK}"
@@ -53,6 +54,12 @@ if [[ "${MODE}" != "range" && -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
     exit 2
 fi
 
+if [[ "${STANDARDIZE}" == "true" ]]; then
+    STD_FLAG="--standardize"
+else
+    STD_FLAG="--no-standardize"
+fi
+
 # Args for run_scripts.cliff_detection.py
 COMMON=(
 --parquet "${ENRICHED}"
@@ -62,6 +69,7 @@ COMMON=(
 --floor   "${FLOOR}"
 --cutoff  "${CUTOFF}"
 --min-delta "${MIN_DELTA}"
+"${STD_FLAG}"
 )
 
 case "${MODE}" in
