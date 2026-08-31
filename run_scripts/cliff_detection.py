@@ -9,6 +9,7 @@ import math
 import os
 import random
 import time
+from collections import Counter, defaultdict
 from collections.abc import Iterable, Iterator
 
 import pyarrow as pa
@@ -32,6 +33,7 @@ from lignova.clustering import (
     find_activity_cliffs,
     high_confidence_cliffs,
     label_cliff_severity,
+    resolve_smiles,
     same_assay_cliffs,
 )
 from lignova.hdf5 import ParquetParser
@@ -408,6 +410,13 @@ def select_genes(path: str, args: argparse.Namespace) -> list[str]:
     if args.select == "range":
         start, end = args.range
         genes = extract_genes(_iter_enriched_rows(path, [GENE_COL]))
+        if start > len(genes):
+            logger.info(
+                "Range selected start {s} exceeds {t} genes. Nothing to do.",
+                s=start,
+                t=len(genes),
+            )
+            return 3
         if bounded:
             counts = count_usable_by_gene(_iter_enriched_rows(path, READ_COLS))
             genes = _apply_bounds(genes, counts, lo, hi)
@@ -441,6 +450,7 @@ def run_target(
     cutoff: float = 0.55,
     radius: int = 2,
     spread_gate: float = DEFAULT_SPREAD_GATE,
+    standardize: bool = True,
 ) -> tuple[list[dict], list[dict], list[dict]]:
     """Run clustering and cliff detection for one target across every user specified fingerprint size.
 
@@ -452,6 +462,7 @@ def run_target(
         cutoff: Butina similarity cutoff (used in clustering). Default is 0.55.
         radius: Morgan radius (shared across the fingerprint sizes). Default is 2.
         spread_gate: The quality gate fails when the winning-type spread exceeds this (in log units). Default is DEFAULT_SPREAD_GATE =1.
+        standardize: Whether to standardize the SMILES to neutral parent forms when handling multiple SMILES variants for the same InChIKey. Default is True.
 
     Returns:
         A tuple of (cliff_rows, cluster_rows, metric_rows), each tagged with the gene id and the
@@ -460,11 +471,25 @@ def run_target(
     grouped = group_measurements(rows)
     activity = aggregate_activity(grouped, spread_gate=spread_gate)
     xref = cid_crosswalk(grouped)
-    smiles = {
-        str(r[KEY_COL]): str(r[SMILES_COL])
-        for r in rows
-        if r.get(KEY_COL) and r.get(SMILES_COL)
+    variants: dict[str, set[str]] = defaultdict(set)
+    for r in rows:
+        k, s = r.get(KEY_COL), r.get(SMILES_COL)
+        if k and s:
+            variants[str(k)].add(str(s))
+    resolved = {
+        k: resolve_smiles(v, standardize=standardize) for k, v in variants.items()
     }
+    smiles = {k: chosen for k, (chosen, _) in resolved.items()}
+
+    n_conflicts = sum(1 for v in variants.values() if len(v) > 1)
+    if n_conflicts:
+        methods = Counter(m for k, (_, m) in resolved.items() if len(variants[k]) > 1)
+        logger.info(
+            "Resolved {n} multi-SMILES keys for {g}: {m}",
+            n=n_conflicts,
+            g=gene,
+            m=dict(methods),
+        )
 
     cliff_rows: list[dict] = []
     cluster_rows: list[dict] = []
@@ -483,7 +508,7 @@ def run_target(
         ).cluster(sims)
         result = label_cliff_severity(find_activity_cliffs(sims, activity, params))
 
-        cliff_rows.extend(_cliff_rows(gene, fp_key, result, xref))
+        cliff_rows.extend(_cliff_rows(gene, fp_key, result, xref, smiles))
         cluster_rows.extend(_cluster_rows(gene, fp_key, clusters))
         metric_rows.append(
             _metric_row(
@@ -496,6 +521,8 @@ def run_target(
                 params,
                 time.perf_counter() - t0,
                 spread_gate,
+                standardize_conflicts=standardize,
+                n_smiles_conflicts=n_conflicts,
             )
         )
 
@@ -503,7 +530,7 @@ def run_target(
 
 
 def _cliff_rows(
-    gene: str, fp_key: str, result, xref: dict[str, set[str]]
+    gene: str, fp_key: str, result, xref: dict[str, set[str]], smiles: dict[str, str]
 ) -> list[dict]:
     """Flatten a labelled CliffResult into per-cliff rows for cliffs.parquet keyed by InChIKey.
 
@@ -512,6 +539,7 @@ def _cliff_rows(
         fp_key: The fingerprint key (e.g. "morgan_r2_n2048").
         result: The labelled CliffResult.
         xref: The compound key to source CIDs map (from `cid_crosswalk`).
+        smiles: The compound key to chosen SMILES map (from `resolve_smiles`).
 
     Returns:
         A list of dictionaries, one per cliff, with the gene and fp_key added.
@@ -524,6 +552,8 @@ def _cliff_rows(
                 "fp": fp_key,
                 "id_a": c.id_a,
                 "id_b": c.id_b,
+                "smiles_a": smiles.get(c.id_a),
+                "smiles_b": smiles.get(c.id_b),
                 "cids_a": ";".join(sorted(xref.get(c.id_a, set()))),
                 "cids_b": ";".join(sorted(xref.get(c.id_b, set()))),
                 "similarity": c.similarity,
@@ -566,7 +596,17 @@ def _cluster_rows(gene: str, fp_key: str, clusters) -> list[dict]:
 
 
 def _metric_row(
-    gene, fp_key, feats, sims, clusters, result, params, seconds, spread_gate
+    gene,
+    fp_key,
+    feats,
+    sims,
+    clusters,
+    result,
+    params,
+    seconds,
+    spread_gate,
+    standardize_conflicts,
+    n_smiles_conflicts,
 ) -> dict:
     """Assemble one per-(target, fingerprint) summary row for metrics.parquet.
 
@@ -580,6 +620,8 @@ def _metric_row(
         params: The CliffParams used for the cliff detection and severity labelling.
         seconds: Wall-clock seconds for this one (target, fp) pass; for spotting slow configs at scale.
         spread_gate: The quality gate threshold for the winning-type spread.
+        standardize_conflicts: Whether SMILES were standardized to neutral parent forms when resolving multiple SMILES variants for the same InChIKey.
+        n_smiles_conflicts: The number of InChIKeys that had multiple SMILES variants that were resolved to a single representative SMILES.
 
     Returns:
         A dictionary with the metrics for this (gene, fp_key) pass.
@@ -589,7 +631,9 @@ def _metric_row(
         "gene": gene,
         "fp": fp_key,
         "metric": params.metric.value,
-        "spread_gate": spread_pixgate,
+        "standardize_conflicts": standardize_conflicts,
+        "n_smiles_conflicts": n_smiles_conflicts,
+        "spread_gate": spread_gate,
         "min_similarity": params.min_similarity,
         "butina_cutoff": clusters.params.similarity_cutoff,
         "min_delta": params.min_delta,
@@ -746,6 +790,13 @@ def main() -> int:
         help="Do not merge parquets after processing is complete. Useful for parallel runs where "
         "each task writes its own per-gene parquets and a single final merge is done later ",
     )
+    ap.add_argument(
+        "--standardize",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Neutralize and salt-strip InChIKeys that carry multiple SMILES. "
+        "Default: on. Use --no-standardize to pick deterministically instead.",
+    )
     args = ap.parse_args()
 
     if args.select == "range" and not args.range:
@@ -824,6 +875,7 @@ def main() -> int:
             params=params,
             radius=args.radius,
             spread_gate=args.spread_gate,
+            standardize=args.standardize,
         )
         _write_parquet(cliffs, out_dir, "cliffs", gene)
         _write_parquet(clusters, out_dir, "clusters", gene)

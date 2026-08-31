@@ -7,7 +7,7 @@ r"""Initialize clustering modules."""
 from .mmseq import MMseqsClustering, MMseqsParams
 from .base import ClusterMethod, ClusterParams, ClusterResult, Clusterer
 from .butina import ButinaClustering, ButinaParams
-from .featurize import FeaturizeResult, MorganFeaturizer
+from .featurize import FeaturizeResult, MorganFeaturizer, resolve_smiles
 from .tanimoto import TanimotoSimilarities, compute_pairwise
 from .cliff import (
     ActivityCliffs,
@@ -49,4 +49,5 @@ __all__ = [
     "same_assay_cliffs",
     "same_assay",
     "high_confidence",
+    "resolve_smiles",
 ]
