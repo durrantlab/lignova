@@ -141,7 +141,9 @@ def test_cliffs_read_edges_not_clusters():
         "B": CompoundActivity(pActivity=5.0, winning_type="Ki"),
         "C": CompoundActivity(pActivity=6.0, winning_type="Ki"),
     }
-    result = find_activity_cliffs(sims, activity, CliffParams(min_delta=2.0))
+    result = find_activity_cliffs(
+        sims, activity, CliffParams(min_delta=2.0, min_similarity=0.15)
+    )
     pairs = {frozenset((c.id_a, c.id_b)) for c in result.cliffs}
     assert frozenset(("A", "B")) in pairs
 
@@ -156,7 +158,9 @@ def test_cliff_flag_behavior():
             pActivity=5.0, winning_type="Ki", passes_quality_gate=False
         ),
     }
-    result = find_activity_cliffs(sims, activity, CliffParams(min_delta=2.0))
+    result = find_activity_cliffs(
+        sims, activity, CliffParams(min_delta=2.0, min_similarity=0.15)
+    )
 
     pair = {frozenset((c.id_a, c.id_b)) for c in result.cliffs}
     assert frozenset(("A", "B")) in pair

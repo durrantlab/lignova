@@ -92,7 +92,9 @@ def test_sali_value():
         "B": CompoundActivity(pActivity=6.0, winning_type="Ki"),
     }
     result = find_activity_cliffs(
-        sims, activity, CliffParams(min_delta=2.0, metric=SeverityMetric.SALI)
+        sims,
+        activity,
+        CliffParams(min_delta=2.0, metric=SeverityMetric.SALI, min_similarity=0.0),
     )
     (c,) = result.cliffs
     assert np.isclose(c.landscape_index, 6.0)
@@ -146,6 +148,7 @@ def test_sali_undefined_treatment():
                 min_delta=2.0,
                 metric=SeverityMetric.SALI,
                 sali_undefined=SaliUndefined.NEXT_LARGEST,
+                min_similarity=0.0,
             ),
         )
     )
@@ -159,6 +162,7 @@ def test_sali_undefined_treatment():
                 min_delta=2.0,
                 metric=SeverityMetric.SALI,
                 sali_undefined=SaliUndefined.EXCLUDE,
+                min_similarity=0.0,
             ),
         )
     )

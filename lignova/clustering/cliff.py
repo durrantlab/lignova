@@ -59,6 +59,9 @@ class CliffParams:
     min_delta: float = 2.0
     """Minimum absolute difference in pActivity for a pair to be considered a cliff. Default is 2.0 which means a 100-fold difference."""
 
+    min_similarity: float = 0.55
+    """Minimum Tanimoto similarity for a pair to be considered a cliff. Default is 0.55."""
+
     metric: SeverityMetric = SeverityMetric.TS_SALI
     """Which landscape index to compute and rank by. Default is TS_SALI."""
 
@@ -215,8 +218,17 @@ def find_activity_cliffs(
         A `CliffResult` holding the detected cliffs; severity labels are None until
         `label_cliff_severity` is called.
     """
+    if sims.min_sim > params.min_similarity:
+        raise ValueError(
+            f"Edges listed in sims were built at floor {sims.min_sim}, but "
+            f"params.min_similarity={params.min_similarity} is higher. "
+            f"Thus activity cliff pairs are unreachable. Please rebuild sims at a "
+            f"lower floor or lower params.min_similarity."
+        )
     cliffs: list[ActivityCliffs] = []
     for id_a, id_b, similarity in sims.edges:
+        if similarity < params.min_similarity:
+            continue
         a = activity.get(id_a)
         b = activity.get(id_b)
         if a is None or b is None:

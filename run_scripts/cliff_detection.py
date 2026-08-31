@@ -438,7 +438,6 @@ def run_target(
     rows: list[dict],
     params: CliffParams,
     fp_sizes: list[int] = [2048],
-    floor: float = 0.55,
     cutoff: float = 0.55,
     radius: int = 2,
     spread_gate: float = DEFAULT_SPREAD_GATE,
@@ -448,9 +447,8 @@ def run_target(
     Args:
         gene: The gene id being processed.
         rows: The enriched rows for this gene only.
-        params: The cliff detection and severity configuration (metric, min_delta, thresholds).
+        params: The cliff detection and severity configuration (metric, min_delta, thresholds, min_similarity).
         fp_sizes: The fingerprint bit sizes to evaluate.Default is [2048].
-        floor: Minimum Tanimoto similarity kept as an edge (used in cliff detection). Default is 0.55.
         cutoff: Butina similarity cutoff (used in clustering). Default is 0.55.
         radius: Morgan radius (shared across the fingerprint sizes). Default is 2.
         spread_gate: The quality gate fails when the winning-type spread exceeds this (in log units). Default is DEFAULT_SPREAD_GATE =1.
@@ -477,7 +475,9 @@ def run_target(
         t0 = time.perf_counter()
         feats = MorganFeaturizer(radius=radius, fp_size=fp_size).featurize(smiles)
         dense = len(feats.items) <= SPARSE_ABOVE
-        sims = compute_pairwise(feats.items, min_sim=floor, dense=dense)
+        sims = compute_pairwise(
+            feats.items, min_sim=min(params.min_similarity, cutoff), dense=dense
+        )
         clusters = ButinaClustering(
             ButinaParams(similarity_cutoff=cutoff, sparse_above=SPARSE_ABOVE)
         ).cluster(sims)
@@ -589,7 +589,10 @@ def _metric_row(
         "gene": gene,
         "fp": fp_key,
         "metric": params.metric.value,
-        "spread_gate": spread_gate,
+        "spread_gate": spread_pixgate,
+        "min_similarity": params.min_similarity,
+        "butina_cutoff": clusters.params.similarity_cutoff,
+        "min_delta": params.min_delta,
         "n_featurized": len(feats.items),
         "n_skipped": len(feats.skipped),
         "n_edges": len(sims.edges),
@@ -755,6 +758,7 @@ def main() -> int:
         min_delta=args.min_delta,
         metric=SeverityMetric(args.metric),
         sali_undefined=SaliUndefined(args.undefined_sali),
+        min_similarity=args.floor,
     )
     out_dir = args.out
     os.makedirs(out_dir, exist_ok=True)
@@ -816,7 +820,6 @@ def main() -> int:
             gene=gene,
             rows=rows,
             fp_sizes=args.fp_sizes,
-            floor=args.floor,
             cutoff=args.cutoff,
             params=params,
             radius=args.radius,
