@@ -78,6 +78,9 @@ fi
 
 PREPPED_BASE="${OUTDIR}"
 PROTONATED_BASE="${OUTDIR}"
+FAILED=0
+SUCCEEDED=0
+
 #protonate each cleaned pdb 
 for CLEANED in "${CLEANED_FILES[@]}"; do
     echo "Protonating: ${CLEANED}"
@@ -106,10 +109,16 @@ for CLEANED in "${CLEANED_FILES[@]}"; do
         -o "${OUT_PATH}" \
         -m mgltools \
         -pq "${PROT_PDBQT_PATH}"; then
-        echo "WARNING: Protonation failed for ${CLEANED}. Skipping to the next file." >&2
-        continue
-    fi
+                echo "WARNING: Protonation failed for ${CLEANED}. Skipping to the next file." >&2
+                FAILED=$((FAILED + 1))
+                continue
+        fi
+        SUCCEEDED=$((SUCCEEDED + 1))
 done
 
-echo "All protonation done for array task ${TASK_ID}."
+echo "Protonation summary for array task ${TASK_ID}: ${SUCCEEDED} succeeded, ${FAILED} failed."
 echo "Finished at: $(date)"
+if [[ "${FAILED}" -gt 0 ]]; then
+    echo "ERROR: ${FAILED} protein(s) failed in task ${TASK_ID}." >&2
+    exit 1
+fi

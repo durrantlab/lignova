@@ -659,3 +659,5 @@ licenses/MISSING.txt
 licenses/CONFLICTS.txt
 licenses/PLACEHOLDERS.txt
 licenses/LICENSE-AUDIT.txt
+
+_version.py

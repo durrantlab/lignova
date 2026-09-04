@@ -67,7 +67,7 @@ licenses = "bash gen_notice.sh --environment default --environment mgltools"
 licenses-check = "bash gen_notice.sh --environment default --environment mgltools --check"
 
 [dependencies]
-python = ">=3.12.13,<3.15"
+python = ">=3.12,<3.15"
 h5py = ">=3.15.1,<4"
 numpy = ">=2.4.2,<3"
 rdkit = ">=2025.9.5,<2026"
@@ -96,9 +96,11 @@ pytest-cov = ">=6.0.0,<7"
 coverage = ">=7.6.4,<8"
 types-requests = ">=2.32.0.20241016,<3"
 pytest-asyncio = ">=1.4.0,<2"
+basedpyright = ">=1.39.10,<2"
 
 [feature.dev.tasks]
 format = { cmd = ["ruff", "check", "--select", "I", "--fix", "--config", ".ruff.toml", "&&", "ruff", "format", "--config", ".ruff.toml", "./"] }
+typecheck = "basedpyright lignova"
 tests = { cmd = [
     "PYTHONPATH=.",
     "pytest",
