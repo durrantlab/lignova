@@ -7,6 +7,7 @@
 import math
 import os
 import subprocess
+from io import StringIO
 from typing import TextIO
 
 import numpy as np
@@ -209,7 +210,7 @@ def obabel_convert(
         mae_convert(str(test_file), output_filename, remove_hs=not hydrogen)
         return
     # Construct the command
-    command: list[str] = ["obabel", test_file, "-O", output_filename]
+    command: list[str] = ["obabel", str(test_file), "-O", output_filename]
     logger.info(f"Running command: {' '.join(command)}")
     if hydrogen:
         command.append("-h")
@@ -516,6 +517,8 @@ def guess_atom_type(atom_name: str) -> str:
         return "S.2"
     elif name.startswith("H"):
         return "H"
+    else:
+        return name
 
 
 def fix_mol2_atom_types(input_file: str, output_file: str) -> None:
@@ -556,9 +559,9 @@ def eval_pose(
     protein: str,
     outfmt: str = "csv",
     multiple: bool = True,
-    output_file: str | None = str,
-    top_n: int = None,
-    max_workers: int = None,
+    output_file: str | None = None,
+    top_n: int | None = None,
+    max_workers: int | None = None,
 ) -> str | pd.DataFrame:
     """
     Run posebuster (bust) command line tool to evaluate predicted pose
@@ -629,6 +632,11 @@ def eval_pose(
         if process.returncode == 0:
             logger.info("Pose evaluation completed")
             logger.info(f"Output:\n{stdout}")
+            if output_file is not None:
+                logger.info(f"Results saved to {output_file}")
+                return output_file
+            df = pd.read_csv(StringIO(stdout))
+            return df
         else:
             logger.error("Pose evaluation failed ")
             logger.error(f"Error Output:\n{stderr}")
