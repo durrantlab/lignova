@@ -3,6 +3,7 @@
 # Source: https://github.com/durrantlab/lignova
 
 r"""Parser for GNINA docked SDF files and dataset builder."""
+# pyright: reportAttributeAccessIssue=false
 
 # NOTE: this is for SDF files output ONLY
 import glob
@@ -136,6 +137,10 @@ class GNINA_Results:
         else:
             fd, tmp_path = tempfile.mkstemp(suffix=".sdf", prefix="gnina_")
             os.close(fd)
+            if self._raw is None:
+                raise RuntimeError(
+                    "Can't create seekable file as the raw text is not loaded."
+                )
             with open(tmp_path, "w", encoding="utf-8") as out:
                 out.write(self._raw)
             self._seekable_path = tmp_path
@@ -168,7 +173,7 @@ class GNINA_Results:
             metas.append(raw)
 
             if not isinstance(num_modes, int):
-                lig_id = raw.get("mol_name", "")
+                lig_id = str(raw.get("mol_name", ""))
                 try:
                     uid = int(float(raw.get("UniqueID", "0")))
                 except (ValueError, TypeError):
@@ -185,29 +190,22 @@ class GNINA_Results:
             )
         uniform = resolved if isinstance(resolved, int) else None
 
-        col: dict[str, np.ndarray | list[str]] = {
-            "block_start": np.array([s for s, _ in self._offsets], dtype=np.int64),
-            "block_end": np.array([e for _, e in self._offsets], dtype=np.int64),
-            "protein_id": [self._protein_id] * n,
-            "ligand_id": [""] * n,
-            "UniqueID": np.zeros(n, dtype=np.int32),
-            "conformer_idx": np.zeros(n, dtype=np.int32),
-            "pose_rank": np.zeros(n, dtype=np.int32),
-            "SMILES": [""] * n,
-            "n_atoms": np.zeros(n, dtype=np.int32),
-            "Vina_affinity": np.full(n, np.nan, dtype=np.float64),
-            "CNNscore": np.full(n, np.nan, dtype=np.float64),
-            "CNNaffinity": np.full(n, np.nan, dtype=np.float64),
-            "CNN_VS": np.full(n, np.nan, dtype=np.float64),
-            "CNNaffinity_variance": np.full(n, np.nan, dtype=np.float64),
-            "Energy": np.full(n, np.nan, dtype=np.float64),
-            "source_file": [self._filepath] * n,
+        ligand_id: list[str] = [""] * n
+        smiles: list[str] = [""] * n
+        uniqueid = np.zeros(n, dtype=np.int32)
+        conformer_idx = np.zeros(n, dtype=np.int32)
+        pose_rank = np.zeros(n, dtype=np.int32)
+        n_atoms = np.zeros(n, dtype=np.int32)
+        vina = np.full(n, np.nan, dtype=np.float64)
+        energy = np.full(n, np.nan, dtype=np.float64)
+        floats: dict[str, np.ndarray] = {
+            prop: np.full(n, np.nan, dtype=np.float64) for prop in _GNINA_FLOAT_PROPS
         }
 
         group_seq: dict[tuple[str, int], int] = {}
 
         for idx, raw in enumerate(metas):
-            lig_id = raw.get("mol_name", "")
+            lig_id = str(raw.get("mol_name", ""))
             try:
                 uid = int(float(raw.get("UniqueID", "0")))
             except (ValueError, TypeError):
@@ -217,30 +215,49 @@ class GNINA_Results:
             seq = group_seq.get(key, 0)
             group_seq[key] = seq + 1
 
-            nm = uniform if uniform is not None else resolved[key]
+            nm = resolved if isinstance(resolved, int) else resolved[key]
 
-            col["ligand_id"][idx] = lig_id
-            col["UniqueID"][idx] = uid
-            col["conformer_idx"][idx] = seq // nm
-            col["pose_rank"][idx] = seq % nm
-            col["SMILES"][idx] = raw.get("SMILES", "")
-            col["n_atoms"][idx] = raw.get("n_atoms", 0)
+            ligand_id[idx] = lig_id
+            uniqueid[idx] = uid
+            conformer_idx[idx] = seq // nm
+            pose_rank[idx] = seq % nm
+            smiles[idx] = str(raw.get("SMILES", ""))
+            n_atoms[idx] = int(raw.get("n_atoms", 0))
 
             # minimizedAffinity → Vina_affinity
             try:
-                col["Vina_affinity"][idx] = float(raw["minimizedAffinity"])
+                vina[idx] = float(raw["minimizedAffinity"])
             except (KeyError, ValueError, TypeError):
                 pass
 
             for prop in _GNINA_FLOAT_PROPS:
                 try:
-                    col[prop][idx] = float(raw[prop])
+                    floats[prop][idx] = float(raw[prop])
                 except (KeyError, ValueError, TypeError):
                     pass
             try:
-                col["Energy"][idx] = float(raw.get("Energy", "nan"))
+                energy[idx] = float(raw.get("Energy", "nan"))
             except (ValueError, TypeError):
                 pass
+
+        col: dict[str, np.ndarray | list[str]] = {
+            "block_start": np.array([s for s, _ in self._offsets], dtype=np.int64),
+            "block_end": np.array([e for _, e in self._offsets], dtype=np.int64),
+            "protein_id": [self._protein_id] * n,
+            "ligand_id": ligand_id,
+            "UniqueID": uniqueid,
+            "conformer_idx": conformer_idx,
+            "pose_rank": pose_rank,
+            "SMILES": smiles,
+            "n_atoms": n_atoms,
+            "Vina_affinity": vina,
+            "CNNscore": floats["CNNscore"],
+            "CNNaffinity": floats["CNNaffinity"],
+            "CNN_VS": floats["CNN_VS"],
+            "CNNaffinity_variance": floats["CNNaffinity_variance"],
+            "Energy": energy,
+            "source_file": [self._filepath] * n,
+        }
 
         if uniform is not None:
             for key, cnt in group_seq.items():
@@ -352,6 +369,10 @@ class GNINA_Results:
         if self._raw is not None:
             return self._raw[start:end]
         # Fall back to disk seek
+        if self._seekable_path is None:
+            self._ensure_seekable()
+        if self._seekable_path is None:
+            raise RuntimeError("Seekable path could not be created.")
         with open(self._seekable_path, "r", encoding="utf-8") as f:
             f.seek(start)
             return f.read(end - start)
@@ -533,6 +554,10 @@ class GNINA_Results:
         """
         if self._raw is not None:
             return self._raw[block_start:block_end]
+        if self._seekable_path is None:
+            self._ensure_seekable()
+        if self._seekable_path is None:
+            raise RuntimeError("Seekable path could not be created.")
         with open(self._seekable_path, "r", encoding="utf-8") as f:
             f.seek(block_start)
             return f.read(block_end - block_start)
@@ -992,12 +1017,13 @@ class GNINA_Results:
         if not overwrite and os.path.isfile(output_path):
             logger.info(f"Skipping SDF export, file exists: {output_path}")
             return
-        if table is None:
-            table = self._table
+        tbl = self._table if table is None else table
+        if tbl is None:
+            raise RuntimeError("No table available to export.")
         blocks = []
-        for i in range(table.num_rows):
-            bs = table.column("block_start")[i].as_py()
-            be = table.column("block_end")[i].as_py()
+        for i in range(tbl.num_rows):
+            bs = tbl.column("block_start")[i].as_py()
+            be = tbl.column("block_end")[i].as_py()
             blocks.append(self.get_block_by_offsets(bs, be))
         text = "\n$$$$\n".join(blocks) + "\n$$$$\n"
         if output_path.endswith(".sdf.gz"):
