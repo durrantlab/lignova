@@ -4,7 +4,6 @@
 
 r"""Implementation of the UniChem API parser class."""
 
-import gzip
 import io
 import urllib.request
 from typing import Any
@@ -92,8 +91,7 @@ class UniChemAPI(BaseAPI):
             with urllib.request.urlopen(file_path) as response:
                 buf = io.BytesIO(response.read())
 
-            with gzip.GzipFile(fileobj=buf) as gz:
-                df = pd.read_csv(gz, sep="\t", dtype=str)
+            df = pd.read_csv(buf, sep="\t", compression="gzip")
             new_src = {}
             for _, row in df.iterrows():
                 name = row["NAME"].strip().lower()

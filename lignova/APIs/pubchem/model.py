@@ -251,8 +251,6 @@ class AssayInfo(BaseModel):
 
         return cls(aid=aid, records=records)
 
-        return cls(aid=aid, records=records, pubmed_id=pubmed_id)
-
     def _cids_where(self, outcome: str) -> list[int]:
         """Deduplicated CIDs whose outcome matches in a case-insensitive manner."""
         seen: set[int] = set()
