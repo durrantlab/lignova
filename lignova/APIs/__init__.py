@@ -7,4 +7,4 @@ from .pubchem import PubChemAPI, AssayInfo, CompoundProperties
 from .unichem import UniChemAPI
 from reqadence.api import APIResponseType, BaseAPI, ClientConfig, RetryPolicy
 
-__all__ = ["PubChemAPI", "UniChemAPI", "BaseAPI", "ClientConfig", "RetryPolicy", "APIResponseType"," AssayInfo", "CompoundInfo", "CompoundSummary", "TargetInfo"]
+__all__ = ["PubChemAPI", "UniChemAPI", "BaseAPI", "ClientConfig", "RetryPolicy", "APIResponseType","AssayInfo","CompoundProperties"]
