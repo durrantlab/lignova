@@ -21,6 +21,12 @@ class Structure(ABC):
             self.file_id = file_id
             self.file_ext = os.path.splitext(self.file_path)[1].lstrip(".")
 
+    @property
+    def path(self) -> str:
+        if self.file_path is None:
+            raise ValueError(f"{type(self).__name__} has no file_path set.")
+        return self.file_path
+
     @abstractmethod
     def load(
         self,
