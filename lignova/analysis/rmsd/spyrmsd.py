@@ -34,12 +34,10 @@ class spyrmsdRMSD(RMSDBase):
         """
         super().__init__(target, reference)
 
-        if not self.reference.file_path or not os.path.exists(self.reference.file_path):
-            raise FileNotFoundError(
-                f"Reference file {self.reference.file_path} not found."
-            )
-        if not self.target.file_path or not os.path.exists(self.target.file_path):
-            raise FileNotFoundError(f"Target file {self.target.file_path} not found.")
+        if not self.reference.path or not os.path.exists(self.reference.path):
+            raise FileNotFoundError(f"Reference file {self.reference.path} not found.")
+        if not self.target.path or not os.path.exists(self.target.path):
+            raise FileNotFoundError(f"Target file {self.target.path} not found.")
 
         self._ensure_compatible_format()
 
@@ -52,17 +50,17 @@ class spyrmsdRMSD(RMSDBase):
         supported = ["sdf", "pdb"]
 
         if self.reference.file_ext not in supported:
-            ref_out = self.reference.file_path.replace(
+            ref_out = self.reference.path.replace(
                 self.reference.file_ext, f".{target_format}"
             )
-            obabel_convert(self.reference.file_path, ref_out)
+            obabel_convert(self.reference.path, ref_out)
             self.reference = self.reference.__class__(ref_out)
 
         if self.target.file_ext not in supported:
-            tgt_out = str(self.target.file_path).replace(
+            tgt_out = str(self.target.path).replace(
                 self.target.file_ext, f".{target_format}"
             )
-            obabel_convert(self.target.file_path, tgt_out)
+            obabel_convert(self.target.path, tgt_out)
             self.target = self.target.__class__(tgt_out)
 
     def _load_all_poses(self, path: str, add_hs: bool = False) -> list:
@@ -88,13 +86,13 @@ class spyrmsdRMSD(RMSDBase):
     ) -> list[float]:
         r"""In-process spyrmsd via symmrmsd / rmsd."""
 
-        ref_mol = load_mol(self.reference.file_path, add_hs=hydrogens)
-        target_poses = self._load_all_poses(self.target.file_path, add_hs=hydrogens)
+        ref_mol = load_mol(self.reference.path, add_hs=hydrogens)
+        target_poses = self._load_all_poses(self.target.path, add_hs=hydrogens)
         if ref_mol is None or not target_poses:
             raise ValueError("Failed to load reference or target.")
         if mcs:
             ref_idx, tgt_idx = calc_mcs(
-                self.reference.file_path, self.target.file_path, add_hs=hydrogens
+                self.reference.path, self.target.path, add_hs=hydrogens
             )
         else:
             ref_n = ref_mol.GetNumAtoms()
@@ -180,7 +178,7 @@ class spyrmsdRMSD(RMSDBase):
             command.append("--hydrogens")
         if superimpose:
             command.append("-m")
-        command.extend([self.reference.file_path, self.target.file_path])
+        command.extend([self.reference.path, self.target.path])
         result = self._run_command(command)
         values = [
             float(line.strip()) for line in result.strip().splitlines() if line.strip()

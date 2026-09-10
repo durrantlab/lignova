@@ -41,18 +41,14 @@ class mdaRMSD(RMSDBase):
         """
         # check if the extensions are not pdb then raise an error using .file_ext
         if self.target.file_ext != "pdb":
-            raise ValueError(
-                f"Target file {self.target.file_path} must be in PDB format."
-            )
+            raise ValueError(f"Target file {self.target.path} must be in PDB format.")
         if self.reference.file_ext != "pdb":
             raise ValueError(
-                f"Reference file {self.reference.file_path} must be in PDB format."
+                f"Reference file {self.reference.path} must be in PDB format."
             )
-        if not self.target.file_path:
-            raise ValueError("Target file path is None.")
 
-        docked_traj = get_mda_universe(self.target.file_path)
-        reference = get_mda_universe(self.reference.file_path)
+        docked_traj = get_mda_universe(self.target.path)
+        reference = get_mda_universe(self.reference.path)
 
         ref_ligand = filter_hetatoms(reference).select_atoms(selection)
         dock_ligand = filter_hetatoms(docked_traj).select_atoms(selection)
@@ -61,7 +57,7 @@ class mdaRMSD(RMSDBase):
             raise ValueError(
                 f"Atom count mismatch: reference has {len(ref_ligand.atoms)}, "
                 f"target has {len(dock_ligand.atoms)}. "
-                f"Files: {self.reference.file_path}, {self.target.file_path}"
+                f"Files: {self.reference.path}, {self.target.path}"
             )
 
         rmsd_values = []
