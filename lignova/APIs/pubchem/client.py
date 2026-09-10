@@ -84,7 +84,11 @@ class PubChemAPI(BaseAPI):
             )
             return None
         if "Fault" in data:
-            fault_msg = data["Fault"].get("Message", "Unknown fault")
+            fault_msg = (
+                data["Fault"].get("Message", "Unknown fault")
+                if isinstance(data["Fault"], dict)
+                else "Unknown fault"
+            )
             logger.info(
                 "AID {aid} not available on PubChem: {fault_msg}",
                 aid=aid,
@@ -126,24 +130,50 @@ class PubChemAPI(BaseAPI):
                 "No data available to retrieve information for CID {cid}.", cid=cid
             )
             return {}
+        if not isinstance(data, dict):
+            logger.warning(
+                "Unexpected response format for CID {cid}: {t}",
+                cid=cid,
+                t=type(data).__name__,
+            )
+            return {}
+        property_table = data.get("PropertyTable")
+        properties_list = (
+            property_table.get("Properties")
+            if isinstance(property_table, dict)
+            else None
+        )
         results: dict[int, dict[str, Any]] = {}
-        if "PropertyTable" in data and "Properties" in data["PropertyTable"]:
-            for properties_data in data["PropertyTable"]["Properties"]:
-                entry_cid = properties_data.get("CID")
-                if entry_cid is None:
-                    continue
-                compound_info: dict[str, Any] = {}
-                for prop in properties:
-                    if str(prop) in properties_data:
-                        compound_info[str(prop)] = properties_data[str(prop)]
-                    else:
-                        logger.warning(
-                            "Failed to find {prop} information for CID {cid}.",
-                            prop=prop,
-                            cid=entry_cid,
-                        )
-                        compound_info[str(prop)] = None
-                results[int(entry_cid)] = compound_info
+        if not isinstance(properties_list, list):
+            logger.warning(
+                "Unexpected properties list format for CID {cid}: {t}",
+                cid=cid,
+                t=type(properties_list).__name__,
+            )
+            return results
+        for properties_data in properties_list:
+            if not isinstance(properties_data, dict):
+                logger.warning(
+                    "Unexpected properties data format for CID {cid}: {t}",
+                    cid=cid,
+                    t=type(properties_data).__name__,
+                )
+                continue
+            entry_cid = properties_data.get("CID")
+            if not isinstance(entry_cid, (int, str)):
+                continue
+            compound_info: dict[str, Any] = {}
+            for prop in properties:
+                if str(prop) in properties_data:
+                    compound_info[str(prop)] = properties_data[str(prop)]
+                else:
+                    logger.warning(
+                        "Failed to find {prop} information for CID {cid}.",
+                        prop=prop,
+                        cid=entry_cid,
+                    )
+                    compound_info[str(prop)] = None
+            results[int(entry_cid)] = compound_info
         return results
 
     async def get_properties(
