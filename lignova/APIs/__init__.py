@@ -6,5 +6,6 @@
 from .pubchem import PubChemAPI, AssayInfo, CompoundProperties
 from .unichem import UniChemAPI
 from reqadence.api import APIResponseType, BaseAPI, ClientConfig, RetryPolicy
+from reqadence.api.rcsb import RCSBClient,RCSBEntry
 
-__all__ = ["PubChemAPI", "UniChemAPI", "BaseAPI", "ClientConfig", "RetryPolicy", "APIResponseType","AssayInfo","CompoundProperties"]
+__all__ = ["PubChemAPI", "UniChemAPI", "BaseAPI", "ClientConfig", "RetryPolicy", "APIResponseType","AssayInfo","CompoundProperties","RCSBClient","RCSBEntry"]
