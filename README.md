@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/lignova_pipeline.svg" alt="LIGNOVA pipeline: data curation, preparation, docking, grading and release" width="100%">
+  <img src="assets/images/lignova_pipeline.svg" alt="LIGNOVA pipeline: data curation, preparation, docking, grading and release" width="100%">
 </p>
 
 LIGNOVA is an open-source, automated pipeline that pairs bioactive compounds from PubChem with high-resolution protein structures from the PDB to generate large-scale docked protein–ligand complexes using GNINA.
